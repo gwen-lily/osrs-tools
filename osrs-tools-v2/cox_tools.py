@@ -109,7 +109,7 @@ def cox_scale_comparison(
 
 def point_cap(list_of_list_of_monsters: List[list], party_size: int, challenge_mode: bool):
 	for list_of_monsters in list_of_list_of_monsters:
-
+		pass
 
 
 def hello_rope():
