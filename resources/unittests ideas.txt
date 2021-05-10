@@ -1,0 +1,101 @@
+TESTS:
+	Stats:
+		add, sub, sum
+			Combat
+			Aggressive
+			Defensive
+			CurrentCombatBase
+	
+	from_highscores of known max
+		add/sub/sum
+		
+	StatPrayer
+		piety
+		rigour
+		augury
+	
+	max player stats
+	
+	MonsterStats aggressive
+	
+		CurrentCombat
+			edit defence
+			
+		from_bitterkoekje
+		from_de0
+		
+	Style
+		Scythe
+		Chin
+	
+	WeaponStyles
+		from_weapon_type
+		two_handed_swords
+		blunt_weapons
+		scythes
+		bow
+		chinchompas
+		thrown
+		powered_staves
+	
+	Gear
+		a few items + assert gear
+		from_bitterkoekje_bedevere
+	
+	Weapon
+		same
+		choose style by name
+		attack speed
+		attack range (chins good for test)
+		
+	SpecialWeapon
+		same
+		
+	Equipment
+		attack bonus
+		defensive bonus
+		prayer bonus
+		wearing (choice items)
+		
+		players that match all snowflake conditions
+		
+		swap gear, 
+	
+	Character
+		specific known max rolls
+		specific known accuracies
+	
+	Player
+		pot
+		reset stats
+		pot different
+		tick down
+		combat level
+		
+		_modifiers
+		
+		known attack rolls
+		known max hit
+		
+	Monster
+		damage
+		heal
+		reset
+		dwh_reduce
+		bgs_reduce
+		reset
+		
+		from_bitterkoekje against known lad
+		
+	CoxMonster
+		from_de0
+		tbow check?
+		
+	Guardian
+		damage
+		
+	Tekton
+		reduce dinky
+	
+	Olm
+		Olm
