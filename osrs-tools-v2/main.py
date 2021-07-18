@@ -4,13 +4,20 @@ import math
 import pandas as pd
 import numpy as np
 import random
+from sanitize_filename import sanitize
+from tabulate import tabulate
+
 from bedevere import markov
+from osrsbox import items_api
+from osrsbox.items_api.item_properties import ItemProperties, ItemEquipment, ItemWeapon
 
 import resource_reader
 import spells
 
-# # Stats
 
+ITEMS = items_api.load()
+
+# # Stats
 
 class Stats:
 
@@ -38,6 +45,10 @@ class Stats:
         @classmethod
         def npc_style_bonus(cls):
             return cls(0, 1, 1, 1, 1, 1)
+
+        @classmethod
+        def no_style_bonus(cls):
+            return cls(0, 0, 0, 0, 0, 0)
 
         def __add__(self, other):
             attributes = [
@@ -365,6 +376,40 @@ class PlayerStats(Stats):
             )
 
         @classmethod
+        def from_dict_incomplete(cls, d: dict):
+            reqs = (
+                'hitpoints',
+                'attack',
+                'strength',
+                'defence',
+                'magic',
+                'ranged',
+                'prayer',
+                'mining',
+                'slayer',
+                'agility',
+            )
+
+            d = {} if not d else d
+
+            for key in reqs:
+                if key not in d.keys():
+                    d[key] = 1
+
+            return cls(
+                hitpoints=d['hitpoints'],
+                attack=d['attack'],
+                strength=d['strength'],
+                defence=d['defence'],
+                magic=d['magic'],
+                ranged=d['ranged'],
+                prayer=d['prayer'],
+                mining=d['mining'],
+                slayer=d['slayer'],
+                agility=d['agility']
+            )
+
+        @classmethod
         def from_highscores(cls, rsn: str):
             user_hs = resource_reader.lookup_player_highscores(rsn)
             return cls(
@@ -588,13 +633,18 @@ class PlayerStats(Stats):
 
     class StatPrayer:
         _no_prayer = 'no prayer'
+        _join_char = ' & '
         _piety = 'piety'
         _rigour = 'rigour'
         _augury = 'augury'
         _eagle_eye = 'eagle eye'
+        _mystic_lore = 'mystic lore'
+        _mystic_might = 'mystic might'
         _preserve = 'preserve'
         _rapid_restore = 'rapid restore'
         _rapid_heal = 'rapid heal'
+        _improved_reflexes = 'improved reflexes'
+        _ultimate_strength = 'ultimate strength'
 
         def __init__(self,
                      name: str,
@@ -622,6 +672,34 @@ class PlayerStats(Stats):
             self.magic_attack = magic_attack
             self.magic_strength = magic_strength
             self.magic_defence = magic_defence
+
+        def __add__(self, other):
+            attributes = [
+                "attack",
+                "strength",
+                "defence",
+                "ranged_attack",
+                "ranged_strength",
+                "magic_attack",
+                "magic_strength",
+                "magic_defence"
+            ]
+            new_values = {}
+            new_name = self._join_char.join([self.name, other.name])
+
+            for a in attributes:
+                norm_self = self.__getattribute__(a) - 1    # Stored as modifier, subtract 1 to get bonus
+                norm_other = other.__getattribute__(a) - 1
+                new_values[a] = 1 + norm_self + norm_other
+
+            combined_prayer = PlayerStats.StatPrayer(name=new_name, **new_values)
+            return combined_prayer
+
+        def __radd__(self, other):
+            if other == 0:
+                return self
+            else:
+                return self.__add__(other)
 
         @classmethod
         def no_boost(cls):
@@ -667,6 +745,44 @@ class PlayerStats(Stats):
                 drain_rate=3,
                 drain_effect=12,
                 ranged_attack=1.15
+            )
+
+        @classmethod
+        def mystic_lore(cls):
+            return cls(
+                name=cls._mystic_lore,
+                drain_rate=6,
+                drain_effect=6,
+                magic_attack=1.10,
+                magic_defence=1.10
+            )
+
+        @classmethod
+        def mystic_might(cls):
+            return cls(
+                name=cls._mystic_might,
+                drain_rate=3,
+                drain_effect=12,
+                magic_attack=1.15,
+                magic_defence=1.15
+            )
+
+        @classmethod
+        def improved_reflexes(cls):
+            return cls(
+                name=cls._improved_reflexes,
+                drain_rate=6,
+                drain_effect=6,
+                attack=1.10
+            )
+
+        @classmethod
+        def ultimate_strength(cls):
+            return cls(
+                name=cls._ultimate_strength,
+                drain_rate=3,
+                drain_effect=12,
+                strength=1.15
             )
 
         @classmethod
@@ -973,6 +1089,7 @@ class PlayerStyle(Style):
     accurate = 'accurate'
     longrange = 'longrange'
     defensive = 'defensive'
+    no_style = 'no style'
 
     # melee style class vars
     aggressive = 'aggressive'
@@ -985,7 +1102,7 @@ class PlayerStyle(Style):
 
     # magic style class vars
     standard = 'standard'   # also longrange, shared with ranged
-    magic_stances = (accurate, longrange, standard, defensive)
+    magic_stances = (accurate, longrange, no_style, no_style)
 
     # style names, flavor text as far as I can tell
     chop = 'chop'
@@ -1012,6 +1129,8 @@ class PlayerStyle(Style):
     long_fuse = 'long fuse'
     spell = 'spell'
     focus = 'focus'
+    standard_spell = 'standard spell'
+    defensive_spell = 'defensive spell'
 
     chinchompa_style_names = (short_fuse, medium_fuse, long_fuse)
 
@@ -1056,6 +1175,8 @@ class PlayerStyle(Style):
                 elif stance == PlayerStyle.longrange:
                     cb = Stats.Combat(0, 0, 0, 1, 0, 0)
                     attack_range_modifier += 2
+                elif stance == PlayerStyle.no_style:
+                    cb = Stats.Combat.no_style_bonus()
                 else:
                     raise Style.StyleError(stance, 'not defined')
             else:
@@ -1352,8 +1473,8 @@ class WeaponStyles(StyleCollection):
             PlayerStyle(PlayerStyle.jab, PlayerStyle.stab, PlayerStyle.accurate),
             PlayerStyle(PlayerStyle.swipe, PlayerStyle.slash, PlayerStyle.aggressive),
             PlayerStyle(PlayerStyle.fend, PlayerStyle.crush, PlayerStyle.defensive),
-            PlayerStyle(PlayerStyle.spell, PlayerStyle.magic, PlayerStyle.defensive),
-            PlayerStyle(PlayerStyle.spell, PlayerStyle.magic, PlayerStyle.standard)
+            PlayerStyle(PlayerStyle.standard_spell, PlayerStyle.magic, PlayerStyle.no_style),
+            PlayerStyle(PlayerStyle.defensive_spell, PlayerStyle.magic, PlayerStyle.no_style)
         )
 
     @classmethod
@@ -1371,8 +1492,8 @@ class WeaponStyles(StyleCollection):
             PlayerStyle(PlayerStyle.bash, PlayerStyle.crush, PlayerStyle.accurate),
             PlayerStyle(PlayerStyle.pound, PlayerStyle.crush, PlayerStyle.aggressive),
             PlayerStyle(PlayerStyle.focus, PlayerStyle.crush, PlayerStyle.defensive),
-            PlayerStyle(PlayerStyle.spell, PlayerStyle.magic, PlayerStyle.defensive),
-            PlayerStyle(PlayerStyle.spell, PlayerStyle.magic, PlayerStyle.standard)
+            PlayerStyle(PlayerStyle.standard_spell, PlayerStyle.magic, PlayerStyle.no_style),
+            PlayerStyle(PlayerStyle.defensive_spell, PlayerStyle.magic, PlayerStyle.no_style)
         )
 
     def __str__(self):
@@ -1400,6 +1521,8 @@ class Gear:
     hands = 'hands'
     feet = 'feet'
     ring = 'ring'
+
+    slots = [head, cape, neck, ammunition, weapon, shield, body, legs, hands, feet, ring]
 
     class GearError(Exception):
 
@@ -1465,7 +1588,18 @@ class Gear:
         self.aggressive_bonus = aggressive_bonus
         self.defensive_bonus = defensive_bonus
         self.prayer_bonus = prayer_bonus
-        self.slot = slot
+
+        try:
+            assert slot in self.slots
+            self.slot = slot
+
+        except AssertionError:
+
+            if slot == "ammo":
+                self.slot = self.ammunition
+            else:
+                raise Gear.GearError(slot)
+
         self.combat_requirements = combat_requirements if combat_requirements else PlayerStats.Combat.no_requirements()
         self.degradable = degradable if degradable else False
         self.quest_req = quest_req if quest_req else False
@@ -1516,6 +1650,57 @@ class Gear:
             raise Gear.DuplicateGearError(name, item_df)
 
     @classmethod
+    def from_osrsbox(cls, **kwargs):
+
+        name_key = 'name'
+        id_key = 'id'
+
+        keys = kwargs.keys()
+
+        if name_key in keys:
+            item = ITEMS.lookup_by_item_name(kwargs[name_key])
+        elif id_key in keys:
+            item = ITEMS.lookup_by_item_id(kwargs[id_key])
+        else:
+            s = f'No item found for kwargs: {kwargs}'
+            raise Gear.GearError(s)
+
+        equipment = item.equipment
+
+        assert isinstance(equipment, ItemEquipment)
+        assert item.equipable
+        assert item.equipable_by_player
+        assert not item.equipable_weapon
+
+        magic_strength = 0.01 * equipment.magic_damage
+
+        return cls(
+            name=item.name.lower(),
+            aggressive_bonus=Stats.Aggressive(
+                stab=equipment.attack_stab,
+                slash=equipment.attack_slash,
+                crush=equipment.attack_crush,
+                magic=equipment.attack_magic,
+                ranged=equipment.attack_ranged,
+                melee_strength=equipment.melee_strength,
+                ranged_strength=equipment.ranged_strength,
+                magic_strength=magic_strength   # sanitized
+            ),
+            defensive_bonus=Stats.Defensive(
+                stab=equipment.defence_stab,
+                slash=equipment.defence_slash,
+                crush=equipment.defence_crush,
+                magic=equipment.defence_magic,
+                ranged=equipment.defence_ranged
+            ),
+            prayer_bonus=equipment.prayer,
+            slot=equipment.slot,
+            combat_requirements=PlayerStats.Combat.from_dict_incomplete(equipment.requirements),
+            # degradable=
+            quest_req=item.quest_item
+        )
+
+    @classmethod
     def empty_slot(cls, slot: str):
         return cls(
             name='empty ' + slot,
@@ -1526,7 +1711,18 @@ class Gear:
         )
 
     def __str__(self):
-        return "{:} ({:} slot)".format(self.name, self.slot)
+        # s = "{:} ({:} slot)".format(self.name, self.slot)
+        header = type(self).__name__
+
+        s = '\n\t'.join([
+            header,
+            self.name,
+            self.slot,
+            str(self.aggressive_bonus),
+            str(self.defensive_bonus)
+        ])
+
+        return s
 
 
 class Weapon(Gear):
@@ -1587,7 +1783,6 @@ class Weapon(Gear):
         self.choose_style_by_name(style_name)
         self._autocast = spell
 
-
     @property
     def autocast(self) -> Union[None, spells.Spell]:
         return self._autocast
@@ -1606,7 +1801,12 @@ class Weapon(Gear):
 
     @property
     def attack_speed(self) -> int:
-        return self._attack_speed + self.active_style.attack_speed_modifier
+        if self.name == 'harmonised nightmare staff' and isinstance(self.autocast, spells.StandardSpell):
+            harm_modifier = -1
+        else:
+            harm_modifier = 0
+
+        return self._attack_speed + self.active_style.attack_speed_modifier + harm_modifier
 
     @property
     def attack_range(self) -> int:
@@ -1676,6 +1876,63 @@ class Weapon(Gear):
 
         else:
             raise Gear.DuplicateGearError(name, item_df)
+
+    # TODO: Augment this classmethod with additional data, including for SpecialWeapon
+    # @classmethod
+    # def from_osrsbox(cls, two_handed: bool, weapon_type: str, **kwargs):
+    #     default_attack_range = 0
+    #
+    #     name_key = 'name'
+    #     id_key = 'id'
+    #
+    #     keys = kwargs.keys()
+    #
+    #     if name_key in keys:
+    #         item = ITEMS.lookup_by_item_name(kwargs[name_key])
+    #     elif id_key in keys:
+    #         item = ITEMS.lookup_by_item_id(kwargs[id_key])
+    #     else:
+    #         s = f'No item found for kwargs: {kwargs}'
+    #         raise Weapon.WeaponError(s)
+    #
+    #     equipment = item.equipment
+    #     weapon = item.weapon
+    #
+    #     assert isinstance(equipment, ItemEquipment)
+    #     assert isinstance(weapon, ItemWeapon)
+    #     assert item.equipable
+    #     assert item.equipable_by_player
+    #     assert item.equipable_weapon
+    #
+    #
+    #     return cls(
+    #         name=item.name.lower(),
+    #         aggressive_bonus=Stats.Aggressive(
+    #             stab=equipment.attack_stab,
+    #             slash=equipment.attack_slash,
+    #             crush=equipment.attack_crush,
+    #             magic=equipment.attack_magic,
+    #             ranged=equipment.attack_ranged,
+    #             melee_strength=equipment.melee_strength,
+    #             ranged_strength=equipment.ranged_strength,
+    #             magic_strength=equipment.magic_damage
+    #         ),
+    #         defensive_bonus=Stats.Defensive(
+    #             stab=equipment.defence_stab,
+    #             slash=equipment.defence_slash,
+    #             crush=equipment.defence_crush,
+    #             magic=equipment.defence_magic,
+    #             ranged=equipment.defence_ranged
+    #         ),
+    #         prayer_bonus=equipment.prayer,
+    #         attack_speed=weapon.attack_speed,
+    #         attack_range=default_attack_range,      # TODO: Attack range
+    #         two_handed=two_handed,
+    #         weapon_styles=WeaponStyles.from_weapon_type(weapon_type),
+    #         combat_requirements=PlayerStats.Combat.from_dict(equipment.requirements),
+    #         # degradable=
+    #         quest_req=item.quest_item
+    #     )
 
 
 class SpecialWeapon(Weapon):
@@ -1863,6 +2120,30 @@ class Equipment:
                 self.__setattr__(g.slot, g)
 
         self.compatibility_check()
+
+    def equip_elite_void(self):
+        self.equip(
+            Gear.from_bitterkoekje_bedevere("void knight helm"),
+            Gear.from_bitterkoekje_bedevere("elite void top"),
+            Gear.from_bitterkoekje_bedevere("elite void robe"),
+            Gear.from_bitterkoekje_bedevere("void knight gloves")
+        )
+
+    def equip_regular_void(self):
+        self.equip(
+            Gear.from_bitterkoekje_bedevere("void knight helm"),
+            Gear.from_bitterkoekje_bedevere("void knight top"),
+            Gear.from_bitterkoekje_bedevere("void knight robe"),
+            Gear.from_bitterkoekje_bedevere("void knight gloves")
+        )
+
+    def equip_arma(self):
+        self.equip(
+            Gear.from_bitterkoekje_bedevere("armadyl helmet"),
+            Gear.from_bitterkoekje_bedevere("armadyl chestplate"),
+            Gear.from_bitterkoekje_bedevere("armadyl chainskirt"),
+            Gear.from_bitterkoekje_bedevere("barrows gloves")
+        )
 
     def unequip(self, *gear: Union[Gear, str]):
 
@@ -2108,13 +2389,14 @@ class Character:
 
 class Player(Character):
 
-    def __init__(self, name: str, stats: PlayerStats, equipment: Equipment, on_task: bool = True):
+    def __init__(self, name: str, stats: PlayerStats, equipment: Equipment, on_task: bool = True,
+                 kandarin_hard: bool = True):
         super().__init__(name, stats)
         self.equipment = equipment
-        self.weapon = self.equipment.weapon
-        assert isinstance(self.weapon, Weapon)
+        assert isinstance(self.equipment.weapon, Weapon)
         self.stats = stats
         self.on_task = on_task
+        self.kandarin_hard = kandarin_hard
 
         self.compatibility_check()
         self._charge_spell = False
@@ -2178,20 +2460,37 @@ class Player(Character):
     def reset_prayers(self):
         self.stats.prayer_modifiers = self.stats.StatPrayer.no_boost()
 
-    def pray(self, prayer: Union[PlayerStats.StatPrayer, str]):
+    def pray(self, *prayers: Union[PlayerStats.StatPrayer, str]):
         self.reset_prayers()
 
-        if isinstance(prayer, PlayerStats.StatPrayer):
-            self.stats.prayer_modifiers = prayer
+        n = len(prayers)
+
+        if n == 1:
+
+            for pr in prayers:
+                if isinstance(pr, PlayerStats.StatPrayer):
+                    self.stats.prayer_modifiers = pr
+                else:
+                    if pr == 'piety':
+                        self.stats.prayer_modifiers = PlayerStats.StatPrayer.piety()
+                    elif pr == 'rigour':
+                        self.stats.prayer_modifiers = PlayerStats.StatPrayer.rigour()
+                    elif pr == 'augury':
+                        self.stats.prayer_modifiers = PlayerStats.StatPrayer.augury()
+                    else:
+                        raise Exception('unrecognized prayer string', pr)
+
         else:
-            if prayer == 'piety':
-                self.stats.prayer_modifiers = PlayerStats.StatPrayer.piety()
-            elif prayer == 'rigour':
-                self.stats.prayer_modifiers = PlayerStats.StatPrayer.rigour()
-            elif prayer == 'augury':
-                self.stats.prayer_modifiers = PlayerStats.StatPrayer.augury()
-            else:
-                raise Exception('unrecognized prayer string', prayer)
+            combined_prayer = prayers[0]
+
+            for pr in prayers[1:]:
+
+                if isinstance(pr, PlayerStats.StatPrayer):
+                    combined_prayer = combined_prayer + pr
+                else:
+                    raise Exception('prayer string in the combo method', pr)
+
+            self.stats.prayer_modifiers = combined_prayer
 
     def tick_down_potion_modifiers(self, n: int = 1):
 
@@ -2429,46 +2728,40 @@ class Player(Character):
 
     @property
     def effective_attack_level(self) -> int:
-        assert isinstance(self.weapon, Weapon)
-        style_bonus = self.weapon.active_style.combat_bonus.attack
+        style_bonus = self.equipment.weapon.active_style.combat_bonus.attack
         void_atk_lvl_mod, _ = self._void_modifiers()
 
         return Character.effective_accuracy_level(self.invisible_attack, style_bonus, void_atk_lvl_mod)
 
     @property
     def effective_melee_strength_level(self) -> int:
-        assert isinstance(self.weapon, Weapon)
-        style_bonus = self.weapon.active_style.combat_bonus.strength
+        style_bonus = self.equipment.weapon.active_style.combat_bonus.strength
         _, void_str_lvl_mod = self._void_modifiers()
 
         return Character.effective_strength_level(self.invisible_strength, style_bonus, void_str_lvl_mod)
 
     @property
     def effective_defence_level(self) -> int:
-        assert isinstance(self.weapon, Weapon)
-        style_bonus = self.weapon.active_style.combat_bonus.defence
+        style_bonus = self.equipment.weapon.active_style.combat_bonus.defence
         return Character.effective_accuracy_level(self.invisible_defence, style_bonus)
 
     @property
     def effective_ranged_attack_level(self) -> int:
-        assert isinstance(self.weapon, Weapon)
-        style_bonus = self.weapon.active_style.combat_bonus.ranged
+        style_bonus = self.equipment.weapon.active_style.combat_bonus.ranged
         void_rng_atk_lvl_mod, _ = self._void_modifiers()
 
         return Character.effective_accuracy_level(self.invisible_ranged_attack, style_bonus, void_rng_atk_lvl_mod)
 
     @property
     def effective_ranged_strength_level(self) -> int:
-        assert isinstance(self.weapon, Weapon)
-        style_bonus = self.weapon.active_style.combat_bonus.ranged
+        style_bonus = self.equipment.weapon.active_style.combat_bonus.ranged
         _, void_rng_str_lvl_mod = self._void_modifiers()
 
         return Character.effective_strength_level(self.invisible_ranged_strength, style_bonus, void_rng_str_lvl_mod)
 
     @property
     def effective_magic_level(self) -> int:
-        assert isinstance(self.weapon, Weapon)
-        style_bonus = self.weapon.active_style.combat_bonus.magic
+        style_bonus = self.equipment.weapon.active_style.combat_bonus.magic
         void_mag_atk_lvl_mod, _ = self._void_modifiers()
 
         return Character.effective_accuracy_level(self.invisible_magic, style_bonus, void_mag_atk_lvl_mod)
@@ -2649,7 +2942,7 @@ class Player(Character):
         crystal_arm = 1
         crystal_dm = 1
 
-        if self.weapon.name == 'crystal bow':
+        if self.equipment.weapon.name == 'crystal bow':
             piece_arm_bonus = 0.06
             piece_dm_bonus = 0.03
             set_arm_bonus = 0.12
@@ -2737,10 +3030,21 @@ class Player(Character):
         cg_damage_boost = 3 if spell in spells.bolt_spells and self.equipment.wearing(hands='chaos gauntlets') else 0
         return cg_damage_boost
 
+    def _smoke_modifier(self, spell: spells.Spell = None):
+        smoke_arm = 1
+        smoke_db = 0    # db (damage bonus) defined instead of modifier for ease of logic
+
+        if self.equipment.wearing(weapon='mystic smoke staff') or self.equipment.wearing(weapon='smoke battlestaff'):
+            if isinstance(spell, spells.StandardSpell):
+                smoke_arm = 1.1
+                smoke_db = 0.1
+
+        return smoke_arm, smoke_db
+
     def attack_roll(self, other, special_attack: bool = False, distance: int = None) -> int:
         aggressive_combat_bonus = self.equipment.aggressive_bonus()
-        assert isinstance(self.weapon, Weapon)
-        dt = self.weapon.active_style.damage_type
+        assert isinstance(self.equipment.weapon, Weapon)
+        dt = self.equipment.weapon.active_style.damage_type
 
         if dt in Style.melee_damage_types:
             effective_level = self.effective_attack_level
@@ -2752,7 +3056,7 @@ class Player(Character):
             effective_level = self.effective_magic_level
             bonus = aggressive_combat_bonus.magic
         else:
-            raise Style.StyleError(self.weapon, self.weapon.active_style, dt)
+            raise Style.StyleError(self.equipment.weapon, self.equipment.weapon.active_style, dt)
 
         assert isinstance(other, Monster)
         # X_arm: X attack roll modifier
@@ -2774,6 +3078,13 @@ class Player(Character):
         chin_arm = self._chinchompa_modifier(distance)
         inquisitor_arm, _ = self._inquisitor_modifier()
 
+        if dt in Style.magic_damage_types:
+            spell = self.equipment.weapon.autocast
+            assert isinstance(spell, spells.Spell)
+            smoke_arm, _ = self._smoke_modifier(spell)
+        else:
+            smoke_arm = 1
+
         all_roll_modifiers = [
             salve_arm,
             slayer_arm,
@@ -2784,23 +3095,23 @@ class Player(Character):
             obsidian_arm,
             crystal_arm,
             chin_arm,
-            inquisitor_arm
+            inquisitor_arm,
+            smoke_arm
         ]
 
         if special_attack:
-            assert isinstance(self.weapon, SpecialWeapon)
-            all_roll_modifiers.append(self.weapon.special_accuracy_modifier)
+            assert isinstance(self.equipment.weapon, SpecialWeapon)
+            all_roll_modifiers.append(self.equipment.weapon.special_accuracy_modifier)
 
         active_roll_modifiers = [x for x in all_roll_modifiers if not x == 1]
 
         return Character.maximum_roll(effective_level, bonus, active_roll_modifiers)
 
     def max_hit(self, other, special_attack: bool = False) -> int:
-        assert isinstance(self.weapon, Weapon)
         assert isinstance(other, Monster)
         aggressive_gear_bonus: PlayerStats.Aggressive = self.equipment.aggressive_bonus()
 
-        dt = self.weapon.active_style.damage_type
+        dt = self.equipment.weapon.active_style.damage_type
 
         if dt in Style.melee_damage_types or dt in Style.ranged_damage_types:
             if dt in Style.melee_damage_types:
@@ -2828,6 +3139,9 @@ class Player(Character):
             _, inquisitor_dm = self._inquisitor_modifier()
             # TODO: vampyric weapons and a few others
 
+            ice_demon_dm = 0.33 if other.name == 'ice demon' else 1
+
+
             all_roll_modifiers = [
                 salve_dm,
                 slayer_dm,
@@ -2837,20 +3151,21 @@ class Player(Character):
                 twisted_bow_dm,
                 obsidian_dm,
                 crystal_dm,
-                inquisitor_dm
+                inquisitor_dm,
+                ice_demon_dm
             ]
 
             if special_attack:
-                assert isinstance(self.weapon, SpecialWeapon)
-                all_roll_modifiers.append(self.weapon.special_damage_modifier_1)
-                all_roll_modifiers.append(self.weapon.special_damage_modifier_2)
+                assert isinstance(self.equipment.weapon, SpecialWeapon)
+                all_roll_modifiers.append(self.equipment.weapon.special_damage_modifier_1)
+                all_roll_modifiers.append(self.equipment.weapon.special_damage_modifier_2)
 
             active_roll_modifiers = [x for x in all_roll_modifiers if not x == 1]
 
             max_hit = Character._max_hit(base_damage, active_roll_modifiers)
 
         elif dt in Style.magic_damage_types:
-            spell = self.weapon.autocast
+            spell = self.equipment.weapon.autocast
             assert isinstance(spell, spells.Spell)
 
             if isinstance(spell, spells.StandardSpell) or isinstance(spell, spells.AncientSpell):
@@ -2863,34 +3178,42 @@ class Player(Character):
                 raise Style.StyleError('autocast spell is not a recognized type')
 
             cg_bonus = self._chaos_gauntlets_bonus(spell)
-            gear_bonus_modifier = 1 + self.equipment.aggressive_bonus().magic_strength
+            _, smoke_db = self._smoke_modifier(spell)
+            gear_bonus_modifier = 1 + self.equipment.aggressive_bonus().magic_strength + smoke_db
             _, salve_dm = self._salve_modifier(other)
             _, slayer_dm = self._slayer_modifier()
             tome_dm = self._tome_of_fire_damage_modifier(spell)
 
-            base_damage += cg_bonus
-            base_damage = math.floor(base_damage * gear_bonus_modifier)
+            max_hit = base_damage + cg_bonus
+            max_hit = math.floor(max_hit * gear_bonus_modifier)
 
             if salve_dm > 1:
-                base_damage = math.floor(base_damage * salve_dm)
+                max_hit = math.floor(max_hit * salve_dm)
             elif slayer_dm > 1:
-                base_damage = math.floor(base_damage * slayer_dm)
+                max_hit = math.floor(max_hit * slayer_dm)
 
-            max_hit = math.floor(base_damage * tome_dm)
+            max_hit = math.floor(max_hit * tome_dm)
+
+            if other.name == IceDemon.get_name():
+                ice_demon_dm = 1.5 if spell in spells.fire_spells else 0.33
+                max_hit = math.floor(max_hit * ice_demon_dm)
+
             # TODO: Castle wars bracelet
 
+
         else:
-            raise Style.StyleError(self.weapon, self.weapon.active_style, dt)
+            raise Style.StyleError(self.equipment.weapon, self.equipment.weapon.active_style, dt)
 
         return max_hit
 
-    def damage_against_monster(self, other, special_attack: bool = False, distance: int = None):    # -> Damage:
+    def damage_against_monster(self, other, special_attack: bool = False, distance: int = None,
+                               tick_efficiency_ratio: float = None):    # -> Damage:
         assert isinstance(other, Monster)
-        assert isinstance(self.weapon, Weapon)
-        dt = self.weapon.active_style.damage_type
+        assert isinstance(self.equipment.weapon, Weapon)
+        dt = self.equipment.weapon.active_style.damage_type
 
         if special_attack:
-            assert isinstance(self.weapon, SpecialWeapon)
+            assert isinstance(self.equipment.weapon, SpecialWeapon)
 
         att_roll = self.attack_roll(other, special_attack, distance)
         def_roll = other.defence_roll(self, special_attack)
@@ -2901,21 +3224,69 @@ class Player(Character):
 
         # specific weapon types handled here
 
-        if 'scythe of vitur' in self.weapon.name:
+        if 'scythe of vitur' in self.equipment.weapon.name:
             damage = Damage(
-                self.weapon.attack_speed,
+                self.equipment.weapon.attack_speed,
                 Hitsplat.from_max_hit_acc(max_hit, accuracy, hitpoints_cap),
                 Hitsplat.from_max_hit_acc(math.floor(0.50 * max_hit), accuracy, hitpoints_cap),
-                Hitsplat.from_max_hit_acc(math.floor(0.25 * max_hit), accuracy, hitpoints_cap)
+                Hitsplat.from_max_hit_acc(math.floor(0.25 * max_hit), accuracy, hitpoints_cap),
+                tick_efficiency_ratio=tick_efficiency_ratio
+            )
+        elif self.equipment.ammunition.name in ['diamond bolts (e)', 'diamond dragon bolts (e)'] and dt in Style.ranged_damage_types:
+            assert 'crossbow' in self.equipment.weapon.name
+            activation_chance = 0.11 if self.kandarin_hard else 0.10
+            effect_max_hit = math.floor(1.15 * max_hit)
+
+            damage_values = np.arange(effect_max_hit + 1)
+            probabilities = np.zeros(damage_values.shape)
+
+            for index, dv in enumerate(damage_values):
+                p_miss = (1 - activation_chance) * (1 - accuracy) if dv == 0 else 0
+                p_norm = 0 if dv > max_hit else (1 - activation_chance) * accuracy * 1 / (max_hit + 1)
+                p_effect = activation_chance * 1 / (effect_max_hit + 1)
+
+                probabilities[index] = p_miss + p_norm + p_effect
+
+            damage = Damage(
+                self.equipment.weapon.attack_speed,
+                Hitsplat(damage_values, probabilities, hitpoints_cap),
+                tick_efficiency_ratio=tick_efficiency_ratio
+            )
+        elif self.equipment.ammunition.name in ['ruby bolts (e)', 'ruby dragon bolts (e)'] and dt in Style.ranged_damage_types:
+            assert 'crossbow' in self.equipment.weapon.name
+            activation_chance = 0.066 if self.kandarin_hard else 0.06
+            target_hp = other.stats.current_combat.hitpoints
+            effect_damage = min([100, math.floor(0.20 * target_hp)])
+            true_max = max([max_hit, effect_damage])
+
+            damage_values = np.arange(true_max + 1)
+            probabilities = np.zeros(damage_values.shape)
+
+            for index, dv in enumerate(damage_values):
+                p_miss = 0 if dv > 0 else (1 - activation_chance) * (1 - accuracy)
+                p_norm = 0 if dv > max_hit else (1 - activation_chance) * accuracy * 1 / (max_hit + 1)
+                p_effect = activation_chance if dv == effect_damage else 0
+                probabilities[index] = p_miss + p_norm + p_effect
+
+            damage = Damage(
+                self.equipment.weapon.attack_speed,
+                Hitsplat(damage_values, probabilities, hitpoints_cap),
+                tick_efficiency_ratio=tick_efficiency_ratio
             )
         else:
-            damage = Damage.from_max_hit_acc(max_hit, accuracy, self.weapon.attack_speed, hitpoints_cap)
+            damage = Damage.from_max_hit_acc(max_hit, accuracy, self.equipment.weapon.attack_speed, hitpoints_cap,
+                                             tick_efficiency_ratio)
 
         return damage
 
-    def attack_monster(self, other, special_attack: bool = False, distance: int = None, attempts: int = 1) -> int:
+    def attack_monster(self,
+                       other,
+                       special_attack: bool = False,
+                       distance: int = None,
+                       tick_efficiency_ratio: float = None,
+                       attempts: int = 1) -> int:
         assert isinstance(other, Monster)
-        damage = self.damage_against_monster(other, special_attack, distance)
+        damage = self.damage_against_monster(other, special_attack, distance, tick_efficiency_ratio)
         damage_dealt = 0
         max_damage_dealt = other.stats.current_combat.hitpoints
 
@@ -2925,15 +3296,15 @@ class Player(Character):
 
         return min([damage_dealt, max_damage_dealt])
 
-    def kill_monster(self, other, distance: int = None) -> (int, int):
+    def kill_monster(self, other, distance: int = None, tick_efficiency_ratio: float = None) -> (int, int):
         assert isinstance(other, Monster)
-        assert isinstance(self.weapon, Weapon)
-        damage = self.damage_against_monster(other, special_attack=False, distance=distance)
+        damage = self.damage_against_monster(other, special_attack=False, distance=distance,
+                                             tick_efficiency_ratio=tick_efficiency_ratio)
         max_damage_dealt = other.stats.current_combat.hitpoints
         ticks = 0
 
         while other.alive:
-            ticks += self.weapon.attack_speed
+            ticks += self.equipment.weapon.attack_speed
             for rd in damage.random():
                 other.damage(rd)
 
@@ -3041,8 +3412,30 @@ class Player(Character):
         )
 
     @classmethod
+    def max_lance_bandos(cls):
+        weapon = Weapon.from_bitterkoekje_bedevere('dragon hunter lance')
+        weapon.choose_style_by_name(PlayerStyle.lunge)
+
+        return cls(
+            name='[max] lance bandos',
+            stats=PlayerStats.max_player_stats(),
+            equipment=Equipment(
+                weapon,
+                Gear.from_bitterkoekje_bedevere('neitiznot faceguard'),
+                Gear.from_bitterkoekje_bedevere("infernal cape"),
+                Gear.from_bitterkoekje_bedevere("amulet of torture"),
+                Gear.from_bitterkoekje_bedevere('bandos chestplate'),
+                Gear.from_bitterkoekje_bedevere('bandos tassets'),
+                Gear.from_bitterkoekje_bedevere("avernic defender"),
+                Gear.from_bitterkoekje_bedevere("ferocious gloves"),
+                Gear.from_bitterkoekje_bedevere("primordial boots"),
+                Gear.from_bitterkoekje_bedevere("berserker (i)")
+            )
+        )
+
+    @classmethod
     def dwh_inquisitor_brimstone(cls):
-        weapon = Weapon.from_bitterkoekje_bedevere("dragon warhammer")
+        weapon = SpecialWeapon.from_bitterkoekje_bedevere("dragon warhammer")
         weapon.choose_style_by_name(PlayerStyle.pound)
 
         return cls(
@@ -3059,6 +3452,27 @@ class Player(Character):
                 Gear.from_bitterkoekje_bedevere("ferocious gloves"),
                 Gear.from_bitterkoekje_bedevere("primordial boots"),
                 Gear.from_bitterkoekje_bedevere("brimstone ring")
+            )
+        )
+
+    @classmethod
+    def bgs_bandos(cls):
+        weapon = SpecialWeapon.from_bitterkoekje_bedevere('bandos godsword')
+        weapon.choose_style_by_name(PlayerStyle.slash)
+
+        return cls(
+            name='bgs bandos',
+            stats=PlayerStats.max_player_stats(),
+            equipment=Equipment(
+                weapon,
+                Gear.from_bitterkoekje_bedevere('neitiznot faceguard'),
+                Gear.from_bitterkoekje_bedevere('infernal cape'),
+                Gear.from_bitterkoekje_bedevere('amulet of torture'),
+                Gear.from_bitterkoekje_bedevere('bandos chestplate'),
+                Gear.from_bitterkoekje_bedevere('bandos tassets'),
+                Gear.from_bitterkoekje_bedevere('ferocious gloves'),
+                Gear.from_bitterkoekje_bedevere('primordial boots'),
+                Gear.from_bitterkoekje_bedevere('berserker (i)')
             )
         )
 
@@ -3348,6 +3762,175 @@ class Player(Character):
             )
         )
 
+    @classmethod
+    def decihybrid_ice_demon(cls):
+        weapon = Weapon.from_bitterkoekje_bedevere('smoke battlestaff')
+        weapon.choose_autocast(PlayerStyle.defensive_spell, spells.fire_surge)
+
+        return cls(
+            name='[hybrid gang] fire surge (smoke)',
+            stats=PlayerStats(
+                PlayerStats.Combat.from_highscores('decihybrid'),
+                PlayerStats.Aggressive.no_bonus(),
+                PlayerStats.Defensive.no_bonus()
+            ),
+            equipment=Equipment(
+                weapon,
+                Gear.from_bitterkoekje_bedevere("god mitre"),
+                Gear.from_bitterkoekje_bedevere("god cape (i)"),
+                Gear.from_bitterkoekje_bedevere("occult necklace"),
+                Gear.from_bitterkoekje_bedevere("mystic robe top"),
+                Gear.from_bitterkoekje_bedevere("mystic robe bottom"),
+                Gear.from_bitterkoekje_bedevere("tome of fire"),
+                Gear.from_bitterkoekje_bedevere("regen bracelet"),
+                Gear.from_bitterkoekje_bedevere("infinity boots"),
+                Gear.from_bitterkoekje_bedevere("brimstone ring")
+            )
+        )
+
+    @classmethod
+    def decihybrid_ice_demon_chad_mode(cls):
+        weapon = Weapon.from_bitterkoekje_bedevere('smoke battlestaff')
+        weapon.choose_autocast(PlayerStyle.defensive_spell, spells.fire_surge)
+
+        return cls(
+            name='[hybrid gang] fire surge (smoke)',
+            stats=PlayerStats.max_player_stats(),
+            equipment=Equipment(
+                weapon,
+                Gear.from_bitterkoekje_bedevere("ancestral hat"),
+                Gear.from_bitterkoekje_bedevere("god cape (i)"),
+                Gear.from_bitterkoekje_bedevere("occult necklace"),
+                Gear.from_bitterkoekje_bedevere("ahrim's robetop"),
+                Gear.from_bitterkoekje_bedevere("ahrim's robeskirt"),
+                Gear.from_bitterkoekje_bedevere("tome of fire"),
+                Gear.from_bitterkoekje_bedevere("tormented bracelet"),
+                Gear.from_bitterkoekje_bedevere("eternal boots"),
+                Gear.from_bitterkoekje_bedevere("brimstone ring")
+            )
+        )
+
+    @classmethod
+    def arma_dhcb_ruby(cls):
+        weapon = Weapon.from_bitterkoekje_bedevere('dragon hunter crossbow')
+        weapon.choose_style_by_name(PlayerStyle.rapid)
+
+        return cls(
+            name='[arma] dhcb (ruby dragon bolts e)',
+            stats=PlayerStats.max_player_stats(),
+            equipment=Equipment(
+                weapon,
+                Gear.from_bitterkoekje_bedevere("ruby dragon bolts (e)"),
+                Gear.from_bitterkoekje_bedevere("armadyl helmet"),
+                Gear.from_bitterkoekje_bedevere("ava's assembler"),
+                Gear.from_bitterkoekje_bedevere("necklace of anguish"),
+                Gear.from_bitterkoekje_bedevere("armadyl chestplate"),
+                Gear.from_bitterkoekje_bedevere("armadyl chainskirt"),
+                Gear.from_bitterkoekje_bedevere("twisted buckler"),
+                Gear.from_bitterkoekje_bedevere("barrows gloves"),
+                Gear.from_bitterkoekje_bedevere("pegasian boots"),
+                Gear.from_bitterkoekje_bedevere("archer (i)")
+            )
+
+        )
+
+    @classmethod
+    def max_kodai_fire_surge(cls):
+        weapon = Weapon.from_bitterkoekje_bedevere('kodai wand')
+        weapon.choose_autocast(PlayerStyle.standard_spell, spells.fire_surge)
+
+        return cls(
+            name='[max] kodai (fire surge)',
+            stats=PlayerStats.max_player_stats(),
+            equipment=Equipment(
+                weapon,
+                Gear.from_bitterkoekje_bedevere("ancestral hat"),
+                Gear.from_bitterkoekje_bedevere("god cape (i)"),
+                Gear.from_bitterkoekje_bedevere("occult necklace"),
+                Gear.from_bitterkoekje_bedevere("ancestral robe top"),
+                Gear.from_bitterkoekje_bedevere("ancestral robe bottoms"),
+                Gear.from_bitterkoekje_bedevere("tome of fire"),
+                Gear.from_bitterkoekje_bedevere("tormented bracelet"),
+                Gear.from_bitterkoekje_bedevere("eternal boots"),
+                Gear.from_bitterkoekje_bedevere("brimstone ring")
+            )
+        )
+
+    @classmethod
+    def max_harm_fire_surge(cls):
+        weapon = Weapon.from_bitterkoekje_bedevere('harmonised nightmare staff')
+        weapon.choose_autocast(PlayerStyle.standard_spell, spells.fire_surge)
+
+        return cls(
+            name='[max] harm (fire surge)',
+            stats=PlayerStats.max_player_stats(),
+            equipment=Equipment(
+                weapon,
+                Gear.from_bitterkoekje_bedevere("ancestral hat"),
+                Gear.from_bitterkoekje_bedevere("god cape (i)"),
+                Gear.from_bitterkoekje_bedevere("occult necklace"),
+                Gear.from_bitterkoekje_bedevere("ancestral robe top"),
+                Gear.from_bitterkoekje_bedevere("ancestral robe bottoms"),
+                Gear.from_bitterkoekje_bedevere("tome of fire"),
+                Gear.from_bitterkoekje_bedevere("tormented bracelet"),
+                Gear.from_bitterkoekje_bedevere("eternal boots"),
+                Gear.from_bitterkoekje_bedevere("brimstone ring")
+            )
+        )
+
+    @classmethod
+    def mage_void_ice_demon(cls):
+        weapon = Weapon.from_bitterkoekje_bedevere('smoke battlestaff')
+        weapon.choose_autocast(PlayerStyle.defensive_spell, spells.fire_surge)
+
+        return cls(
+            name='[void] fire surge (smoke)',
+            stats=PlayerStats.max_player_stats(),
+            equipment=Equipment(
+                weapon,
+                Gear.from_bitterkoekje_bedevere('void knight helm'),
+                Gear.from_bitterkoekje_bedevere('god cape (i)'),
+                Gear.from_bitterkoekje_bedevere('occult necklace'),
+                Gear.from_bitterkoekje_bedevere('void knight top'),
+                Gear.from_bitterkoekje_bedevere('void knight robe'),
+                Gear.from_bitterkoekje_bedevere('tome of fire'),
+                Gear.from_bitterkoekje_bedevere('void knight gloves'),
+                Gear.from_bitterkoekje_bedevere('infinity boots'),
+                Gear.from_bitterkoekje_bedevere('brimstone ring')
+            )
+        )
+
+    @classmethod
+    def shaun_restricted_mage(cls):
+        rsn = "31 pray btw"
+
+        weapon = Weapon.from_bitterkoekje_bedevere('trident of the swamp')
+        weapon.choose_autocast(PlayerStyle.accurate, spells.trident_of_the_swamp)
+
+        stats = PlayerStats(
+            PlayerStats.Combat.from_highscores(rsn),
+            PlayerStats.Aggressive.no_bonus(),
+            PlayerStats.Defensive.no_bonus()
+        )
+
+        return cls(
+            name="[snowflake] 31 pray btw mage setup",
+            stats=stats,
+            equipment=Equipment(
+                weapon,
+                Gear.from_osrsbox(name="dagon'hai hat"),
+                Gear.from_osrsbox(name="imbued saradomin cape"),
+                Gear.from_osrsbox(name="occult necklace"),
+                Gear.from_osrsbox(name="ruby bolts (e)"),
+                Gear.from_osrsbox(name="infinity top"),
+                Gear.from_osrsbox(name="infinity bottoms"),
+                Gear.from_osrsbox(name="mage's book"),
+                Gear.from_osrsbox(name="tormented bracelet"),
+                Gear.from_osrsbox(name="infinity boots"),
+                Gear.from_osrsbox(name="brimstone ring")
+            )
+        )
+
     def __str__(self):
         return "name: {:}\n{:}".format(self.name, self.equipment)
 
@@ -3439,6 +4022,7 @@ class Monster(Character):
     def dwh_reduce(self, damage_dealt: bool = True):
         multiplier = self._dwh_defence_multiplier if damage_dealt else self._dwh_defence_multiplier_on_miss
         self.stats.current_combat.reduce_defence_ratio(multiplier)
+        return self.stats.current_combat.defence
 
     def arclight_reduce(self):
         reduction_modifier = 0.10 if self.demon in self.attributes else 0.05
@@ -3500,6 +4084,15 @@ class Monster(Character):
 
         return 0
 
+    def vulnerability_reduce(self, success: bool = True):
+
+        if success:
+            multiplier = 0.90
+            self.stats.current_combat.reduce_defence_ratio(multiplier)
+            return self.stats.current_combat.defence
+        else:
+            return self.stats.current_combat.defence
+
     @property
     def effective_defence_level(self) -> int:
         style_bonus = MonsterStats.Combat.npc_style_bonus().defence
@@ -3512,9 +4105,9 @@ class Monster(Character):
 
     def defence_roll(self, other, special_attack: bool = False) -> int:
         assert isinstance(other, Player)
-        assert isinstance(other.weapon, Weapon)
+        assert isinstance(other.equipment.weapon, Weapon)
 
-        dt = other.weapon.active_style.damage_type
+        dt = other.equipment.weapon.active_style.damage_type
 
         if dt in Style.melee_damage_types or dt in Style.ranged_damage_types:
             stat = self.effective_defence_level
@@ -3524,8 +4117,8 @@ class Monster(Character):
             raise Style.StyleError('unrecognized damage type: {:}'.format(dt))
 
         if special_attack:
-            assert isinstance(other.weapon, SpecialWeapon)
-            dt_def_roll = other.weapon.special_defence_roll if other.weapon.special_defence_roll else dt
+            assert isinstance(other.equipment.weapon, SpecialWeapon)
+            dt_def_roll = other.equipment.weapon.special_defence_roll if other.equipment.weapon.special_defence_roll else dt
         else:
             dt_def_roll = dt
 
@@ -3544,6 +4137,7 @@ class Monster(Character):
 
     @classmethod
     def from_bitterkoekje(cls, name: str):
+        name = name.lower()
         boss_df = resource_reader.lookup_monster(name)
 
         if boss_df['location'].values[0] == 'raids':
@@ -3632,6 +4226,10 @@ class CoxMonster(Monster):
         # catch improper definitions
         if name == Guardian.get_name() and not isinstance(self, Guardian):
             raise CoxMonster.MonsterError(self, f'wrong {name} class definition, use Guardian(CoxMonster)')
+        elif name == SkeletalMystic.get_name() and not isinstance(self, SkeletalMystic):
+            raise CoxMonster.MonsterError(self, f'wrong {name} class definition, use SkeletalMystic(CoxMonster)')
+        elif name == IceDemon.get_name() and not isinstance(self, IceDemon):
+            raise CoxMonster.MonsterError(self, f'wrong {name} class definition, use IceDemon(CoxMonster)')
         elif name == Tekton.get_name() and not isinstance(self, Tekton):
             raise CoxMonster.MonsterError(self, f'wrong {name} class definition, use Tekton(CoxMonster)')
         elif 'olm' in name and not isinstance(self, Olm):
@@ -3770,6 +4368,48 @@ class CoxMonster(Monster):
         return cls._name
 
 
+class IceDemon(CoxMonster):
+    _name = 'ice demon'
+
+    def __init__(self, party_size: int, challenge_mode: bool,
+                 max_combat_level: int = None,
+                 max_hitpoints_level: int = None,):
+        base_stats = MonsterStats.from_de0(IceDemon._name)
+        super().__init__(
+            name=IceDemon._name,
+            base_stats=base_stats,
+            party_size=party_size,
+            challenge_mode=challenge_mode,
+            max_combat_level=max_combat_level,
+            max_hitpoints_level=max_hitpoints_level,
+            attribute=Monster.demon
+        )
+
+    @property
+    def effective_magic_defence_level(self) -> int:
+        # Ice demon calculates magic defence level from defence instead of magic level
+        style_bonus = MonsterStats.Combat.npc_style_bonus().magic
+        return Character.effective_accuracy_level(self.stats.current_combat.defence, style_bonus)
+
+
+class SkeletalMystic(CoxMonster):
+    _name = 'skeletal mystic'
+
+    def __init__(self, party_size: int, challenge_mode: bool,
+                 max_combat_level: int = None,
+                 max_hitpoints_level: int = None,):
+        base_stats = MonsterStats.from_de0(SkeletalMystic._name)
+        super().__init__(
+            name=SkeletalMystic._name,
+            base_stats=base_stats,
+            party_size=party_size,
+            challenge_mode=challenge_mode,
+            max_combat_level=max_combat_level,
+            max_hitpoints_level=max_hitpoints_level,
+            attribute=Monster.undead
+        )
+
+
 class Guardian(CoxMonster):
     _name = 'guardian'
 
@@ -3830,6 +4470,8 @@ class Tekton(CoxMonster):
 class Olm(CoxMonster):
     _name: str
     _combat_level: int
+    _head_max_hitpoints = 13600
+    _hand_max_hitpoints = 10200
 
     def __init__(self, party_size: int, challenge_mode: bool, max_combat_level: int = None,
                  max_hitpoints_level: int = None):
@@ -3871,16 +4513,19 @@ class OlmHead(Olm):
     def __init__(self, party_size: int, challenge_mode: bool, max_combat_level: int = None,
                  max_hitpoints_level: int = None):
         super().__init__(party_size, challenge_mode, max_combat_level, max_hitpoints_level)
+        self.stats.combat.hitpoints = self._head_max_hitpoints
+        self.reset_current_stats()
 
 
 class OlmMeleeHand(Olm):
     _name = 'great olm (left/melee claw)'
     _combat_level = 750
 
-    def __init__(self, party_size: int, challenge_mode: bool,
-                 max_combat_level: int = None,
+    def __init__(self, party_size: int, challenge_mode: bool, max_combat_level: int = None,
                  max_hitpoints_level: int = None):
         super().__init__(party_size, challenge_mode, max_combat_level, max_hitpoints_level)
+        self.stats.combat.hitpoints = self._hand_max_hitpoints
+        self.reset_current_stats()
 
     def cripple_threshold(self):
         pass
@@ -3890,10 +4535,11 @@ class OlmMageHand(Olm):
     _name = 'great olm (right/mage claw)'
     _combat_level = 549
 
-    def __init__(self, party_size: int, challenge_mode: bool,
-                 max_combat_level: int = None,
+    def __init__(self, party_size: int, challenge_mode: bool, max_combat_level: int = None,
                  max_hitpoints_level: int = None):
         super().__init__(party_size, challenge_mode, max_combat_level, max_hitpoints_level)
+        self.stats.combat.hitpoints = self._hand_max_hitpoints
+        self.reset_current_stats()
 
 # Damage Data
 
@@ -3965,13 +4611,24 @@ class Damage:
     _seconds_per_tick = 0.6
     _ticks_per_second = 1 / _seconds_per_tick
 
-    def __init__(self, attack_speed: int, *hitsplats: Hitsplat):
+    def __init__(self, attack_speed: int, *hitsplats: Hitsplat, **kwargs):
         # TODO: Make the default __iter__ behavior of this class yield hitsplats
-        self.attack_speed = attack_speed
+
+        # KWARGS
+        tick_efficiency_key = 'tick_efficiency_ratio'
+
+        if tick_efficiency_key in kwargs.keys():
+            val = kwargs[tick_efficiency_key]
+            self.tick_efficiency_ratio = val if val else 1
+        else:
+            self.tick_efficiency_ratio = 1
+
+        # INIT
+        self.attack_speed = attack_speed / self.tick_efficiency_ratio
         assert len(hitsplats) > 0
         self.hitsplats = hitsplats
         self.mean = sum(hs.mean for hs in self.hitsplats)
-        self.per_tick = self.mean / attack_speed
+        self.per_tick = self.mean / self.attack_speed
         self.per_second = self.per_tick * Damage._ticks_per_second
 
     def random(self, attempts: int = 1) -> List[int]:
@@ -3984,9 +4641,10 @@ class Damage:
         return hits
 
     @classmethod
-    def from_max_hit_acc(cls, max_hit: int, accuracy: float, attack_speed: int, hitpoints_cap: int = None):
+    def from_max_hit_acc(cls, max_hit: int, accuracy: float, attack_speed: int, hitpoints_cap: int = None,
+                         tick_efficiency_ratio: float = None):
         hs = Hitsplat.from_max_hit_acc(max_hit=max_hit, accuracy=accuracy, hitpoints_cap=hitpoints_cap)
-        return cls(attack_speed, hs)
+        return cls(attack_speed, hs, tick_efficiency_ratio=tick_efficiency_ratio)
 
 
 def attack_absorbing_markov_chain(player: Player, monster: Monster, special_attack: bool = False, distance: int = None):

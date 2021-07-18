@@ -1,3 +1,13 @@
 osrs-tools-v2\.idea
 osrs-tools-v2\venv
 osrs-tools-v2\__pycache__
+.idea/
+__pycache__/
+*.pyc
+venv/
+
+osrs-tools-v2\osrs-tools-v2\venv\*
+*.pyc
+*.xml
+*.tsv
+*.ods

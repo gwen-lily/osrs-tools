@@ -171,5 +171,7 @@ bolt_spells = [
 	fire_bolt
 ]
 
+
+
 if __name__ == '__main__':
 	pass

@@ -153,13 +153,14 @@ def rope_decorator():
 	ranger_name = 'deathly ranger'
 	mage_name = 'deathly mage'
 
-	void_bp = Player.void_bp()
+	# void_bp = Player.void_bp()
 	void_tbow = Player.void_tbow()
 	arma_tbow = Player.arma_tbow()
 	void_chin = Player.void_chinchompa()
 	arma_chin = Player.arma_chinchompa()
 
-	players = [void_bp, void_tbow, arma_tbow, void_chin, arma_chin]
+	# players = [void_bp, void_tbow, arma_tbow, void_chin, arma_chin]
+	players = [void_tbow, arma_tbow, void_chin, arma_chin]
 
 	for p in players:
 		p.overload()
@@ -169,8 +170,9 @@ def rope_decorator():
 	additional_targets = 3
 
 	csc = ct.plot_comparison(ct.cox_scale_comparison)
-	csc(players, ranger_name, bounds=(1, 100), distance=attack_distance, additional_monsters_hit=additional_targets)
-	csc(players, mage_name, bounds=(1, 100), distance=attack_distance, additional_monsters_hit=additional_targets)
+	# csc = ct.print_comparison(ct.cox_scale_comparison)
+	csc(players, ranger_name, bounds=(15, 100), distance=attack_distance, additional_monsters_hit=additional_targets, cast_vulnerability=True, plot_title="deathly ranger (vulnerability)")
+	csc(players, mage_name, bounds=(15, 100), distance=attack_distance, additional_monsters_hit=additional_targets, cast_vulnerability=True, plot_title="deathly mage (vulnerability)")
 
 
 if __name__ == '__main__':

@@ -145,6 +145,46 @@ def chin_decorator():
 
 
 
+def shaman_decorator():
+	shaman_name = 'lizardman shaman'
+
+	task_chinner = Player.on_task_chinchompa()
+	void_chin = Player.void_chinchompa()
+	arma_chin = Player.arma_chinchompa()
+	task_tbow = Player.on_task_tbow()
+	void_tbow = Player.void_tbow()
+	arma_tbow = Player.arma_tbow()
+
+	players = [
+		task_chinner,
+		void_chin,
+		arma_chin,
+		task_tbow,
+		void_tbow,
+		arma_tbow
+	]
+
+	for p in players:
+		p.overload()
+		p.pray(PlayerStats.StatPrayer.rigour())
+
+	attack_distance = 9
+	additional_targets = 4
+
+	csc = ct.plot_comparison(ct.cox_scale_comparison)
+	# csc = ct.print_comparison(ct.cox_scale_comparison)
+	csc(
+		players,
+		shaman_name,
+		bounds=(15, 100),
+		distance=attack_distance,
+		additional_monsters_hit=additional_targets,
+		plot_title="lizardman shaman (vulnerability)",
+		cast_vulnerability=True
+	)
+
+
+
 if __name__ == '__main__':
 	# main(7, False)
-	chin_decorator()
+	shaman_decorator()
