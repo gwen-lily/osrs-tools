@@ -1,6 +1,32 @@
 import numpy as np
 from typing import Union, List, Iterable
 
+SKILLS = (
+    "attack",
+    "strength",
+    "defence",
+    "ranged",
+    "prayer",
+    "magic",
+    "runecraft",
+    "hitpoints",
+    "crafting",
+    "mining",
+    "smithing",
+    "fishing",
+    "cooking",
+    "firemaking",
+    "woodcutting",
+    "agility",
+    "herblore",
+    "thieving",
+    "fletching",
+    "slayer",
+    "farming",
+    "construction",
+    "hunter"
+)
+
 
 def compute_differential(levels: Union[int, Iterable[int]]):
 	# returns an array of the XP needed to advance from LEVEL to LEVEL + 1

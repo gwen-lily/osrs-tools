@@ -1,5 +1,5 @@
 # osrs-tools-v2\main.py
-from typing import Tuple, Union, List
+from typing import Tuple, Union, List, Iterable
 import math
 import pandas as pd
 import numpy as np
@@ -13,6 +13,7 @@ from osrsbox.items_api.item_properties import ItemProperties, ItemEquipment, Ite
 
 import resource_reader
 import spells
+from boost_effects import *
 
 
 ITEMS = items_api.load()
@@ -2521,6 +2522,15 @@ class Player(Character):
         # ccb.mining = ccb
         pass
 
+    def apply_boost(self, boost_effect: BoostEffect):
+        cb = self.stats.combat
+        pm = self.stats.potion_modifiers
+
+        for skill in boost_effect.affected_skills:
+            boost_function = boost_effect.__getattribute__(skill)
+            boost_value = boost_function(cb.__getattribute__(skill))
+            pm.__setattr__(skill, boost_value)
+
     def super_combat_potion(self):
         cb = self.stats.combat
         pm = self.stats.potion_modifiers
@@ -4320,17 +4330,33 @@ class CoxMonster(Monster):
 
     @classmethod
     def from_de0(cls, name: str, party_size: int, challenge_mode: bool, max_combat_level: int = None,
-                 max_hitpoints_level: int = None, attribute: Union[List[str], str] = None):
+                 max_hitpoints_level: int = None, average_mining_level: int = None,
+                 attribute: Union[List[str], str] = None):
 
-        return cls(
-            name=name,
-            base_stats=MonsterStats.from_de0(name),
-            party_size=party_size,
-            challenge_mode=challenge_mode,
-            max_combat_level=max_combat_level,
-            max_hitpoints_level=max_hitpoints_level,
-            attribute=attribute
-        )
+        if name == Guardian.get_name():
+            return Guardian(party_size, challenge_mode, max_combat_level, max_hitpoints_level, average_mining_level)
+        elif name == SkeletalMystic.get_name():
+            return SkeletalMystic(party_size, challenge_mode, max_combat_level, max_hitpoints_level)
+        elif name == Tekton.get_name():
+            return Tekton(party_size, challenge_mode, max_combat_level, max_hitpoints_level)
+        elif name == OlmHead.get_name():
+            return OlmHead(party_size, challenge_mode, max_combat_level, max_hitpoints_level)
+        elif name == OlmMeleeHand.get_name():
+            return OlmMeleeHand(party_size, challenge_mode, max_combat_level, max_hitpoints_level)
+        elif name == OlmMageHand.get_name():
+            return OlmMageHand(party_size, challenge_mode, max_combat_level, max_hitpoints_level)
+        elif name == IceDemon.get_name():
+            return IceDemon(party_size, challenge_mode, max_combat_level, max_hitpoints_level)
+        else:
+            return cls(
+                name=name,
+                base_stats=MonsterStats.from_de0(name),
+                party_size=party_size,
+                challenge_mode=challenge_mode,
+                max_combat_level=max_combat_level,
+                max_hitpoints_level=max_hitpoints_level,
+                attribute=attribute
+            )
 
     def player_hp_scaling_factor(self):
         return self.max_combat_level / PlayerStats.Combat.max_combat_level

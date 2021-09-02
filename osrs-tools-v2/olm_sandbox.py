@@ -149,7 +149,7 @@ def main(party_size: int, challenge_mode: bool):
 
 	players = [bandos_camp, bandos_flex]
 
-	cox_tools.cox_scale_comparison(players, OlmMeleeHand.get_name(), bounds=(15, 32))
+	ct.cox_scale_comparison(players, OlmMeleeHand.get_name(), bounds=(15, 32))
 
 
 def camp_vs_fifteen_sixteen_comp(party_size: int, challenge_mode: bool):
