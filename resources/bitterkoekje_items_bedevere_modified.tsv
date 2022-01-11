@@ -7,10 +7,11 @@ Abyssal bludgeon			102								85				0	0.495		Crush		4	14			70	70						weapon	blu
 Abyssal dagger	75	40	-4						1		75				0.25	-0.15		Slash		4	4			70							weapon	stab swords	FALSE	FALSE	FALSE
 Abyssal tentacle		90									86				0.25	0		Slash		4	13			75							weapon	whips	FALSE	TRUE	FALSE
 Abyssal whip		82									82				0.25	0		Slash		4	13			70							weapon	whips	FALSE	FALSE	FALSE
+Ancient godsword	0	132	80	0	0	0	0	0	0	0	132			8	1	0.1		Slash		6	10			75							weapon	two-handed swords	TRUE		
 Ancient mace	10	-2	16								14			3				Crush		5	7										weapon	spiked weapons			
 Arclight	10	38	-2				3	2	2		8							Stab		4	6										weapon	slash swords			
-Armadyl godsword		132	80								132			8	1	0.1	0.25	Slash		6	10										weapon	two-handed swords	TRUE		
-Bandos godsword		132	80								132			8	1	0.1	0.1	Slash		6	10										weapon	two-handed swords	TRUE		
+Armadyl godsword		132	80								132			8	1	0.1	0.25	Slash		6	10			75							weapon	two-handed swords	TRUE		
+Bandos godsword		132	80								132			8	1	0.1	0.1	Slash		6	10			75							weapon	two-handed swords	TRUE		
 Barrelchest anchor	-2	10	92					20			100				1	0.1		Crush		6	7										weapon	spiked weapons	TRUE		
 Black salamander		59			69						71	49								5	18										weapon				
 Blade of Saeldor	55	94									89									4	6			75							weapon	slash swords	FALSE	TRUE	TRUE
@@ -117,7 +118,7 @@ Armadyl crossbow					100									1	1			ranged		6	17										weapon	crossbow
 Black chinchompa					80							30								4	17										weapon	chinchompas			
 Chinchompa					45							0								4	17										weapon	chinchompas			
 Crystal bow					100							70								5	17										weapon	bow			
-cbow2					100							70								5	17										weapon	crossbow			
+Bow of Faerdhinen	0	0	0	0	128	0	0	0	0	0	0	106	0	0						5	17						75			70	weapon	bow			
 Crystal bow (basic)					72							42		1						5	17										weapon	bow			
 Crystal bow (attuned)					118							88		2						5	17										weapon	bow			
 Crystal bow (perfected)					172							138		3						5	17										weapon	bow			
@@ -152,9 +153,10 @@ Oak shortbow					14															4	17										weapon	bow
 Shortbow					8															4	17										weapon	bow			
 Red chinchompa					70							15								4	17										weapon	chinchompas			
 Seercull					69													ranged		5	17										weapon	bow			
-Toxic blowpipe					60							40				0.5		ranged		3	17										weapon	thrown			
+Toxic blowpipe					30							20			1	0.5		ranged		3	17										weapon	thrown			
 tbpotykgfbnhltmfgylnhkm					30							25			1	0.5		ranged		3	17										weapon	thrown			
 Twisted bow					70							20		4						6	17										weapon	bow			
+Zaryte Crossbow					110	14	14	12	15	16				1	1			ranged		6	17						80				weapon	crossbow			
 																																			
 Ahrim's staff	12	-1	62	15		3	2	5	15		68		0.05							5	15										weapon	staves			
 Ancient staff	10	-1	40	15		2	3	1	15		50			-1						5	15										weapon	staves			
@@ -193,6 +195,7 @@ Fire battlestaff	7	-1	28	10		2	3	1	10		35									5	15										weapon	staves
 																																			
 																																			
 None																															head				
+Torva full helm				-5	-5	59	60	62	-2	57	8			1												80									
 Neitiznot faceguard						36	34	38	3	34	6			3																	head				
 nezzzzzy						36	34	38	3	34	5			3																	head				
 Inquisitor's great helm	-2	-2	8	0	-5	19	10	21	0	12	4			1																	head				
@@ -288,6 +291,7 @@ Bonecrusher necklace	0	0	0	0	0	0	0	0	0	0				12																	neck
 																																			
 																																			
 None																															body				
+Torva platebody				-18	-14	117	111	117	-11	142	6			1																					
 Inquisitor's hauberk	-3	-3	12	-11	-10	67	55	71		35	4			2																	body				
 Bandos chestplate				-15	-10	98	93	105	-6	133	4			1																	body				
 Fighter torso				-40		62	85	62	-10	67	4																				body				
@@ -333,6 +337,7 @@ Monk's robe top														6																	body
 																																			
 																																			
 None																															legs				
+Torva platelegs				-24	-11	87	78	79	-9	102	4			1																					
 Inquisitor's plateskirt	-3	-3	12	-9	-5	42	30	49	0	22	2			2																	legs				
 Bandos tassets				-21	-7	71	63	66	-4	93	2			1																	legs				
 Void knight robe						30	30	30	30	30																					legs				
@@ -418,6 +423,7 @@ Book of darkness				10										5																	shield
 																																			
 None																															hands				
 Ferocious gloves	16	16	16	-16	-16	0	0	0	0	0	14																				hands				
+Zaryte vambraces	-8	-8	-8		18	8	8	8	5	8		2		1																					
 Barrows gloves	12	12	12	6	12	12	12	12	6	12	12																				hands				
 Void knight gloves						6	6	6	4	6																					hands				
 Tormented bracelet				10									0.05	2																	hands				

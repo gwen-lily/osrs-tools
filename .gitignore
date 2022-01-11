@@ -11,3 +11,6 @@ osrs-tools-v2\osrs-tools-v2\venv\*
 *.xml
 *.tsv
 *.ods
+*.pyc
+*.xml
+*.csv

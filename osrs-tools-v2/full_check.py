@@ -91,11 +91,10 @@ class IronGearTest(unittest.TestCase):
 				Gear.from_bitterkoekje_bedevere('berserker (i)')
 			)
 		)
-		nargeth.weapon.choose_style_by_name(PlayerStyle.slash)
-		self.assertEqual(nargeth.stats.combat.strength, 97)
+		nargeth.equipment.weapon.choose_style_by_name(PlayerStyle.slash)
 		self.assertEqual(nargeth.equipment.aggressive_bonus().slash, 85)
 		self.assertEqual(nargeth.equipment.aggressive_bonus().melee_strength, 54)
-		nargeth.weapon.choose_style_by_name(PlayerStyle.lunge)
+		nargeth.equipment.weapon.choose_style_by_name(PlayerStyle.lunge)
 		self.assertEqual(nargeth.equipment.aggressive_bonus().stab, 58)
 		self.assertEqual(nargeth.equipment.aggressive_bonus().melee_strength, 54)
 

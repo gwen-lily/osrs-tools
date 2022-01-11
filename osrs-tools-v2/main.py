@@ -2274,6 +2274,9 @@ class Equipment:
             cape="graceful cape"
         )
 
+    def zaryte_crossbow(self) -> bool:
+        return self.weapon.name == 'zaryte crossbow'
+
     def __str__(self):
         gear = self.get_gear()
         s = ''.join(["Equipment:", "\n\t{:}"*len(gear)])
@@ -2952,8 +2955,10 @@ class Player(Character):
         crystal_arm = 1
         crystal_dm = 1
 
-        if self.equipment.weapon.name == 'crystal bow':
-            piece_arm_bonus = 0.06
+        valid_weapon_names = ['crystal bow', 'bow of faerdhinen']
+
+        if self.equipment.weapon.name in valid_weapon_names:
+            piece_arm_bonus = 0.06  # accuracy roll modifier (arm)
             piece_dm_bonus = 0.03
             set_arm_bonus = 0.12
             set_dm_bonus = 0.06
@@ -3242,10 +3247,12 @@ class Player(Character):
                 Hitsplat.from_max_hit_acc(math.floor(0.25 * max_hit), accuracy, hitpoints_cap),
                 tick_efficiency_ratio=tick_efficiency_ratio
             )
-        elif self.equipment.ammunition.name in ['diamond bolts (e)', 'diamond dragon bolts (e)'] and dt in Style.ranged_damage_types:
+        elif self.equipment.ammunition.name in ['diamond bolts (e)', 'diamond dragon bolts (e)'] and \
+                dt in Style.ranged_damage_types:
             assert 'crossbow' in self.equipment.weapon.name
             activation_chance = 0.11 if self.kandarin_hard else 0.10
-            effect_max_hit = math.floor(1.15 * max_hit)
+            damage_modifier = 1.15 + (0.15 * 0.10)*self.equipment.zaryte_crossbow()
+            effect_max_hit = math.floor(damage_modifier * max_hit)
 
             damage_values = np.arange(effect_max_hit + 1)
             probabilities = np.zeros(damage_values.shape)
@@ -3262,11 +3269,15 @@ class Player(Character):
                 Hitsplat(damage_values, probabilities, hitpoints_cap),
                 tick_efficiency_ratio=tick_efficiency_ratio
             )
-        elif self.equipment.ammunition.name in ['ruby bolts (e)', 'ruby dragon bolts (e)'] and dt in Style.ranged_damage_types:
+        elif self.equipment.ammunition.name in ['ruby bolts (e)', 'ruby dragon bolts (e)'] and \
+                dt in Style.ranged_damage_types:
             assert 'crossbow' in self.equipment.weapon.name
             activation_chance = 0.066 if self.kandarin_hard else 0.06
             target_hp = other.stats.current_combat.hitpoints
-            effect_damage = min([100, math.floor(0.20 * target_hp)])
+            max_effective_hp = 500
+            hp_ratio = 0.20 + (0.20 * 0.10)*self.equipment.zaryte_crossbow()
+
+            effect_damage = min(map(lambda hp: math.floor(hp_ratio*hp), [max_effective_hp, target_hp]))
             true_max = max([max_hit, effect_damage])
 
             damage_values = np.arange(true_max + 1)
@@ -3351,6 +3362,27 @@ class Player(Character):
                 Gear.from_bitterkoekje_bedevere('amulet of torture'),
                 Gear.from_bitterkoekje_bedevere('bandos chestplate'),
                 Gear.from_bitterkoekje_bedevere('bandos tassets'),
+                Gear.from_bitterkoekje_bedevere('ferocious gloves'),
+                Gear.from_bitterkoekje_bedevere('primordial boots'),
+                Gear.from_bitterkoekje_bedevere('berserker (i)')
+            )
+        )
+
+    @classmethod
+    def max_scythe_torva(cls):
+        weapon = Weapon.from_bitterkoekje_bedevere('scythe of vitur')
+        weapon.choose_style_by_name(PlayerStyle.chop)
+
+        return cls(
+            name='[max] scythe torva',
+            stats=PlayerStats.max_player_stats(),
+            equipment=Equipment(
+                weapon,
+                Gear.from_bitterkoekje_bedevere('torva full helm'),
+                Gear.from_bitterkoekje_bedevere('infernal cape'),
+                Gear.from_bitterkoekje_bedevere('amulet of torture'),
+                Gear.from_bitterkoekje_bedevere('torva platebody'),
+                Gear.from_bitterkoekje_bedevere('torva platelegs'),
                 Gear.from_bitterkoekje_bedevere('ferocious gloves'),
                 Gear.from_bitterkoekje_bedevere('primordial boots'),
                 Gear.from_bitterkoekje_bedevere('berserker (i)')
@@ -3568,6 +3600,50 @@ class Player(Character):
                 Gear.from_bitterkoekje_bedevere("necklace of anguish"),
                 Gear.from_bitterkoekje_bedevere("armadyl chestplate"),
                 Gear.from_bitterkoekje_bedevere("armadyl chainskirt"),
+                Gear.from_bitterkoekje_bedevere("barrows gloves"),
+                Gear.from_bitterkoekje_bedevere("pegasian boots"),
+                Gear.from_bitterkoekje_bedevere("archer (i)")
+            )
+        )
+
+    @classmethod
+    def arma_zbow(cls):
+        weapon = Weapon.from_bitterkoekje_bedevere('zaryte crossbow')
+        weapon.choose_style_by_name(PlayerStyle.rapid)
+
+        return cls(
+            name='[arma] zbow (ruby dragon (e))',
+            stats=PlayerStats.max_player_stats(),
+            equipment=Equipment(
+                weapon,
+                Gear.from_bitterkoekje_bedevere("ruby dragon bolts (e)"),
+                Gear.from_bitterkoekje_bedevere("armadyl helmet"),
+                Gear.from_bitterkoekje_bedevere("ava's assembler"),
+                Gear.from_bitterkoekje_bedevere("necklace of anguish"),
+                Gear.from_bitterkoekje_bedevere("armadyl chestplate"),
+                Gear.from_bitterkoekje_bedevere("armadyl chainskirt"),
+                Gear.from_bitterkoekje_bedevere("barrows gloves"),
+                Gear.from_bitterkoekje_bedevere("pegasian boots"),
+                Gear.from_bitterkoekje_bedevere("archer (i)"),
+                Gear.from_bitterkoekje_bedevere("twisted buckler"),
+            )
+        )
+
+    @classmethod
+    def bowfa(cls):
+        weapon = Weapon.from_bitterkoekje_bedevere('bow of faerdhinen')
+        weapon.choose_style_by_name(PlayerStyle.rapid)
+
+        return cls(
+            name='[crystal] bowfa',
+            stats=PlayerStats.max_player_stats(),
+            equipment=Equipment(
+                weapon,
+                Gear.from_bitterkoekje_bedevere("crystal helm"),
+                Gear.from_bitterkoekje_bedevere("ava's assembler"),
+                Gear.from_bitterkoekje_bedevere("necklace of anguish"),
+                Gear.from_bitterkoekje_bedevere("crystal body"),
+                Gear.from_bitterkoekje_bedevere("crystal legs"),
                 Gear.from_bitterkoekje_bedevere("barrows gloves"),
                 Gear.from_bitterkoekje_bedevere("pegasian boots"),
                 Gear.from_bitterkoekje_bedevere("archer (i)")
@@ -4564,7 +4640,7 @@ class OlmMageHand(Olm):
     def __init__(self, party_size: int, challenge_mode: bool, max_combat_level: int = None,
                  max_hitpoints_level: int = None):
         super().__init__(party_size, challenge_mode, max_combat_level, max_hitpoints_level)
-        self.stats.combat.hitpoints = self._hand_max_hitpoints
+        self.stats.combat.hitpoints = min([self._hand_max_hitpoints, self.stats.combat.hitpoints])
         self.reset_current_stats()
 
 # Damage Data

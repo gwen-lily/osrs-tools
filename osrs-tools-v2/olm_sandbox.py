@@ -651,7 +651,15 @@ def assignment_table_hundred_scale(lb: int, ub: int, thralls: bool = False):
 	print(table)
 
 
+def melee_comparison(*players):
+	pass    # lmao there's no need torva >>>>>>>>>>>>>>>>>>>
+
+
+
 if __name__ == '__main__':
+	bandos_scythe = Player.max_scythe_bandos()
+	inq_scythe = Player.max_scythe_inquisitor()
+	torva_scythe = Player.max_scythe_torva()
 
 	# main(ps, cm)
 	# camp_vs_fifteen_sixteen_comp(ps, cm)
@@ -666,7 +674,7 @@ if __name__ == '__main__':
 	# melee_dps_scale()
 	# melee_camp_scale()
 	# scaled_olm_time_estimate(15, 100)
-	assignment_table_hundred_scale(7, 30, thralls=True)
+	# assignment_table_hundred_scale(7, 30, thralls=True)
 
 
 
