@@ -11,7 +11,7 @@ delimiter = '\t'
 
 
 def _load_de0():
-	cox_df = pd.read_csv(de0_cox_bosses, delimiter)
+	cox_df = pd.read_csv(de0_cox_bosses, sep=delimiter)
 	cox_df.columns = map(str.lower, cox_df.columns)     # column headers lower case
 	cox_df['name'] = cox_df['name'].str.lower()         # name column to lower case
 	return cox_df
@@ -22,7 +22,7 @@ def _load_bitterkoekje_bedevere():
 	item_name_header = 'name'
 	none_value = 'none'
 
-	gear_df: pd.DataFrame = pd.read_csv(bitterkoekje_items, delimiter)
+	gear_df: pd.DataFrame = pd.read_csv(bitterkoekje_items, sep=delimiter)
 	gear_df = gear_df.rename(columns={gear_df.columns[0]: item_name_header})        # empty header fill w/ name
 	gear_df.columns = map(str.lower, gear_df.columns)                               # column headers to lower case
 
@@ -90,7 +90,7 @@ def _load_bitterkoekje_bedevere():
 def _load_bitterkoekje_npc():
 	npc_index = 'npc'
 
-	npc_df = pd.read_csv(bitterkoekje_npc, delimiter, header=1)
+	npc_df = pd.read_csv(bitterkoekje_npc, sep=delimiter, header=1)
 	npc_df.columns = map(str.lower, npc_df.columns)     # column headers lower case
 
 	# column operations ################################################################################################
