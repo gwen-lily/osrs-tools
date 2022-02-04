@@ -24,7 +24,7 @@ Crystal halberd (perfected)	166	166	28	0	0	0	0	0	0	0	138	0	0	3						4	11
 Crystal sceptre	8	10	16	0	0	0	0	0	0	0	20									5	9	
 Darklight	10	16	-2				3	2	2		13							Stab		5	6	
 Dharok's greataxe		103	95	-4						-1	105									7	8	
-Dinh's Bulwark	0	0	110	0	0	141	145	145	18	148	38				0.2			Crush		7	21	
+Dinh's Bulwark	0	0	124	0	0	106	109	109	-10	148	38				0.2			Crush		5	21	
 Dragon 2h sword	-4	92	80	-4						-1	93							Slash		7	10	
 Dragon battleaxe	-2	70	65							-1	85							Slash		6	8	
 Dragon claws	41	57				13	26	7			56							Slash		4	6	
@@ -33,7 +33,7 @@ Dragon halberd	70	95		-4		-1	4	5			89				-0.25	0.1		Slash		7	11
 Dragon hasta	55	55	55	0	0	-15	-15	-12	0	-15	60				1	0.5		Stab		4	12	
 Dragon hunter lance	85	65	65	0	0	0	0	0	0	0	70									4	12	
 Dragon longsword	58	69	-2				3	2			71					0.25		Slash		5	6	
-Dragon mace	40	-2	60								55			5	0.25	0.5		Crush		5	7	
+Dragon mace	40	-2	60								55			5	0.25	0.5		Crush		4	7	
 Dragon scimitar	8	67	-2				1				66				0.25			Slash		4	6	
 Dragon spear	55	55	55			5	5	5	5	5	60									5	12	
 Dragon sword	65	55	-2				2	1			63				0.25	0.25		Stab		4	5	
@@ -52,6 +52,7 @@ Ham joint																				3	9
 Hill giant club	-4	50	65	-4		0	0	0	0	-1	70									7	9	
 Ivandis flail	24	38	62	8	0	4	4	2	8	0	42			5						5	15	
 Keris	40	20	-10	2					2		30			2				Stab		4	4	
+Keris Partisan	58	58	57	2	0						45			3				Stab		4	12	
 Leaf-bladed spear	47	42	36			1	1				50									5	12	
 Leaf-bladed sword	67	62									50									4	5	
 Leaf-bladed battleaxe	-2	72	72							-1	92									5	8	
@@ -71,6 +72,7 @@ Iron pickaxe	5	-2	3				1				7									5	16	1
 Bronze pickaxe	4	-2	2				1				5									5	16	1
 Rune pickaxe	26	-2	24				1				29									5	16	41
 Obsidian sword	47	38	-2			2	3				49									4	5	
+Osmumten's Fang	150	105									115				0.5			stab		5	5	
 Rune 2h sword		69	50	-4						-1	70									7	10	
 Rune battleaxe	-2	48	43							-1	64									6	8	
 Rune claws	26	38	-4			10	19	5			39				0.15	0.15		Slash		4	6	
@@ -113,11 +115,12 @@ Iron scimitar	2	10	-2				1				9									4	6
 Bronze scimitar	1	7	-2				1				6									4	6	
 																						
 3rd age bow					80															4	17	
+Zaryte crossbow					110	14	14	12	15	16					1			ranged		6	17	
 Armadyl crossbow					100									1	1			ranged		6	17	
 Black chinchompa					80							30								4	17	
 Chinchompa					45							0								4	17	
-Crystal bow					100							70								5	17	
-cbow2					100							70								5	17	
+Crystal bow					100							78								5	17	
+Bow of Faerdhinen	0	0	0	0	128							106								5	17	
 Crystal bow (basic)					72							42		1						5	17	
 Crystal bow (attuned)					118							88		2						5	17	
 Crystal bow (perfected)					172							138		3						5	17	
@@ -152,8 +155,7 @@ Oak shortbow					14															4	17
 Shortbow					8															4	17	
 Red chinchompa					70							15								4	17	
 Seercull					69													ranged		5	17	
-Toxic blowpipe					60							40				0.5		ranged		3	17	
-tbpotykgfbnhltmfgylnhkm					30							25			1	0.5		ranged		3	17	
+Toxic blowpipe					30							20			1	0.5		ranged		3	17	
 Twisted bow					70							20		4						6	17	
 																						
 Ahrim's staff	12	-1	62	15		3	2	5	15		68		0.05							5	15	
@@ -176,6 +178,7 @@ Sanguinesti staff				25	-4	2	3	1	15	0										4	20
 Trident of the seas				15		2	3	1	15											4	20	
 Trident of the swamp				25		2	3	1	15											4	20	
 Toxic staff of the dead	55	70		25			3	3	17		72		0.15							4	19	
+Heka of Tumeken				25	-4	2	3	1	20	0										2.5	20	
 3rd age wand				20					20											5	15	
 Void knight mace	22		41	8		2	2	2	2	2	38			6						5	15	
 Mystic smoke staff	10	-1	40	10		2	3	1	10		50									5	15	
@@ -193,8 +196,8 @@ Fire battlestaff	7	-1	28	10		2	3	1	10		35									5	15
 																						
 																						
 None																						
+Torva full helm				-5	-5	59	60	62	-2	57	8			1								
 Neitiznot faceguard						36	34	38	3	34	6			3								
-nezzzzzy						36	34	38	3	34	5			3								
 Inquisitor's great helm	-2	-2	8	0	-5	19	10	21	0	12	4			1								
 Dharok's helm				-3	-1	45	48	44	-1	51												
 Dwarven helmet			6	-2	-2	27	28	31	5	24												
@@ -204,6 +207,7 @@ Neitiznot						31	29	34	3	30	3			3
 Justiciar faceguard				-6	-2	60	63	59	-6	67				2								
 Dragon full helm				-6	-2	45	48	41	-1	46												
 Dragon med helm				-3	-1	33	35	32	-1	34												
+Masori helmet				-1	12	3	4	3	6	4		1		1								
 Rune full helm				-6	-2	30	32	27	-1	30												
 Serpentine				-5	-5	52	55	58	0	50	5											
 Slayer helmet (i)				3	3	30	32	27	10	30												
@@ -220,7 +224,7 @@ Robin hood hat				-10	8	4	6	8	4	4
 Karil's coif				-3	7	6	9	12	6	10												
 God coif				-1	7	4	7	10	4	8				1								
 3rd age range coif	0	0	0	-2	9	4	7	10	5	8												
-Crystal helm	0	0	0	-10	8	12	8	14	26	18				2								
+Crystal helm	0	0	0	-10	9	12	8	14	10	18				2								
 Archer helm	-5	-5	-5	-5	6	6	8	10	6	6												
 Snakeskin bandana				-5	4	2	4	4	2	2												
 Spined helm	-6	-6	-6	-6	6	6	6	6	6	0												
@@ -271,9 +275,11 @@ None
 Amulet of fury	10	10	10	10	10	15	15	15	15	15	8			5								
 Amulet of torture	15	15	15								10			2								
 Necklace of anguish					15							5		2								
+Masori amulet					17							7										
 Amulet of avarice	10	10	10	10	10	3	3	3	3	3	6			3								
 Amulet of strength											10											
 Amulet of glory	10	10	10	10	10	3	3	3	3	3	6			3								
+Amulet of avarice	10	10	10	10	10	3	3	3	3	3	6			3								
 Amulet of power	6	6	6	6	6	6	6	6	6	6	6			1								
 Salve amulet (i)						3	3	3						3								
 Salve amulet (ei)						3	3	3						3								
@@ -288,6 +294,7 @@ Bonecrusher necklace	0	0	0	0	0	0	0	0	0	0				12
 																						
 																						
 None																						
+Torva platebody				-18	-14	117	111	117	-11	142	6			1								
 Inquisitor's hauberk	-3	-3	12	-11	-10	67	55	71		35	4			2								
 Bandos chestplate				-15	-10	98	93	105	-6	133	4			1								
 Fighter torso				-40		62	85	62	-10	67	4											
@@ -304,8 +311,9 @@ Dragon chainbody				-15		81	93	98	-3	82
 3rd age platebody				-20	0	96	108	113	-4	97												
 Rune platebody				-30	-10	82	80	72	-6	80												
 Dragon platebody				-30	-10	109	107	97	-6	106												
+Masori chestplate	0	0	0	-4	43	37	35	38	25	33	0	4		1								
 Armadyl chestplate	-7	-7	-7	-15	33	56	48	61	70	57				1								
-Crystal body	0	0	0	-18	30	34	24	32	44	53				3								
+Crystal body	0	0	0	-18	31	46	38	48	44	68				3								
 Karil's leathertop				-15	30	47	52	50	65	57												
 God d'hide body				-15	30	45	47	60	50	55				1								
 Black d'hide body				-15	30	45	47	60	50	55												
@@ -333,6 +341,7 @@ Monk's robe top														6
 																						
 																						
 None																						
+Torva platelegs				-24	-11	87	78	79	-9	102	4			1								
 Inquisitor's plateskirt	-3	-3	12	-9	-5	42	30	49	0	22	2			2								
 Bandos tassets				-21	-7	71	63	66	-4	93	2			1								
 Void knight robe						30	30	30	30	30												
@@ -347,8 +356,9 @@ Justiciar legguard				-31	-17	95	92	93	-14	102				4
 3rd age platelegs				-25	-2	78	76	83	-5	75												
 Dragon platelegs				-21	-7	68	66	63	-4	65												
 Rune platelegs				-21	-7	51	49	47	-4	49												
+Masori chainskirt				-2	27	26	24	29	19	22		2		1								
 Armadyl chainskirt	-6	-6	-6	-10	20	32	26	34	40	33				1								
-Crystal legs				-12	17	20	16	24	34	29				2								
+Crystal legs				-12	18	26	21	30	34	38				2								
 Karil's leatherskirt				-10	17	26	20	28	35	33												
 God d'hide chaps				-10	17	31	25	33	28	31				1								
 3rd age range legs				-10	17	31	25	33	30	31												
@@ -393,14 +403,14 @@ Falador shield 3				-8	-2	18	22	20	-1	20				4
 Falador shield 4				-8	-2	27	31	29	-1	29				5								
 Elysian spirit shield						63	65	75	2	57				3								
 Arcane spirit shield				20		53	55	73	2	52				3								
-Siren's tome				25		-10	-10	-10	20	-10			0.04	-5								
+Ward of Elidinis				25		53	55	73	2	52			0.05	4								
 Spectral spirit shield						53	55	73	30	52				3								
 Mind shield									9													
 Ancient Wyvern shield	-10	-10	-10	15	-10	72	80	75	15	-5	-2											
 Anti-dragon shield						7	8	9	2	8												
-Twisted buckler	-7	-8	-7	-10	18	22	24	22	26	58												
-Dragonfire ward	-10	-10	-10	-10	15	15	20	18	22	68	-2											
-Odium ward	-12	-12	-12	-8	12				24	52												
+Twisted buckler	-7	-8	-7	-10	18	22	24	22	26	58		10										
+Dragonfire ward	-10	-10	-10	-10	15	15	20	18	22	68	-2	8										
+Odium ward	-12	-12	-12	-8	12				24	52		4										
 Hard leather shield	-15	-15	-11	-10	2	8	7	7	5	9												
 Snakeskin shield	-15	-15	-11	-10	3	10	9	8	7	10												
 Green d'hide shield	-15	-15	-11	-10	4	14	12	11	9	11												
@@ -410,6 +420,7 @@ Black d'hide shield	-15	-15	-11	-10	7	21	18	16	15	14
 Mage's book				15					15													
 Malediction ward	-8	-8	-8	12	-12	50	52	48	15													
 Tome of fire				8					8													
+Tome of water				8					8													
 Book of law					10									5								
 Book of war											2			5								
 Book of darkness				10										5								
@@ -418,6 +429,7 @@ Book of darkness				10										5
 																						
 None																						
 Ferocious gloves	16	16	16	-16	-16	0	0	0	0	0	14											
+Zaryte vambraces	-8	-8	-8		18	8	8	8	5	8		2		1								
 Barrows gloves	12	12	12	6	12	12	12	12	6	12	12											
 Void knight gloves						6	6	6	4	6												
 Tormented bracelet				10									0.05	2								
@@ -508,14 +520,15 @@ Explorer's ring														1
 																						
 Blessing														1								
 Rada's blessing 4														2								
-Bronze dart					3							1								7		
-Iron dart					4							3								7		
-Steel dart					5							4								7		
-Black dart					7							6								7		
-Mithril dart					8							7								7		
-Adamant dart					11							10								7		
-Rune dart					15							14								7		
-Dragon dart					18							20								7		
+Bronze dart												1								7		
+Iron dart												2								7		
+Steel dart												3								7		
+Black dart												6								7		
+Mithril dart												9								7		
+Adamant dart												17								7		
+Rune dart												26								7		
+Amethyst dart												28										
+Dragon dart												35								7		
 Bronze knife					4							3								7		
 Iron knife					5							4								7		
 Steel knife					8							7								7		
@@ -540,14 +553,6 @@ Adamant javelin												107
 Rune javelin												124										
 Amethyst javelin												135										
 Dragon javelin												150										
-Dart1					2							1								7		
-Dart2					3							2								7		
-Dart3					4							3								7		
-Dart4					5							4								7		
-Dart5					6							6								7		
-Dart6					7							10								7		
-Dart7					11							20								7		
-Dart8					15							28								7		
 Bolt rack												55										
 Broad bolts												100										
 Opal bolts (e)												14				0.25						
@@ -594,6 +599,16 @@ Water bolt																			10
 Water blast																			14			
 Water wave																			18			
 Water surge																			22			
+Confuse																			0			
+Weaken																			0			
+Curse																			0			
+Vulnerability																			0			
+Enfeeble																			0			
+Stun																			0			
+Bind																			0			
+Snare																			2			
+Entangle																			5			
+Tele Block																			0			
 Earth strike																			6			
 Earth bolt																			11			
 Earth blast																			15			
@@ -628,6 +643,14 @@ Flames of Zamorak																			30
 Magic dart																			mdart			
 Iban Blast																			25			
 Crumble Undead																			15			
+																						
+Inferior Demonbane																			20			
+Superior Demonbane																			28			
+Dark Demonbane																			37			
+Ghostly Grasp																			12			
+Skeletal Grasp																			17			
+Undead Grasp																			24			
+																						
 																						
 																						
 																						
