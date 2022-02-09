@@ -66,7 +66,7 @@ def example_cartesian_comparison(data_mode: DataMode, **kwargs):
 		for scale in range(23, 23+1, 8):
 			monsters.append(CoxMonster.from_de0(mn, scale))
 
-	indices, axes, data = cox.generic_comparison_better(
+	indices, axes, data = analysis_tools.generic_comparison_better(
 		lads,
 		levels=levels,
 		prayers=prayers,
