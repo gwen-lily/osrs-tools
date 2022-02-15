@@ -128,7 +128,7 @@ Crystal bow (perfected)					172							138		3						5	17		weapon	bow	TRUE
 Craw's bow					75							60								4	17		weapon	bow	TRUE
 Dark bow					95											0.5		ranged		9	17		weapon	bow	TRUE
 Dart																				3	17		weapon	thrown	
-Dorgeshuun crossbow					42															5	17		weapon	crossbow	
+Dorgeshuun crossbow					42													ranged		5	17		weapon	crossbow	
 Dragon crossbow					94											0.2		ranged		6	17		weapon	crossbow	
 Dragon hunter crossbow					95															6	17		weapon	crossbow	
 Dragon thrownaxe					36							47			0.25			ranged		5	17		weapon	thrown	
