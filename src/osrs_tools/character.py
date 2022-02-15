@@ -902,7 +902,16 @@ class Player(Character):
                 active_roll_modifiers = [float(x) for x in all_roll_modifiers if not x == 1]
                 max_hit = self.static_max_hit(base_damage, *active_roll_modifiers)
             elif dt in Style.magic_damage_types:
+                if spell is None:
+                    if self.equipment.weapon == Weapon.from_bb('sanguinesti staff'):
+                        self.autocast = PoweredSpells.sanguinesti_staff
+                    elif self.equipment.weapon == Weapon.from_bb('trident of the swamp'):
+                        self.autocast = PoweredSpells.trident_of_the_swamp
+                    elif self.equipment.weapon == Weapon.from_bb('trident of the seas'):
+                        self.autocast = PoweredSpells.trident_of_the_seas
+
                 spell = spell if spell else self.autocast
+
                 if isinstance(spell, Spell):
                     if isinstance(spell, StandardSpell) or isinstance(spell, AncientSpell):
                         base_damage = spell.max_hit()
@@ -951,7 +960,7 @@ class Player(Character):
                     isinstance(active_spell, StandardSpell):
                 return active_spell.attack_speed - 1
             else:
-                return spell.attack_speed + self.active_style.attack_speed_modifier
+                return active_spell.attack_speed + self.active_style.attack_speed_modifier
         else:
             return self.equipment.weapon.attack_speed + self.active_style.attack_speed_modifier
 
@@ -1039,6 +1048,9 @@ class Player(Character):
                     probabilities[index] = p_miss + p_norm + p_effect
 
                 damage = Damage(attack_speed, Hitsplat(damage_values, probabilities, hitpoints_cap), **kwargs)
+            elif special_attack and self.equipment.wearing(weapon=SpecialWeapon.from_bb('dorgeshuun crossbow')):
+                accuracy = 1
+                damage = Damage.from_max_hit_acc(max_hit, accuracy, attack_speed, hitpoints_cap, **kwargs)
             else:
                 damage = Damage.from_max_hit_acc(max_hit, accuracy, attack_speed, hitpoints_cap, **kwargs)
 
