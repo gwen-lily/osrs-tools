@@ -55,7 +55,7 @@ class PoweredSpell(Spell):
             minimum_visible_level = 75
             maximum_visible_level = 120
             stat = min([max([minimum_visible_level, visible_magic_level]), maximum_visible_level])
-            scaled_base_max_hit = self._base_max_hit + math.floor((stat - minimum_visible_level) / 3)
+            scaled_base_max_hit = self.base_max_hit + math.floor((stat - minimum_visible_level) / 3)
             return scaled_base_max_hit
         except TypeError:
             raise SpellError(f'{visible_magic_level=} must be an integer for {self.name=}')
