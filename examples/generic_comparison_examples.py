@@ -115,5 +115,56 @@ def example_cartesian_comparison(data_mode: DataMode, **kwargs):
 	print(table)
 
 
+
+def shamans_dps(data_mode: DataMode, comparison_mode: ComparisonMode, **kwargs):
+	"""
+	I'm curious about bone crossbows.
+
+	:param data_mode: see DataMode for options.
+	:param kwargs:
+	:return:
+	"""
+	options = {
+		'scale': 31,
+		'floatfmt': '.1f',
+		'special_attack': True,
+	}
+	options.update(kwargs)
+
+	Lad = Player(name='Big Lad')
+	Hybrid = Player(name='hybrid', levels=PlayerLevels.from_rsn('decihybrid'))
+	Hybrid.prayers.pray(Prayer.rigour())
+	boosts = [Overload.overload(), Boost.ranging_potion()]
+
+	# take care of basic equipment up front
+	Hybrid.equipment.equip_basic_ranged_gear(avas=False, pegasian=False)
+	Hybrid.equipment.equip_god_dhide()
+	Hybrid.active_style = Lad.equipment.equip(
+		SpecialWeapon.from_bb('dorgeshuun crossbow'),
+		Gear.from_bb('robin hood hat'),
+		Gear.from_bb("ava's accumulator"),
+		Gear.from_bb('bone bolts'),
+		Gear.from_bb('twisted buckler'),
+		style=CrossbowStyles.get_style(PlayerStyle.longrange)
+	)
+
+	monsters = CoxMonster.from_de0('lizardman shaman', options['scale'])
+	monsters.apply_vulnerability()
+
+	indices, axes, data = analysis_tools.generic_comparison_better(
+		Hybrid,
+		boosts=boosts,
+		target=monsters,
+		comparison_mode=comparison_mode,
+		data_mode=data_mode,
+		**kwargs
+	)
+
+	for i, a, d in zip(indices, axes, data):
+		print(i, a, data)
+
+
 if __name__ == '__main__':
-	example_cartesian_comparison(data_mode=DataMode.DPS, floatfmt='.1f')
+	# example_cartesian_comparison(data_mode=DataMode.DPS, floatfmt='.1f')
+	my_scale = 31
+	shamans_dps(data_mode=DataMode.MAX_HIT, comparison_mode=ComparisonMode.PARALLEL, floatfmt='.1f', scale=my_scale)
