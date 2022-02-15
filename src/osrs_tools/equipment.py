@@ -789,6 +789,15 @@ class Equipment:
             *gear
         )
 
+    def equip_god_dhide(self):
+        self.equip(
+            Gear.from_bb("god coif"),
+            Gear.from_bb("god d'hide body"),
+            Gear.from_bb("god d'hide chaps"),
+            Gear.from_bb('god bracers'),
+            Gear.from_bb("blessed d'hide boots"),
+        )
+
     def equip_void_set(self, elite: bool = True):
         body, legs = ('elite void top', 'elite void robe') if elite else ('void knight top', 'void knight robe')
         self.equip(
