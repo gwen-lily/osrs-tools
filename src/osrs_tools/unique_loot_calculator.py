@@ -31,16 +31,17 @@ def main(**kwargs):
 
 	x_thousand_diff = np.diff(x_thousand)
 	y_diff = np.diff(y)
-	dy_dx_thousand = [dy/dx for dx, dy in zip(x_thousand_diff, y_diff)] + [0]
+	dy_dx_thousand = [dy/dx for dx, dy in zip(x_thousand_diff, y_diff)]
+	dy_dx_thousand_as_percentage = np.asarray(dy_dx_thousand) * (1/max(dy_dx_thousand))
 
 	plt.plot(x_thousand, y)
 	plt.xlabel('points (K)')
 	plt.ylabel('Probability of rolling at least one unique')
 	plt.show()
 
-	plt.plot(x_thousand, dy_dx_thousand)
+	plt.plot(x_thousand[:-1], dy_dx_thousand_as_percentage)
 	plt.xlabel('points (K)')
-	plt.ylabel('d[P(At least one unique)]/d[points]')
+	plt.ylabel('d[P(At least one unique)]/d[points] as % effective of initial roll')
 
 	plt.show()
 
