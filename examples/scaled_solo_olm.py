@@ -226,7 +226,28 @@ def melee_hand_estimate(**kwargs):
 	pass
 
 
+def olm_max_hits(**kwargs):
+	options = {
+		'scales': range(1, 101),
+	}
+	options.update(kwargs)
+	lad = Player(name='dummy')
+	data = []
+	headers = ['scale', 'normal', 'crippled', 'enraged', 'head phase']
 
+	for ps in options['scales']:
+		olm = OlmHead.from_de0(ps)
+		row = [
+			olm.party_size,
+			olm.max_hit(lad),
+			olm.max_hit(lad, crippled=True),
+			olm.max_hit(lad, enraged=True),
+			olm.max_hit(lad, head_phase=True)
+		]
+		data.append(row)
+
+	table = tabulate(data, headers, floatfmt='.0f')
+	print(table)
 
 
 if __name__ == '__main__':
@@ -254,4 +275,5 @@ if __name__ == '__main__':
 
 	# magic_shield_comparison(floatfmt='.2f')
 	olm_estimate(scales=(31, ))
+	olm_max_hits()
 	# olm_damage_estimate(scales=(31, ))
