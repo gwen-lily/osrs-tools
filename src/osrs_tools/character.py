@@ -2075,6 +2075,10 @@ class Olm(CoxMonster, ABC):
         _ = self
         return 1
 
+    def party_offensive_scaling_factor(self):
+        n = self.party_size
+        return (1 + (0.07 * (1 + math.floor(n/5)))) + 0.01*(n-1)
+
     def player_offensive_defensive_scaling_factor(self):
         _ = self
         return 1
@@ -2128,6 +2132,50 @@ class Olm(CoxMonster, ABC):
 # noinspection PyArgumentList
 @define(**character_attrs_settings)
 class OlmHead(Olm):
+
+    def max_hit(self, other: Player, crippled: bool = False, enraged: bool = False, head_phase: bool = False) -> int:
+        aggressive_cb = self.aggressive_bonus
+
+        if (dt := self.active_style.damage_type) in Style.ranged_damage_types:
+            effective_level = self.effective_ranged_strength_level
+            bonus = aggressive_cb.ranged_strength
+        elif dt in Style.magic_damage_types:
+            effective_level = self.effective_magic_attack_level
+            bonus = aggressive_cb.magic_strength
+        elif dt in Style.typeless_damage_types:
+            raise NotImplementedError
+        else:
+            raise StyleError(f'{self.active_style.damage_type=}')
+
+        base_damage = self.base_damage(effective_level, bonus)
+
+        def olm_max(x: float) -> int:
+            return math.floor(
+                math.floor(base_damage) * (x + min([6, math.floor(self.party_size / 8)])) / 100
+            )
+
+        if head_phase:
+            max_hit = olm_max(112)
+        elif enraged:
+            max_hit = olm_max(108)
+        elif crippled:
+            max_hit = olm_max(105)
+        else:
+            max_hit = olm_max(100)
+
+        prot_prayers = other.prayers.prayers
+        if dt in Style.melee_damage_types and Prayer.protect_from_melee() in prot_prayers:
+            prot_modifier = 0.5 if self.active_style.ignores_prayer else 0
+        elif dt in Style.ranged_damage_types and Prayer.protect_from_missiles() in prot_prayers:
+            prot_modifier = 0.5 if self.active_style.ignores_prayer else 0
+        elif dt in Style.magic_damage_types and Prayer.protect_from_magic() in prot_prayers:
+            prot_modifier = 0.5 if self.active_style.ignores_prayer else 0
+        else:
+            prot_modifier = 1
+
+        max_hit = math.floor(max_hit * prot_modifier)
+
+        return max_hit
 
     @classmethod
     def from_de0(
