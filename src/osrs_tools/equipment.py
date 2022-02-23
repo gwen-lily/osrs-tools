@@ -66,7 +66,7 @@ def weapon_validator(instance, attribute, value):
 
 
 def special_defence_roll_validator(instance, attribute, value):
-    if value not in Style.all_damage_types:
+    if value and value not in Style.all_damage_types:
         raise WeaponError(f'{attribute=} with {value=} not in {Style.all_damage_types}')
 
 
@@ -163,6 +163,8 @@ class Gear:
             raise GearNotFoundError(f'{kwargs=}')
 
         eqp = item.equipment
+        slot = eqp.slot
+        slot = 'ammunition' if slot == 'ammo' else slot
 
         try:
             assert isinstance(eqp, ItemEquipment)
@@ -181,7 +183,7 @@ class Gear:
 
         return cls(
             name=item.name.lower(),
-            slot=eqp.slot,
+            slot=slot,
             aggressive_bonus=AggressiveStats(
                 stab=eqp.attack_stab,
                 slash=eqp.attack_slash,
@@ -302,7 +304,7 @@ class SpecialWeapon(Weapon):
     special_accuracy_modifier: float
     special_damage_modifier_1: float
     special_damage_modifier_2: float
-    special_defence_roll: str = field(validator=special_defence_roll_validator)
+    special_defence_roll: str = field(validator=special_defence_roll_validator, factory=str)
 
     @classmethod
     def from_bb(cls, name: str):
@@ -436,7 +438,7 @@ class Equipment:
 
         return weapon_style
 
-    def unequip(self, *slots: str, style: PlayerStyle | None):
+    def unequip(self, *slots: str, style: PlayerStyle = None):
         return_style = None
 
         for slot in slots:
@@ -447,6 +449,8 @@ class Equipment:
 
     def wearing(self, **kwargs) -> bool:
         return all([self.__getattribute__(k) == v for k, v in kwargs.items()])
+
+    # wearing properties, if any Character methods needs to know it I'll define it here for re-use and standardization
 
     @property
     def normal_void_set(self) -> bool:
@@ -611,6 +615,32 @@ class Equipment:
     def tome_of_water(self) -> bool:
         return self.wearing(shield=Gear.from_bb('tome of water'))
 
+    @property
+    def staff_of_the_dead(self) -> bool:
+        bb_names = (
+            'staff of light',
+            'staff of the dead',
+            'toxic staff of the dead',
+        )
+        options = [SpecialWeapon.from_bb(name) for name in bb_names]
+
+        if self.weapon in options:
+            return True
+        else:
+            return False
+
+    @property
+    def elysian_spirit_shield(self) -> bool:
+        return self.wearing(shield=Gear.from_bb('elysian spirit shield'))
+
+    @property
+    def dinhs_bulwark(self) -> bool:
+        return self.wearing(weapon=SpecialWeapon.from_bb("dinh's bulwark"))
+
+    @property
+    def blood_fury(self) -> bool:
+        return self.wearing(neck=Gear.from_bb('amulet of blood fury'))
+
     @classmethod
     def no_equipment(cls):
         return cls()
@@ -644,7 +674,7 @@ class Equipment:
 
     def __str__(self):
         notable_gear = [g.name for g in astuple(self, recurse=False) if 'empty' not in g.name]
-        message = f'{notable_gear}'
+        message = f'{self.__class__.__name__}({str(notable_gear)})'
         return message
 
     def __repr__(self):
@@ -657,47 +687,76 @@ class Equipment:
     # general gear swaps
 
     def equip_basic_melee_gear(self, torture: bool = True, primordial: bool = True, infernal: bool = True,
-                               ferocious: bool = True, berserker: bool = True):
-        full_list = (
+                               ferocious: bool = True, berserker: bool = True, brimstone: bool = False):
+        gear_options = [
             Gear.from_bb('amulet of torture'),
             Gear.from_bb('primordial boots'),
             Gear.from_bb('infernal cape'),
             Gear.from_bb('ferocious gloves'),
-            Gear.from_bb('berserker (i)')
-        )
-        bools = (torture, primordial, infernal, ferocious, berserker)
-        gear = (g for g, b in zip(full_list, bools) if b)
+        ]
+        gear_bools = [torture, primordial, infernal, ferocious]
+        gear = [g for g, b in zip(gear_options, gear_bools) if b]
+
+        # sus ordering again with the rings
+        if brimstone:
+            ring = Gear.from_bb('brimstone ring')
+            gear.append(ring)
+        elif berserker:
+            ring = Gear.from_bb('berserker (i)')
+            gear.append(ring)
+
         self.equip(*gear)
 
     def equip_basic_ranged_gear(self, avas: bool = True, anguish: bool = True, pegasian: bool = True,
-                                brimstone: bool = True):
-        full_list = (
+                                brimstone: bool = True, archers: bool = False):
+        gear_options = (
             Gear.from_bb("ava's assembler"),
             Gear.from_bb('necklace of anguish'),
             Gear.from_bb('pegasian boots'),
-            Gear.from_bb('brimstone ring'),
         )
-        bools = (avas, anguish, pegasian, brimstone,)
-        gear = (g for g, b in zip(full_list, bools) if b)
+        gear_bools = (avas, anguish, pegasian)
+        gear = [g for g, b in zip(gear_options, gear_bools) if b]
+
+        # sus ordering again with the rings
+        if archers:
+            ring = Gear.from_bb('archers (i)')
+            gear.append(ring)
+        elif brimstone:
+            ring = Gear.from_bb('brimstone ring')
+            gear.append(ring)
+
         self.equip(*gear)
 
     def equip_basic_magic_gear(self, ancestral_set: bool = True, god_cape: bool = True, occult: bool = True,
                                arcane: bool = True, tormented: bool = True, eternal: bool = True,
-                               brimstone: bool = True):
+                               brimstone: bool = True, seers: bool = False):
         if ancestral_set:
             self.equip_ancestral_set()
 
-        full_list = (
+        gear_options = (
             Gear.from_bb('god cape (i)'),
             Gear.from_bb('occult necklace'),
             Gear.from_bb('arcane spirit shield'),
             Gear.from_bb('tormented bracelet'),
             Gear.from_bb('eternal boots'),
-            Gear.from_bb('brimstone ring'),
         )
-        bools = (god_cape, occult, arcane, tormented, eternal, brimstone,)
-        gear = (g for g, b in zip(full_list, bools) if b)
+        gear_bools = (god_cape, occult, arcane, tormented, eternal)
+        gear = [g for g, b in zip(gear_options, gear_bools) if b]
+
+        # sus ordering again with the rings
+        if seers:
+            ring = Gear.from_bb('seers (i)')
+            gear.append(ring)
+        elif brimstone:
+            ring = Gear.from_bb('brimstone ring')
+            gear.append(ring)
+
         self.equip(*gear)
+
+    def equip_slayer_helm(self, imbued: bool = True):
+        self.equip(
+            Gear.from_bb('slayer helmet (i)'),
+        )
 
     def equip_salve(self, e: bool = True, i: bool = True):
         if e and i:
@@ -706,6 +765,10 @@ class Equipment:
             self.equip(Gear.from_bb('salve amulet (i)'))
         else:
             raise NotImplementedError
+
+    def equip_fury(self, blood: bool = False):
+        fury = Gear.from_bb('amulet of blood fury') if blood else Gear.from_bb('amulet of fury')
+        self.equip(fury)
 
     # melee gear swaps
 
@@ -730,26 +793,58 @@ class Equipment:
             Gear.from_bb('torva platelegs'),
         )
 
-    def equip_dwh(self,
-                  inquisitor_set: bool = True,
+    def equip_justi_set(self):
+        self.equip(
+            Gear.from_bb('justiciar faceguard'),
+            Gear.from_bb('justiciar chestguard'),
+            Gear.from_bb('justiciar legguard'),
+        )
+
+    def equip_dwh(self, *,
+                  inquisitor_set: bool = False,
                   avernic: bool = True,
                   brimstone: bool = True,
+                  tyrannical: bool = False,
                   style: PlayerStyle = None) -> PlayerStyle:
+
         if inquisitor_set:
             self.equip_inquisitor_set()
 
-        style = style if style else BluntStyles.default
-        gear_options = (Gear.from_bb('avernic defender'), Gear.from_bb('brimstone ring'),)
-        gear_bools = (avernic, brimstone)
+        gear = []
 
-        gear = (g for g, b in zip(gear_options, gear_bools) if b)
+        if avernic:
+            gear.append(Gear.from_bb('avernic defender'))
+
+        # ordering a little sus here ngl
+        if tyrannical:
+            gear.append(Gear.from_bb('tyrannical (i)'))
+        elif brimstone:
+            gear.append(Gear.from_bb('brimstone ring'))
+
+        style = style if style else BluntStyles.default
+
         return self.equip(
             SpecialWeapon.from_bb('dragon warhammer'),
             *gear,
             style=style
         )
 
-    def equip_scythe(self, berserker: bool = True, style: PlayerStyle = None) -> PlayerStyle:
+    def equip_bgs(self, style: PlayerStyle = None) -> PlayerStyle:
+        if style is not None:
+            weapon_style = style
+        elif self.inquisitor_set:
+            weapon_style = TwoHandedStyles.get_style(PlayerStyle.smash)
+        else:
+            weapon_style = TwoHandedStyles.default
+
+        gear = []
+
+        return self.equip(
+            SpecialWeapon.from_bb('bandos godsword'),
+            style=style
+        )
+
+    def equip_scythe(self, berserker: bool = False, style: PlayerStyle = None) -> PlayerStyle:
         if style:
             weapon_style = style
         else:
@@ -765,10 +860,56 @@ class Equipment:
             style=weapon_style
         )
 
+    def equip_lance(self, avernic: bool = True, berserker: bool = False, style: PlayerStyle = None) -> PlayerStyle:
+        if style is not None:
+            weapon_style = style
+        elif self.inquisitor_set:
+            weapon_style = SpearStyles.get_style(PlayerStyle.pound)
+        else:
+            weapon_style = SpearStyles.default
+
+        gear_options = (Gear.from_bb('avernic defender'), Gear.from_bb('berserker (i)'),)
+        gear_bools = (avernic, berserker)
+        gear = (g for g, b in zip(gear_options, gear_bools) if b)
+        return self.equip(
+            Weapon.from_bb('dragon hunter lance'),
+            *gear,
+            style=weapon_style
+        )
+
+    def equip_dragon_pickaxe(self, avernic: bool = True, berserker: bool = False, style: PlayerStyle = None) \
+            -> PlayerStyle:
+        weapon_style = style if style is not None else PickaxeStyles.default
+        gear_options = [Gear.from_bb('avernic defender'), Gear.from_bb('berserker (i)')]
+        gear_bools = (avernic, berserker)
+
+        gear = (g for g, b in zip(gear_options, gear_bools) if b)
+        return self.equip(
+            Weapon.from_bb('dragon pickaxe'),
+            *gear,
+            style=weapon_style
+        )
+
     def equip_arclight(self, style: PlayerStyle = None) -> PlayerStyle:
         style = style if style else SlashSwordStyles.default
         return self.equip(
             SpecialWeapon.from_bb('arclight'),
+            style=style
+        )
+
+    def equip_dinhs(self, style: PlayerStyle = None) -> PlayerStyle:
+        style = BulwarkStyles.default if style is None else style
+
+        return self.equip(
+            SpecialWeapon.from_bb("dinh's bulwark"),
+            style=style
+        )
+
+    def equip_sotd(self, style: PlayerStyle = None) -> PlayerStyle:
+        style = BladedStaffStyles.default if style is None else style
+
+        return self.equip(
+            SpecialWeapon.from_bb('staff of the dead'),
             style=style
         )
 
@@ -844,6 +985,9 @@ class Equipment:
         # TODO: Look into ammunition problems with chinchompa calculations
         gear = (Gear.from_bb('twisted buckler'), ) if buckler else tuple()
         style = style if style else ChinchompaStyles.default
+
+        self.unequip(GearSlots.ammunition)
+
         return self.equip(
             Weapon.from_bb('black chinchompa'),
             *gear,
@@ -867,6 +1011,23 @@ class Equipment:
             SpecialWeapon.from_bb('zaryte crossbow'),
             *gear,
             style=style,
+        )
+
+    def equip_dorgeshuun_crossbow(self, buckler: bool = True, bone_bolts: bool = True, style: PlayerStyle = None) \
+            -> PlayerStyle:
+        if style is not None:
+            weapon_style = style
+        else:
+            weapon_style = CrossbowStyles.get_style(PlayerStyle.accurate)
+
+        gear_options = (Gear.from_bb('twisted buckler'), Gear.from_bb('bone bolts'))
+        gear_bools = (buckler, bone_bolts)
+        gear = [g for g, b in zip(gear_options, gear_bools) if b]
+
+        return self.equip(
+            SpecialWeapon.from_bb('dorgeshuun crossbow'),
+            *gear,
+            style=weapon_style
         )
 
     def equip_crystal_bowfa(self, crystal_set: bool = True, style: PlayerStyle = None) -> PlayerStyle:

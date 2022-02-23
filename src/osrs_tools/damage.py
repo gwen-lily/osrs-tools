@@ -120,7 +120,7 @@ class Damage:
         return self._attack_speed / self.tick_efficiency_ratio
 
     @property
-    def chance_to_deal_positive_damage(self):
+    def chance_to_deal_positive_damage(self) -> float:
         zero_chances = (hs.probability[0] for hs in self.hitsplats)
         return 1 - functools.reduce(lambda x, y: x*y, zero_chances)
 

@@ -28,11 +28,42 @@ class DataMode(enum.Enum):
 	MIN_HIT = MIN
 	MEAN = datamode_type('mean hit', float, 'mean')
 	MEAN_HIT = MEAN
+	POSITIVE_DAMAGE = datamode_type('chance to deal positive damage', float, 'chance_to_deal_positive_damage')
+	DWH_SUCCESS = POSITIVE_DAMAGE
+	TICKS_TO_KILL = datamode_type('ticks to kill', float, None)
+	SECONDS_TO_KILL = datamode_type('seconds to kill', float, None)
+	MINUTES_TO_KILL = datamode_type('minutes to kill', float, None)
+	HOURS_TO_KILL = datamode_type('hours to kill', float, None)
 
 
 class ComparisonMode(enum.Enum):
 	PARALLEL = 'parallel'       # (A | B) -> (A1, B1), (A2, B2)
 	CARTESIAN = 'cartesian'     # (A x B) -> (A1, B1), (A1, B2), (A2, B1), (A2, B2)
+
+
+def tabulate_wrapper(data, col_labels: list, row_labels: list, **kwargs):
+	options = {
+		'floatfmt': '.1f',
+		'tablefmt': 'fancy',
+	}
+	options.update(kwargs)
+
+	if isinstance(data, np.ndarray):
+		m, n = data.shape
+		assert m == len(row_labels)
+		assert n == len(col_labels) or n == len(col_labels) - 1
+
+	table_data = []
+	for index, row in enumerate(data):
+		try:
+			labeled_row = [row_labels[index]] + list(row)
+		except TypeError:
+			labeled_row = [row_labels[index]]
+			labeled_row.append(row)
+
+		table_data.append(labeled_row)
+
+	return tabulate(table_data, headers=col_labels, floatfmt=options['floatfmt'], tablefmt=options['tablefmt'])
 
 
 def graph_wrapper(func: Callable[P, R]) -> Callable[P, R]:
@@ -316,7 +347,23 @@ def generic_comparison_better(
 
 		for index, params in zip(indices, cartesian_product):
 			dam = generic_damage_method(*params, **kwargs)
-			data_ary[index] = dam.__getattribute__(data_mode.value.attribute)
+
+			if data_mode.value.attribute is not None:
+				data_ary[index] = dam.__getattribute__(data_mode.value.attribute)
+			else:
+				target = params[-1]
+				hp = target.active_levels.hitpoints
+
+				if data_mode is DataMode.TICKS_TO_KILL:
+					data_ary[index] = hp / dam.per_tick
+				elif data_mode is DataMode.SECONDS_TO_KILL:
+					data_ary[index] = hp / dam.per_second
+				elif data_mode is DataMode.MINUTES_TO_KILL:
+					data_ary[index] = hp / dam.per_minute
+				elif data_mode is DataMode.HOURS_TO_KILL:
+					data_ary[index] = hp / dam.per_hour
+				else:
+					raise NotImplementedError
 
 	else:
 		raise NotImplementedError

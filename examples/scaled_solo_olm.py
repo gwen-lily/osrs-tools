@@ -6,24 +6,6 @@ from itertools import product
 import math
 from tabulate import tabulate
 
-ring_of_endurance = Gear(
-	name='ring of endurance',
-	slot=GearSlots.ring,
-	aggressive_bonus=AggressiveStats.no_bonus(),
-	defensive_bonus=DefensiveStats.no_bonus(),
-	prayer_bonus=0,
-	combat_requirements=PlayerLevels.no_requirements()
-)
-
-
-book_of_the_dead = Gear(
-	name='book of the dead',
-	slot=GearSlots.shield,
-	aggressive_bonus=AggressiveStats(magic=6),
-	defensive_bonus=DefensiveStats.no_bonus(),
-	prayer_bonus=3,
-	combat_requirements=PlayerLevels.no_requirements()
-)
 
 
 def magic_shield_comparison(**kwargs):
@@ -70,13 +52,13 @@ def magic_shield_comparison(**kwargs):
 	print(table)
 
 
-
 def olm_estimate(**kwargs):
 
 	options = {
 		'floatfmt': '.1f',
-		'thrall_dps': 0.625,
-		'scales': range(15, 32, 8),
+		'thrall_dpt': 0.5,
+		'scales': range(15, 56, 4),
+
 	}
 	options.update(kwargs)
 
@@ -93,36 +75,26 @@ def olm_estimate(**kwargs):
 		players=mage_lad,
 		target=magic_olms,
 		comparison_mode=ComparisonMode.PARALLEL,
-		data_mode=DataMode.DPS,
+		data_mode=DataMode.DPT,
 	)
 
-	data_ary = data_ary + options['thrall_dps']
+	data_ary = data_ary + options['thrall_dpt']
 	magic_hp_per_phase = [olm.levels.hitpoints for olm in magic_olms]
-	magic_seconds_per_phase = [mhpp / dps for mhpp, dps in zip(magic_hp_per_phase, data_ary)]
-	specs_before_melee_starts = [int(np.round(2 + x/150)) for x in magic_seconds_per_phase]
+	magic_ticks_per_phase = [mhpp / dpt for mhpp, dpt in zip(magic_hp_per_phase, data_ary)]
+	specs_before_melee_starts = [int(np.round(2 + x/250)) for x in magic_ticks_per_phase]
 
-	print(magic_seconds_per_phase)
+	print(magic_ticks_per_phase)
 	print(specs_before_melee_starts)
 
 	defence_at_start_of_melee_phase = [0, 0, 0]
-	# defence_at_start_of_melee_phase = [
-	# 	# melee_hand_mean_defence(15, 5, 3),
-	# 	melee_hand_mean_defence(23, 6, 3),
-	# 	melee_hand_mean_defence(31, 8, 3),
-	# ]
-	# print(defence_at_start_of_melee_phase)
 
 	melee_lad = Player(name='melee_lad')
 	melee_lad.boost(Overload.overload())
 	melee_lad.prayers.pray(Prayer.piety())
 	melee_lad.equipment.equip_basic_melee_gear(berserker=False, torture=False)
 	melee_lad.equipment.equip_torva_set()
-	melee_lad.active_style = melee_lad.equipment.equip(
-		Weapon.from_bb('dragon hunter lance'),
-		Gear.from_bb('avernic defender'),
-		Gear.from_bb('amulet of fury'),
-		ring_of_endurance,
-	)
+	melee_lad.active_style = melee_lad.equipment.equip_lance(berserker=False)
+	melee_lad.equipment.equip(amulet_of_fury, ring_of_endurance)
 
 	melee_olms = [OlmMeleeHand.from_de0(ps) for ps in options['scales']]
 
@@ -133,16 +105,16 @@ def olm_estimate(**kwargs):
 		players=melee_lad,
 		target=melee_olms,
 		comparison_mode=ComparisonMode.PARALLEL,
-		data_mode=DataMode.DPS
+		data_mode=DataMode.DPT
 	)
 
-	melee_data_ary = melee_data_ary + options['thrall_dps']
+	melee_data_ary = melee_data_ary + options['thrall_dpt']
 	melee_hp_per_phase = [olm.levels.hitpoints for olm in melee_olms]
-	melee_seconds_per_phase = [mhpp / dps for mhpp, dps in zip(melee_hp_per_phase, melee_data_ary)]
+	melee_ticks_per_phase = [mhpp / dpt for mhpp, dpt in zip(melee_hp_per_phase, melee_data_ary)]
 
 	ranger_lad = Player(name='ranger_lad')
 	ranger_lad.boost(Overload.overload())
-	ranger_lad.prayers.pray(Prayer.piety())
+	ranger_lad.prayers.pray(Prayer.rigour())
 	ranger_lad.equipment.equip_basic_ranged_gear(brimstone=False)
 	ranger_lad.equipment.equip_arma_set(zaryte=True)
 	ranger_lad.active_style = ranger_lad.equipment.equip_twisted_bow()
@@ -153,27 +125,47 @@ def olm_estimate(**kwargs):
 		players=ranger_lad,
 		target=olm_heads,
 		comparison_mode=ComparisonMode.PARALLEL,
-		data_mode=DataMode.DPS
+		data_mode=DataMode.DPT
 	)
 
-	ranged_data_ary = ranged_data_ary + options['thrall_dps']
+	ranged_data_ary = ranged_data_ary + options['thrall_dpt']
 	ranged_hp = [olm.levels.hitpoints for olm in olm_heads]
-	ranged_seconds = [rhp / dps for rhp, dps in zip(ranged_hp, ranged_data_ary)]
+	ranged_ticks = [rhp / dpt for rhp, dpt in zip(ranged_hp, ranged_data_ary)]
 
-	print(f'{magic_seconds_per_phase=}\n{melee_seconds_per_phase=}\n{ranged_seconds=}')
+	print(f'{magic_ticks_per_phase=}\n{melee_ticks_per_phase=}\n{ranged_ticks=}')
 
-	magic_time_secs = [s * o.phases() for s, o in zip(magic_seconds_per_phase, magic_olms)]
-	melee_time_secs = [s * o.phases() for s, o in zip(melee_seconds_per_phase, melee_olms)]
-
-	total_time_secs = magic_time_secs[0] + melee_time_secs[0] + ranged_seconds[0]
-	# total_time_secs_23 = magic_time_secs[0] + melee_time_secs[0] + ranged_seconds[0]
-	# total_time_secs_31 = magic_time_secs[1] + melee_time_secs[1] + ranged_seconds[1]
+	magic_time_secs = [0.6*t * o.phases() for t, o in zip(magic_ticks_per_phase, magic_olms)]
+	melee_time_secs = [0.6*t * o.phases() for t, o in zip(melee_ticks_per_phase, melee_olms)]
+	total_time_secs = magic_time_secs[0] + melee_time_secs[0] + 0.6*ranged_ticks[0]
 
 	print(f'{total_time_secs=}, {total_time_secs / 60}, {total_time_secs / 3600}')
-	# print(f'{total_time_secs_31=}, {total_time_secs_31 / 60}, {total_time_secs_31 / 3600}')
 
 
+def olm_damage_estimate(**kwargs):
+	options = {
+		'floatfmt': '.1f',
+		'scales': range(15, 32, 8),
+	}
+	options.update(kwargs)
 
+	melee_lad = Player(name='melee_lad')
+	melee_lad.boost(Overload.overload())
+	melee_lad.prayers.pray(Prayer.piety())
+	melee_lad.equipment.equip_basic_melee_gear(berserker=False, torture=False)
+	melee_lad.equipment.equip_torva_set()
+	melee_lad.active_style = melee_lad.equipment.equip_lance(avernic=False)
+	melee_lad.equipment.equip(amulet_of_fury, ring_of_endurance)
+
+	equipments = [Equipment(shield=x) for x in (avernic_defender, elysian_spirit_shield)]
+	olms = [OlmHead.from_de0(ps) for ps in options['scales']]
+
+	olm = OlmHead.from_de0(1)
+	melee_lad.equipment.equip(avernic_defender)
+	dam_1 = olm.damage_distribution(melee_lad)
+	melee_lad.equipment.equip(elysian_spirit_shield)
+	dam_2 = olm.damage_distribution(melee_lad)
+
+	print(dam_1, dam_2)
 
 
 def melee_hand_mean_defence(scale: int, total_specs: int, hammers_first: int, **kwargs):
@@ -230,18 +222,6 @@ def melee_hand_mean_defence(scale: int, total_specs: int, hammers_first: int, **
 	return defence_data.mean()
 
 
-
-
-
-
-
-
-
-
-
-
-
-
 def melee_hand_estimate(**kwargs):
 	pass
 
@@ -250,5 +230,28 @@ def melee_hand_estimate(**kwargs):
 
 
 if __name__ == '__main__':
+	ring_of_endurance = Gear(
+		name='ring of endurance',
+		slot=GearSlots.ring,
+		aggressive_bonus=AggressiveStats.no_bonus(),
+		defensive_bonus=DefensiveStats.no_bonus(),
+		prayer_bonus=0,
+		combat_requirements=PlayerLevels.no_requirements()
+	)
+
+	book_of_the_dead = Gear(
+		name='book of the dead',
+		slot=GearSlots.shield,
+		aggressive_bonus=AggressiveStats(magic=6),
+		defensive_bonus=DefensiveStats.no_bonus(),
+		prayer_bonus=3,
+		combat_requirements=PlayerLevels.no_requirements()
+	)
+
+	elysian_spirit_shield = Gear.from_bb('elysian spirit shield')
+	avernic_defender = Gear.from_bb('avernic defender')
+	amulet_of_fury = Gear.from_bb('amulet of fury')
+
 	# magic_shield_comparison(floatfmt='.2f')
 	olm_estimate(scales=(31, ))
+	# olm_damage_estimate(scales=(31, ))

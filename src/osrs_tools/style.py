@@ -179,8 +179,11 @@ class PlayerStyle(Style):
         )
 
     def __str__(self):
-        message = f'PlayerStyle({self.name}, {self.damage_type}, {self.stance})'
+        message = f'{self.__class__.__name__}({self.name})'
         return message
+
+    def __repr__(self):
+        return self.__str__()
 
     def is_spell_style(self):
         return self.name in self.spell_styles and self.damage_type in self.magic_damage_types
@@ -534,6 +537,12 @@ AllWeaponStyles = (
 class NpcAttacks(NamedTuple):
     name: str
     styles: tuple[NpcStyle, ...]
+
+    def get_style(self, style_name: str) -> NpcStyle:
+        for sty in self.styles:
+            if sty.name == style_name:
+                return sty
+        raise StyleError
 
 
 class StyleError(OsrsException):
