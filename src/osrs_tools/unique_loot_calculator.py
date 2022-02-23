@@ -9,7 +9,7 @@ capped_roll_chance = loot_roll_point_cap / points_per_purple
 max_rolls = 6
 
 
-def zero_purple_chance(points: int) -> float | np.ndarray:
+def zero_purple_chance(points: int) -> float:
 	capped_rolls, remaining_points = divmod(points, loot_roll_point_cap)
 
 	if capped_rolls < max_rolls:
@@ -46,4 +46,4 @@ def main(**kwargs):
 
 
 if __name__ == '__main__':
-	main(dx=1000)
+	main()
