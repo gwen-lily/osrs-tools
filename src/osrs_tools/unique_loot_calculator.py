@@ -25,7 +25,7 @@ def main(**kwargs):
 	}
 	options.update(kwargs)
 
-	x = np.arange(0, max_rolls*points_per_purple+1, options['dx'])
+	x = np.arange(0, max_rolls*loot_roll_point_cap+1, options['dx'])
 	y = np.asarray([1 - zero_purple_chance(xx) for xx in x])
 	x_thousand = x * 1e-3
 
