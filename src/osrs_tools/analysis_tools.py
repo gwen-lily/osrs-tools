@@ -41,7 +41,7 @@ class ComparisonMode(enum.Enum):
 	CARTESIAN = 'cartesian'     # (A x B) -> (A1, B1), (A1, B2), (A2, B1), (A2, B2)
 
 
-def tabulate_wrapper(data, col_labels: list, row_labels: list, **kwargs):
+def tabulate_wrapper(data, col_labels: list, row_labels: list, meta_header: str = None, **kwargs):
 	options = {
 		'floatfmt': '.1f',
 		'tablefmt': 'fancy',
@@ -63,7 +63,12 @@ def tabulate_wrapper(data, col_labels: list, row_labels: list, **kwargs):
 
 		table_data.append(labeled_row)
 
-	return tabulate(table_data, headers=col_labels, floatfmt=options['floatfmt'], tablefmt=options['tablefmt'])
+	table = tabulate(table_data, headers=col_labels, floatfmt=options['floatfmt'], tablefmt=options['tablefmt'])
+
+	if meta_header is not None:
+		table = '\n'.join([meta_header, table])
+
+	return table
 
 
 def graph_wrapper(func: Callable[P, R]) -> Callable[P, R]:
