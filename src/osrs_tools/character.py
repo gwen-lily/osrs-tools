@@ -1443,6 +1443,7 @@ class CoxMonster(Monster):
     party_max_combat_level: int = field(default=126, repr=False)
     party_max_hitpoints_level: int = field(default=99, repr=False)
     party_average_mining_level: int = field(default=99, repr=False)
+    points_per_hitpoint: float = field(default=4.15, repr=False, init=False)
 
     def __str__(self):
         message = f'{self.name} ({self.party_size})'
@@ -1567,6 +1568,12 @@ class CoxMonster(Monster):
                 challenge_mode=challenge_mode,
                 **kwargs
             )
+
+    def count_per_room(self, **kwargs) -> int:
+        raise NotImplementedError
+
+    def points_per_room(self, **kwargs) -> int:
+        return math.floor(self.count_per_room(**kwargs) * self.levels.hitpoints * self.points_per_hitpoint)
 
     def _convert_cox_combat_levels(self) -> MonsterCombatLevels:
         # order matters, floor each intermediate value
@@ -1796,7 +1803,7 @@ class SkeletalMystic(CoxMonster):
         skeleton.active_style = magic_style
         return skeleton
 
-    def count_per_room(self, scale_at_load_time: int = None) -> int:
+    def count_per_room(self, scale_at_load_time: int = None, **kwargs) -> int:
         """
         source: @JagexAsh
         https://twitter.com/JagexAsh/status/1386459382834139136
@@ -2177,6 +2184,10 @@ class OlmHead(Olm):
 
         return max_hit
 
+    def count_per_room(self) -> int:
+        _ = self
+        return 1
+
     @classmethod
     def from_de0(
             cls,
@@ -2223,6 +2234,9 @@ class OlmHead(Olm):
 @define(**character_attrs_settings)
 class OlmMeleeHand(Olm):
 
+    def count_per_room(self) -> int:
+        return self.phases()
+
     @classmethod
     def from_de0(
             cls,
@@ -2255,6 +2269,9 @@ class OlmMeleeHand(Olm):
 @define(**character_attrs_settings)
 class OlmMageHand(Olm):
 
+    def count_per_room(self) -> int:
+        return self.phases()
+
     @classmethod
     def from_de0(
             cls,
@@ -2279,6 +2296,7 @@ class OlmMageHand(Olm):
             challenge_mode=challenge_mode,
             **kwargs
         )
+
 
 
 class CharacterError(OsrsException):

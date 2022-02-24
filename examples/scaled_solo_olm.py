@@ -92,6 +92,9 @@ def olm_ticks_estimate(scale: int, **kwargs):
 	magic_damage_ticks_per_phase = magic_hand.levels.hitpoints / dpt
 	specs_before_melee_starts = int(np.round(2 + magic_damage_ticks_per_phase/250))
 
+	magic_ticks = magic_hand.count_per_room() * magic_damage_ticks_per_phase
+	magic_hand_points = magic_hand.points_per_room()
+
 	# MELEE HAND #######################################################################################################
 	melee_lad = Player(name='melee lad')
 	melee_lad.boost(Overload.overload())
@@ -109,6 +112,10 @@ def olm_ticks_estimate(scale: int, **kwargs):
 	dpt = melee_lad.damage_distribution(melee_hand).per_tick + options['thrall_dpt']
 	melee_damage_ticks_per_phase = melee_hand.levels.hitpoints / dpt
 
+	melee_ticks = melee_hand.count_per_room() * melee_damage_ticks_per_phase
+	melee_hand_points = melee_hand.points_per_room()
+
+
 	# HEAD PHASE #######################################################################################################
 	ranger_lad = Player(name='ranger lad')
 	ranger_lad.boost(Overload.overload())
@@ -123,10 +130,11 @@ def olm_ticks_estimate(scale: int, **kwargs):
 	dpt = ranger_lad.damage_distribution(olm_head).per_tick + options['thrall_dpt']
 	ranged_ticks = olm_head.levels.hitpoints / dpt
 
-	magic_ticks, melee_ticks = [olm_head.phases() * t for t in (magic_damage_ticks_per_phase,
-	                                                            melee_damage_ticks_per_phase)]
+	ranged_points = olm_head.points_per_room()
+
 	total_ticks = magic_ticks + melee_ticks + ranged_ticks
-	return total_ticks
+	total_points = magic_hand_points + melee_hand_points + ranged_points
+	return total_ticks, total_points
 
 
 def olm_damage_estimate(**kwargs):

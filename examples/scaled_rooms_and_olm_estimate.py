@@ -1,13 +1,15 @@
 from src.osrs_tools.character import *
 from src.osrs_tools.analysis_tools import ComparisonMode, DataMode, generic_comparison_better, tabulate_wrapper
 from scaled_solo_olm import olm_ticks_estimate
+from src.osrs_tools.unique_loot_calculator import individual_point_cap
 
 from itertools import product
+from matplotlib import pyplot as plt
 import math
 from enum import Enum, auto
 
 
-def guardian_room_ticks_estimate(scale: int, boost: Boost, **kwargs) -> float:
+def guardian_estimates(scale: int, boost: Boost, **kwargs) -> (float, int):
 	"""
 	Simple guardian room estimate method at any scale or boost for scaled solos.
 
@@ -41,7 +43,7 @@ def guardian_room_ticks_estimate(scale: int, boost: Boost, **kwargs) -> float:
 	damage_ticks = guardian.count_per_room() * ticks_per_guardian
 	setup_ticks = 20*6 + 100    # 100 for inefficiency and jank
 	total_ticks = setup_ticks + damage_ticks
-	return total_ticks
+	return total_ticks, guardian.points_per_room()
 
 
 class MysticModes(Enum):
@@ -50,7 +52,7 @@ class MysticModes(Enum):
 	chin_ten = auto()
 
 
-def mystics_room_ticks_estimate(scale: int, mode: MysticModes, **kwargs) -> float:
+def mystics_estimates(scale: int, mode: MysticModes, **kwargs) -> (float, int):
 	"""
 	Simple mystic room estimate method for afk-tbow-thralling them as usual and chinning big stacks of large lads.
 
@@ -126,16 +128,16 @@ def mystics_room_ticks_estimate(scale: int, mode: MysticModes, **kwargs) -> floa
 	else:
 		raise NotImplementedError
 
-	return total_ticks
+	return total_ticks, mystic.points_per_room(**options)
 
 
-def shamans_room_ticks_estimate(
+def shamans_estimates(
 		scale: int,
 		boost: Boost,
 		vulnerability: bool = False,
 		bone_crossbow_specs: int = 0,
 		**kwargs
-) -> float:
+) -> (float, int):
 	"""
 	Simple shaman room estimate method for chinning big stacks of large lads.
 
@@ -194,7 +196,7 @@ def shamans_room_ticks_estimate(
 	setup_ticks = 200 + bone_crossbow_specs*10
 	jank_ticks = 50     # cleanup n such
 	total_ticks = damage_ticks + setup_ticks + jank_ticks
-	return total_ticks
+	return total_ticks, shaman.points_per_room()
 
 
 class RopeModes(Enum):
@@ -203,13 +205,13 @@ class RopeModes(Enum):
 	chin_both = auto()
 
 
-def rope_room_ticks_estimate(
+def rope_estimates(
 		mode: RopeModes,
 		scale: int,
 		vulnerability: bool = False,
 		bone_crossbow_specs: int = 0,
 		**kwargs
-) -> float:
+) -> (float, int):
 	options = {}
 	options.update(kwargs)
 
@@ -287,14 +289,18 @@ def rope_room_ticks_estimate(
 		else:
 			raise NotImplementedError
 
-	return total_ticks
+	total_points = mage.points_per_room() + ranger.points_per_room()
+
+	return total_ticks, total_points
 
 
-def thieving_room_ticks_estimate(
+def thieving_estimates(
 		scale: int,
 		**kwargs
-) -> float:
-	return 20 * 100     # 20 minutes
+) -> (float, int):
+	ticks_estimate = 20 * 100   # 20 minutes
+	points_estimate = int(25e3)     # 25K points
+	return ticks_estimate, points_estimate
 
 
 class CombatRotations(Enum):
@@ -310,62 +316,51 @@ class PuzzleRotations(Enum):
 	crope: auto()
 
 
-def main(rotation: CombatRotations, scale: int, **kwargs):
+def main(rotation: CombatRotations, scale: int, **kwargs) -> float:
 	options = {
 		'vulnerability': True,
 		'bone_crossbow_specs': 0,
 		'trials': int(1e3),
+		'setup_ticks_meta': 30 * 100,   # 30 minutes to wrangle a scale, the lads, and gear
 	}
 	options.update(kwargs)
 
 	if rotation is CombatRotations.gms:
-		guardians_ticks = guardian_room_ticks_estimate(
-			scale=scale,
-			boost=Boost.super_combat_potion(),
-			**options,
-		)
-		mystics_ticks = mystics_room_ticks_estimate(
-			scale=scale,
-			mode=MysticModes.tbow_thralls,
-			**options,
-		)
-		shamans_ticks = shamans_room_ticks_estimate(
-			scale=scale,
-			boost=Overload.overload(),
-			**options,
-		)
-
+		guardian_boost = Boost.super_combat_potion()
+		shamans_boost = Overload.overload()
 	elif rotation is CombatRotations.smg:
-		shamans_ticks = shamans_room_ticks_estimate(
-			scale=scale,
-			boost=Boost.bastion_potion(),
-			**options,
-		)
-		mystics_ticks = mystics_room_ticks_estimate(
-			scale=scale,
-			mode=MysticModes.tbow_thralls,
-			**options,
-		)
-		guardians_ticks = guardian_room_ticks_estimate(
-			scale=scale,
-			boost=Overload.overload(),
-			**options,
-		)
-
+		guardian_boost = Overload.overload()
+		shamans_boost = Boost.bastion_potion()
 	else:
 		raise NotImplementedError
 
-	rope_ticks = rope_room_ticks_estimate(
+	guardians_ticks, guardian_points = guardian_estimates(
+		scale=scale,
+		boost=guardian_boost,
+		**options,
+	)
+	mystics_ticks, mystics_points = mystics_estimates(
+		scale=scale,
+		mode=MysticModes.tbow_thralls,
+		**options,
+	)
+	shamans_ticks, shamans_points = shamans_estimates(
+		scale=scale,
+		boost=shamans_boost,
+		**options,
+	)
+
+	rope_ticks, rope_points = rope_estimates(
 		mode=RopeModes.tbow_thralls,
 		scale=scale,
 		**options,
 	)
-	thieving_ticks = thieving_room_ticks_estimate(
+	thieving_ticks, thieving_points = thieving_estimates(
 		scale=scale,
 		**options,
 	)
 
-	olm_ticks = olm_ticks_estimate(
+	olm_ticks, olm_points = olm_ticks_estimate(
 		scale=scale,
 		**options,
 	)
@@ -373,40 +368,70 @@ def main(rotation: CombatRotations, scale: int, **kwargs):
 	# 1 stam * (4 doses / 1 stam) * (4 minutes / 1 dose) * (100 ticks / 1 minute)
 	minimum_stams_needed = math.ceil(olm_ticks / (1 * 4 * 4 * 100))
 
-	data = [guardians_ticks, mystics_ticks, shamans_ticks, rope_ticks, thieving_ticks, olm_ticks]
-	data.insert(0, sum(data[:]))
-	data.append(minimum_stams_needed)
+	# ticks ############################################################################################################
+	tick_data = [guardians_ticks, mystics_ticks, shamans_ticks, rope_ticks, thieving_ticks, olm_ticks]
+	tick_data.insert(0, sum(tick_data[:]) + options['setup_ticks_meta'])
+	tick_data.append(minimum_stams_needed)
 
-	data_minutes = [d/100 for d in data[:-1]]
-	data_hours = [d/6000 for d in data[:-1]]
-	col_labels = ['time unit', 'total', 'guardians', 'mystics', 'shamans', 'rope', 'thieving', 'olm', 'minimum stamina pots']
+	data_minutes = [d/100 for d in tick_data[:-1]]
+	data_hours = [d/6000 for d in tick_data[:-1]]
+	col_labels = ['time unit', 'total', 'guardians', 'mystics', 'shamans', 'rope', 'thieving', 'olm',
+	              'minimum stamina pots']
 	row_labels = ['ticks', 'minutes', 'hours']
 
-	list_of_data = [data, data_minutes, data_hours]
+	list_of_data = [tick_data, data_minutes, data_hours]
 	table_line = '-'*107
 	header_line = copy(table_line)
 	header_title = f'  scale:  {scale:3.0f}  '
 	chop_index = (len(table_line) - len(header_title))//2
 	title_line = header_line[:chop_index] + header_title + header_line[chop_index + len(header_title):]
-	table = tabulate_wrapper(list_of_data, col_labels=col_labels, row_labels=row_labels, meta_header=title_line,
+	time_table = tabulate_wrapper(list_of_data, col_labels=col_labels, row_labels=row_labels, meta_header=title_line,
 	                         floatfmt='.1f')
-	print(table)
+
+	# points ###########################################################################################################
+	pt_data = [guardian_points, mystics_points, shamans_points, rope_points, thieving_points, olm_points]
+	pt_data.insert(0, sum(pt_data))
+	col_labels = [''] + col_labels[1:-1]
+	row_labels = ['points']
+	list_of_data = [pt_data]
+	points_table = tabulate_wrapper(list_of_data, col_labels, row_labels)
+
+
+
+	# points per hour ##################################################################################################
+	leave_loss = individual_point_cap
+	adjusted_total_points = pt_data[0] - leave_loss
+	points_per_hour = adjusted_total_points / data_hours[0]
+
+	print('\n'.join(['\n', time_table, '\n', points_table, '\n', f'points per hr: {points_per_hour}']))
+	return points_per_hour
 
 
 if __name__ == '__main__':
 	my_rot = CombatRotations.gms
-	my_scales = range(23, 52, 4)
-	my_trials = int(1e1)
-	my_specs = 0
+	my_scales = list(range(15, 51, 4))
+	my_trials = int(1e0)
+	my_specs = 8
+	my_setup_ticks = 30 * 100   # 30 minutes to wrangle a reasonable scale + scalers + gear the lads
 
 	mythical_cape = Gear.from_bb('mythical cape')
 	dwh_specialist_strength_level = 13
 
-	for my_scale in my_scales:
-		main(
+	scales_ary = np.asarray(my_scales)
+	pph_data = np.empty(shape=scales_ary.shape, dtype=float)
+
+	for index, my_scale in enumerate(my_scales):
+		pph_data[index] = main(
 			rotation=my_rot,
 			scale=my_scale,
 			trials=my_trials,
 			bone_crossbow_specs=my_specs,
 			dwh_specialist_strength_level=dwh_specialist_strength_level,
+			setup_ticks_meta=my_setup_ticks
 		)
+
+	plt.plot(scales_ary, pph_data)
+	plt.xlabel('scale')
+	plt.ylabel('points per hr (pph)')
+	plt.title('PPH vs. scale for scaled iron gimmick solos')
+	plt.show()
