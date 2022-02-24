@@ -294,12 +294,25 @@ def rope_estimates(
 	return total_ticks, total_points
 
 
-def thieving_estimates(
-		scale: int,
-		**kwargs
-) -> (float, int):
-	ticks_estimate = 20 * 100   # 20 minutes
-	points_estimate = int(25e3)     # 25K points
+def thieving_estimates(scale: int, **kwargs) -> (float, int):
+	options = {
+		'ticks_per_grub': 5,
+	}
+	options.update(kwargs)
+
+	def flat_grub_estimate(inner_scale: int) -> int:
+		return 16*inner_scale - 1
+
+	def jank_grub_estimate(modifier: float = None):
+		modifier = 268 / flat_grub_estimate(28) if modifier is None else modifier   # my one data point
+		return math.floor(flat_grub_estimate(scale) * modifier)
+
+	grub_estimate = jank_grub_estimate()
+	points_per_grub = 100
+	ticks_per_grub = options['ticks_per_grub']
+
+	ticks_estimate = ticks_per_grub * grub_estimate
+	points_estimate = points_per_grub * grub_estimate
 	return ticks_estimate, points_estimate
 
 
@@ -390,17 +403,14 @@ def main(rotation: CombatRotations, scale: int, **kwargs) -> float:
 
 	# points ###########################################################################################################
 	pt_data = [guardian_points, mystics_points, shamans_points, rope_points, thieving_points, olm_points]
-	pt_data.insert(0, sum(pt_data))
+	pt_data.insert(0, sum(pt_data) - individual_point_cap)
 	col_labels = [''] + col_labels[1:-1]
 	row_labels = ['points']
 	list_of_data = [pt_data]
 	points_table = tabulate_wrapper(list_of_data, col_labels, row_labels)
 
-
-
 	# points per hour ##################################################################################################
-	leave_loss = individual_point_cap
-	adjusted_total_points = pt_data[0] - leave_loss
+	adjusted_total_points = pt_data[0]
 	points_per_hour = adjusted_total_points / data_hours[0]
 
 	print('\n'.join(['\n', time_table, '\n', points_table, '\n', f'points per hr: {points_per_hour}']))
@@ -409,9 +419,12 @@ def main(rotation: CombatRotations, scale: int, **kwargs) -> float:
 
 if __name__ == '__main__':
 	my_rot = CombatRotations.gms
-	my_scales = list(range(15, 51, 4))
-	my_trials = int(1e0)
-	my_specs = 8
+	my_scales = list(range(15, 52, 4))
+	my_scales = list(range(15, 52, 1))
+	my_specs_list = [0] * len(my_scales)
+	# my_specs_list = [*(0, )*4, *(0, )*6]     # bone crossbow only worth the jank in 31+ imo
+	my_trials = int(5e1)
+
 	my_setup_ticks = 30 * 100   # 30 minutes to wrangle a reasonable scale + scalers + gear the lads
 
 	mythical_cape = Gear.from_bb('mythical cape')
@@ -420,7 +433,7 @@ if __name__ == '__main__':
 	scales_ary = np.asarray(my_scales)
 	pph_data = np.empty(shape=scales_ary.shape, dtype=float)
 
-	for index, my_scale in enumerate(my_scales):
+	for index, (my_scale, my_specs) in enumerate(zip(my_scales, my_specs_list)):
 		pph_data[index] = main(
 			rotation=my_rot,
 			scale=my_scale,
@@ -433,5 +446,7 @@ if __name__ == '__main__':
 	plt.plot(scales_ary, pph_data)
 	plt.xlabel('scale')
 	plt.ylabel('points per hr (pph)')
-	plt.title('PPH vs. scale for scaled iron gimmick solos')
+	plot_title = 'PPH vs. scale for scaled iron gimmick solos'
+	plt.title(plot_title)
 	plt.show()
+	plt.savefig(plot_title + '.png')
