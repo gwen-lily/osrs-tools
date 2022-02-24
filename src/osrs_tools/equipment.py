@@ -453,6 +453,33 @@ class Equipment:
     # wearing properties, if any Character methods needs to know it I'll define it here for re-use and standardization
 
     @property
+    def full_set(self, requires_ammo: bool = None, assume_2h: bool = True) -> bool:
+        if requires_ammo is not None:
+            if self.weapon.weapon_styles in [BowStyles, CrossbowStyles, ThrownStyles]:
+                requires_ammo = True
+            else:
+                requires_ammo = False
+
+        for slot in asdict(GearSlots, recurse=False):
+            if slot == GearSlots.ammunition:
+                if requires_ammo and 'empty' in self.ammunition:
+                    return False
+                else:
+                    continue
+
+            if slot == GearSlots.shield:
+                if not assume_2h and 'empty' in self.shield:
+                    return False
+                else:
+                    continue
+
+            if 'empty' in self.__getattribute__(slot).name:
+                return False
+
+        return True
+
+
+    @property
     def normal_void_set(self) -> bool:
         return self.wearing(
             head=Gear.from_bb('void knight helm'),
