@@ -756,6 +756,15 @@ class Player(Character):
             db = 0
         return arm, db
 
+    def _guardians_modifier(self, other: Character) -> float:
+        if isinstance(other, Guardian) and 'pickaxe' in self.equipment.weapon.name:
+            modifier = (50 + min([100, self.active_levels.mining]) + self.equipment.weapon.combat_requirements.mining) \
+                       / 150
+        else:
+            modifier = 1
+
+        return modifier
+
     def attack_roll(self, other: Character, special_attack: bool = False, distance: int = None) -> int:
 
         aggressive_cb = self.equipment.aggressive_bonus
@@ -894,6 +903,7 @@ class Player(Character):
                 _, obsidian_dm = self._obsidian_armor_modifier()
                 _, inquisitor_dm = self._inquisitor_modifier()
                 berserker_dm = self._berserker_necklace_modifier()
+                guardians_dm = self._guardians_modifier(other)
 
                 ice_demon_dm = 0.33 if isinstance(other, IceDemon) else 1
 
@@ -909,6 +919,7 @@ class Player(Character):
                     inquisitor_dm,
                     berserker_dm,
                     ice_demon_dm,
+                    guardians_dm
                 ]
 
                 if special_attack:

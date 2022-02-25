@@ -1,7 +1,7 @@
 from src.osrs_tools.character import *
 from src.osrs_tools.analysis_tools import ComparisonMode, DataMode, generic_comparison_better, tabulate_wrapper
 from scaled_solo_olm import olm_ticks_estimate
-from src.osrs_tools.unique_loot_calculator import individual_point_cap
+from src.osrs_tools.unique_loot_calculator import individual_point_cap, loot_roll_point_cap
 
 from itertools import product
 from matplotlib import pyplot as plt
@@ -18,9 +18,12 @@ def guardian_estimates(scale: int, boost: Boost, **kwargs) -> (float, int):
 	yourself.
 	"""
 	options = {
-		'party_average_mining_level': 61*(15/31) + 85*(5/31) * 1*(11/31)    # hack math based on the alts I usually use
+		'party_average_mining_level': 61*(15/31) + 85*(5/31) * 1*(11/31),   # hack math based on the alts I usually use
+		'guardian_alts': 4,
+		'guardian_alt_levels': PlayerLevels(attack=99, strength=99, mining=61)
 	}
 	options.update(kwargs)
+	extra_lads = options['guardian_alts']
 
 	guardian = Guardian.from_de0(scale, party_average_mining_level=options['party_average_mining_level'])
 	lad = Player(name='guardians fit')
@@ -37,13 +40,35 @@ def guardian_estimates(scale: int, boost: Boost, **kwargs) -> (float, int):
 
 	# dwh / bgs / zero defence assumed if you have enough alts
 	guardian.active_levels.defence = 0
+	lad_dpt = lad.damage_distribution(guardian).per_tick
+	points_raw = guardian.points_per_room()
 
-	dpt = lad.damage_distribution(guardian).per_tick
-	ticks_per_guardian = guardian.levels.hitpoints / dpt
-	damage_ticks = guardian.count_per_room() * ticks_per_guardian
+	if extra_lads:
+		extra_lad = Player(name='guardian alt', levels=options['guardian_alt_levels'])
+		extra_lad.equipment.equip_basic_melee_gear()
+		extra_lad.equipment.equip_bandos_set()
+		extra_lad.active_style = extra_lad.equipment.equip_dragon_pickaxe(avernic=True, berserker=True)
+		assert extra_lad.equipment.full_set
+
+		extra_lad.boost(boost)
+		extra_lad.prayers.pray(Prayer.piety())
+
+		extra_lad_dpt = extra_lad.damage_distribution(guardian).per_tick
+
+		dpt_ary = np.asarray([lad_dpt, *(extra_lad_dpt, )*extra_lads])
+		dpt = dpt_ary.sum()
+		damage_ticks = guardian.count_per_room() * guardian.levels.hitpoints / dpt
+		#                       lads [unitless] * (ticks / room) * (damage / tick) * (points / damage) = points / room
+		total_points = points_raw - extra_lads*damage_ticks*extra_lad_dpt*guardian.points_per_hitpoint
+
+	else:
+		dpt = lad.damage_distribution(guardian).per_tick
+		damage_ticks = guardian.count_per_room() * guardian.levels.hitpoints / dpt
+		total_points = points_raw
+
 	setup_ticks = 20*6 + 100    # 100 for inefficiency and jank
 	total_ticks = setup_ticks + damage_ticks
-	return total_ticks, guardian.points_per_room()
+	return total_ticks, total_points
 
 
 class MysticModes(Enum):
@@ -99,7 +124,7 @@ def mystics_estimates(scale: int, mode: MysticModes, **kwargs) -> (float, int):
 		# debuffs
 		data = np.empty(shape=(trials, ), dtype=int)
 
-		for index in range(trials):
+		for mys_index in range(trials):
 			mystic.reset_stats()
 
 			for _ in range(options['dwh_attempts_per_mystic']):
@@ -107,7 +132,7 @@ def mystics_estimates(scale: int, mode: MysticModes, **kwargs) -> (float, int):
 				if np.random.random() < p:
 					mystic.apply_dwh()
 
-			data[index] = mystic.active_levels.defence
+			data[mys_index] = mystic.active_levels.defence
 
 		mean_defence_level = math.floor(data.mean())
 		mystic.active_levels.defence = mean_defence_level
@@ -119,7 +144,6 @@ def mystics_estimates(scale: int, mode: MysticModes, **kwargs) -> (float, int):
 		tank_ticks = 200
 		jank_ticks = 6*options['dwh_attempts_per_mystic']
 		total_ticks = damage_ticks + tank_ticks + jank_ticks
-
 
 	elif mode is MysticModes.chin_six_by_two:
 		pass
@@ -329,12 +353,14 @@ class PuzzleRotations(Enum):
 	crope: auto()
 
 
-def main(rotation: CombatRotations, scale: int, **kwargs) -> float:
+def main(rotation: CombatRotations, scale: int, cap_overload: bool = True, cap_food: bool = True, **kwargs) -> float:
 	options = {
 		'vulnerability': True,
 		'bone_crossbow_specs': 0,
 		'trials': int(1e3),
 		'setup_ticks_meta': 30 * 100,   # 30 minutes to wrangle a scale, the lads, and gear
+		'points_per_overload_dose': 600,
+		'points_per_food': 90,
 	}
 	options.update(kwargs)
 
@@ -393,7 +419,7 @@ def main(rotation: CombatRotations, scale: int, **kwargs) -> float:
 	row_labels = ['ticks', 'minutes', 'hours']
 
 	list_of_data = [tick_data, data_minutes, data_hours]
-	table_line = '-'*107
+	table_line = '-'*108
 	header_line = copy(table_line)
 	header_title = f'  scale:  {scale:3.0f}  '
 	chop_index = (len(table_line) - len(header_title))//2
@@ -402,30 +428,47 @@ def main(rotation: CombatRotations, scale: int, **kwargs) -> float:
 	                         floatfmt='.1f')
 
 	# points ###########################################################################################################
+
 	pt_data = [guardian_points, mystics_points, shamans_points, rope_points, thieving_points, olm_points]
-	pt_data.insert(0, sum(pt_data) - individual_point_cap)
 	col_labels = [''] + col_labels[1:-1]
+
+	if cap_overload:
+		overload_points = options['points_per_overload_dose'] * 5 * (scale - 1)
+		pt_data.append(overload_points)
+		col_labels.append('overload')
+
+	if cap_food:
+		food_points = options['points_per_food'] * 20 * (scale - 1)
+		pt_data.append(food_points)
+		col_labels.append('food')
+
+	pt_data.insert(0, sum(pt_data) - individual_point_cap)
+
 	row_labels = ['points']
 	list_of_data = [pt_data]
-	points_table = tabulate_wrapper(list_of_data, col_labels, row_labels)
+	points_table = tabulate_wrapper(list_of_data, col_labels, row_labels, floatfmt='.0f')
 
 	# points per hour ##################################################################################################
 	adjusted_total_points = pt_data[0]
 	points_per_hour = adjusted_total_points / data_hours[0]
 
-	print('\n'.join(['\n', time_table, '\n', points_table, '\n', f'points per hr: {points_per_hour}']))
+	print('\n'.join(['\n', time_table, '\n', points_table, '\n', f'points per hr: {points_per_hour:.0f}']))
 	return points_per_hour
 
 
 if __name__ == '__main__':
 	my_rot = CombatRotations.gms
-	my_scales = list(range(15, 52, 4))
-	my_scales = list(range(15, 52, 1))
+	my_scales = list(range(27, 29, 1))
 	my_specs_list = [0] * len(my_scales)
 	# my_specs_list = [*(0, )*4, *(0, )*6]     # bone crossbow only worth the jank in 31+ imo
 	my_trials = int(5e1)
+	outer_cap_ovl = True
+	outer_cap_food = False
+	vulnerability = True
+	guardian_alts = 4
+	dwh_attempts_per_mystic = 4
 
-	my_setup_ticks = 30 * 100   # 30 minutes to wrangle a reasonable scale + scalers + gear the lads
+	my_setup_ticks = 15 * 100   # 30 minutes to wrangle a reasonable scale + scalers + gear the lads
 
 	mythical_cape = Gear.from_bb('mythical cape')
 	dwh_specialist_strength_level = 13
@@ -437,16 +480,21 @@ if __name__ == '__main__':
 		pph_data[index] = main(
 			rotation=my_rot,
 			scale=my_scale,
+			cap_overload=outer_cap_ovl,
+			cap_food=outer_cap_food,
 			trials=my_trials,
 			bone_crossbow_specs=my_specs,
 			dwh_specialist_strength_level=dwh_specialist_strength_level,
-			setup_ticks_meta=my_setup_ticks
+			setup_ticks_meta=my_setup_ticks,
+			guardian_alts=guardian_alts,
+			vulnerability=False,
+			dwh_attempts_per_mystic=dwh_attempts_per_mystic
 		)
 
 	plt.plot(scales_ary, pph_data)
 	plt.xlabel('scale')
 	plt.ylabel('points per hr (pph)')
-	plot_title = 'PPH vs. scale for scaled iron gimmick solos'
+	plot_title = 'PPH vs scale for scaled iron gimmick solos'
 	plt.title(plot_title)
 	plt.show()
-	plt.savefig(plot_title + '.png')
+	# plt.savefig(plot_title, format='png')

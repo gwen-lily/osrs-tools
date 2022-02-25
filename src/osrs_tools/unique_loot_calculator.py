@@ -19,6 +19,22 @@ def zero_purple_chance(points: int) -> float:
 		return (1-capped_roll_chance)**max_rolls
 
 
+def purple_chance(points: int, number: int) -> float:
+	capped_rolls, remaining_points = divmod(points, loot_roll_point_cap)
+
+	if capped_rolls + 1*(remaining_points > 0) < number:
+		return 0
+
+	else:
+		raise NotImplementedError
+
+
+def two_cap_at_least_one() -> float:
+	total_points = loot_roll_point_cap * 2
+	return 1 - zero_purple_chance(total_points)
+
+
+
 def main(**kwargs):
 	options = {
 		'dx': int(1e4),
@@ -47,4 +63,5 @@ def main(**kwargs):
 
 
 if __name__ == '__main__':
-	main()
+	# main()
+	print(two_cap_at_least_one())
