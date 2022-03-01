@@ -2,12 +2,12 @@ import itertools
 from typing import NamedTuple
 
 from .stats import *
-from src.osrs_tools.exceptions import *
+from osrs_tools.exceptions import *
 
 
 # noinspection GrazieInspection
 class Style:
-    from src.osrs_tools import stats
+    from osrs_tools import stats
 
     # melee style class vars
     stab = 'stab'

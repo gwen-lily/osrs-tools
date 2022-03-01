@@ -1,6 +1,6 @@
-from src.osrs_tools.character import *
-from src.osrs_tools import analysis_tools
-from src.osrs_tools.analysis_tools import ComparisonMode, DataMode
+from osrs_tools.character import *
+from osrs_tools import analysis_tools
+from osrs_tools.analysis_tools import ComparisonMode, DataMode
 
 from itertools import product
 import math
@@ -150,9 +150,10 @@ def olm_damage_estimate(**kwargs):
 	melee_lad.equipment.equip_basic_melee_gear(berserker=False, torture=False)
 	melee_lad.equipment.equip_torva_set()
 	melee_lad.active_style = melee_lad.equipment.equip_lance(avernic=False)
-	melee_lad.equipment.equip(amulet_of_fury, ring_of_endurance)
+	melee_lad.equipment.equip_fury(blood=True)
+	melee_lad.equipment.equip(ring_of_endurance)
 
-	equipments = [Equipment(shield=x) for x in (avernic_defender, elysian_spirit_shield)]
+	equipments = [Equipment(shield=x) for x in (elysian_spirit_shield, avernic_defender)]
 	olms = [OlmHead.from_de0(ps) for ps in options['scales']]
 
 	olm = OlmHead.from_de0(1)
@@ -250,8 +251,7 @@ def olm_max_hits(**kwargs):
 
 
 if __name__ == '__main__':
-
-
+	avernic_defender = Gear.from_bb('avernic defender')
 	elysian_spirit_shield = Gear.from_bb('elysian spirit shield')
 
 	# magic_shield_comparison(floatfmt='.2f')

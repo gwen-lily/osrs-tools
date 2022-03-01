@@ -1,8 +1,8 @@
 import numpy as np
 
-from src.osrs_tools.character import *
-from src.osrs_tools import analysis_tools
-from src.osrs_tools.analysis_tools import ComparisonMode, DataMode
+from osrs_tools.character import *
+from osrs_tools import analysis_tools
+from osrs_tools.analysis_tools import ComparisonMode, DataMode
 
 from itertools import product
 import math

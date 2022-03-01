@@ -1,7 +1,7 @@
 from unittest import TestCase
-from src.osrs_tools.character import *
-from src.osrs_tools.equipment import *
-from src.osrs_tools.stats import *
+from osrs_tools.character import *
+from osrs_tools.equipment import *
+from osrs_tools.stats import *
 
 Torva = Player(name='torva')
 Torva.equipment = EquipmentLoadout()

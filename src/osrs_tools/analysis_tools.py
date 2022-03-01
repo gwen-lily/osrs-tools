@@ -283,7 +283,7 @@ def generic_comparison_better(
 		comparison_mode: ComparisonMode.PARALLEL,
 		data_mode: DataMode = DataMode.DPS,
 		**kwargs,
-) -> (tuple[int, ...], list[list, ...], np.ndarray):
+) -> tuple[tuple[int, ...], list[list, ...], np.ndarray]:
 	if isinstance(players, Player):
 		players = [players]
 

@@ -1,8 +1,8 @@
 from unittest import TestCase
 from copy import copy
 
-from src.osrs_tools.equipment import *
-from src.osrs_tools.stats import *
+from osrs_tools.equipment import *
+from osrs_tools.stats import *
 
 PlayerA = PlayerLevels(*(99,) * 23)
 PlayerB = PlayerLevels(*(1,) * 23)

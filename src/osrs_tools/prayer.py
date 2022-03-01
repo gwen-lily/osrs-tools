@@ -3,7 +3,7 @@ from osrsbox import prayers_api
 from osrsbox.prayers_api import prayer_properties
 
 from .stats import *
-from src.osrs_tools.exceptions import *
+from osrs_tools.exceptions import *
 
 Prayers = prayers_api.load()
 

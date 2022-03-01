@@ -2,7 +2,7 @@ import math
 from abc import ABC, abstractmethod
 from attrs import define, field, validators
 
-from src.osrs_tools.exceptions import *
+from osrs_tools.exceptions import *
 
 
 @define(order=True, frozen=True)

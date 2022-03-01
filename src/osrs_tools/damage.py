@@ -4,7 +4,7 @@ import numpy as np
 import random
 from cached_property import cached_property
 
-from src.osrs_tools.exceptions import *
+from osrs_tools.exceptions import *
 
 
 class Hitsplat:     # TODO: Dataclass/attrs

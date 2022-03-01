@@ -1,7 +1,7 @@
 from unittest import TestCase
 
-from src.osrs_tools.equipment import *
-from src.osrs_tools.stats import *
+from osrs_tools.equipment import *
+from osrs_tools.stats import *
 
 
 class TestGear(TestCase):
@@ -43,7 +43,7 @@ class TestSpecialWeapon(TestCase):
 		self.fail()
 
 
-Torva = EquipmentLoadout()
+Torva = Equipment()
 Torva.equip_basic_melee_gear()
 Torva.equip_torva_set()
 Torva.equip_scythe()
@@ -72,13 +72,13 @@ class TestEquipment(TestCase):
 		self.assertTrue(Torva.torva_set)
 
 	def test_normal_void_set(self):
-		void = EquipmentLoadout()
+		void = Equipment()
 		void.equip_void_set(elite=False)
 		self.assertTrue(void.normal_void_set)
 		self.assertFalse(void.elite_void_set)
 
 	def test_elite_void_set(self):
-		void = EquipmentLoadout()
+		void = Equipment()
 		void.equip_void_set(elite=True)
 		self.assertTrue(void.elite_void_set)
 		self.assertFalse(void.normal_void_set)
@@ -150,9 +150,9 @@ class TestEquipment(TestCase):
 
 class TestEquipmentLoadout(TestCase):
 	def test_equip_basic_melee_gear(self):
-		Lad = EquipmentLoadout()
-		Lad.equip_basic_melee_gear(ferocious=False)
-		self.assertFalse(Lad.wearing(hands=Gear.from_bb('ferocious gloves')))
+		lad_eqp = Equipment()
+		lad_eqp.equip_basic_melee_gear(ferocious=False)
+		self.assertFalse(lad_eqp.wearing(hands=Gear.from_bb('ferocious gloves')))
 
 	def test_equip_basic_ranged_gear(self):
 		self.fail()

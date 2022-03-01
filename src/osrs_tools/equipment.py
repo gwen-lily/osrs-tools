@@ -6,7 +6,7 @@ import pandas as pd
 from .style import *
 from .stats import *
 from .exceptions import *
-import src.osrs_tools.resource_reader as rr
+import osrs_tools.resource_reader as rr
 
 
 class GearError(OsrsException):

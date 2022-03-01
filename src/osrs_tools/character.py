@@ -5,7 +5,7 @@ from .stats import *
 from .damage import *
 from .spells import *
 from .exceptions import *
-import src.osrs_tools.resource_reader as rr
+import osrs_tools.resource_reader as rr
 from osrsbox import monsters_api, monsters_api_examples
 
 
@@ -138,7 +138,7 @@ class Character(ABC):
         :return:
         """
 
-        def reduce_stat(inner_stat: str, inner_amount: int, inner_floor: int = 0) -> (int, int):
+        def reduce_stat(inner_stat: str, inner_amount: int, inner_floor: int = 0) -> tuple[int, int]:
             current_stat = self.active_levels.__getattribute__(inner_stat)
             possible_reduction = current_stat - inner_floor
 
@@ -1497,7 +1497,7 @@ class CoxMonster(Monster):
         return factor
 
     @staticmethod
-    def get_base_levels_and_stats(name: str) -> (MonsterCombatLevels, AggressiveStats, DefensiveStats):
+    def get_base_levels_and_stats(name: str) -> tuple[MonsterCombatLevels, AggressiveStats, DefensiveStats]:
         mon_df = rr.get_cox_monster_base_stats_by_name(name)
 
         levels = MonsterCombatLevels(

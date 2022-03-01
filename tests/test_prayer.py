@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from src.osrs_tools.prayer import *
+from osrs_tools.prayer import *
 
 piety = Prayer.piety()
 rigour = Prayer.rigour()
