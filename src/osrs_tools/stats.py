@@ -4,7 +4,7 @@ import math
 from copy import copy, deepcopy
 
 from .exceptions import *
-import src.osrs_tools.resource_reader as rr
+import osrs_tools.resource_reader as rr
 
 player_skill_field = field(converter=lambda s: min([max([1, int(s)]), 99]), default=1)
 player_skill_unbounded_field = field(converter=int, default=0)

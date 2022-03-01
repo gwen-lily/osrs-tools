@@ -1,7 +1,7 @@
-from src.osrs_tools.character import *
-from src.osrs_tools.analysis_tools import ComparisonMode, DataMode, generic_comparison_better, tabulate_wrapper
+from osrs_tools.character import *
+from osrs_tools.analysis_tools import ComparisonMode, DataMode, generic_comparison_better, tabulate_wrapper
 from scaled_solo_olm import olm_ticks_estimate
-from src.osrs_tools.unique_loot_calculator import individual_point_cap, loot_roll_point_cap
+from osrs_tools.unique_loot_calculator import individual_point_cap, loot_roll_point_cap, zero_purple_chance
 
 from itertools import product
 from matplotlib import pyplot as plt
@@ -9,7 +9,7 @@ import math
 from enum import Enum, auto
 
 
-def guardian_estimates(scale: int, boost: Boost, **kwargs) -> (float, int):
+def guardian_estimates(scale: int, boost: Boost, **kwargs) -> tuple[float, int]:
 	"""
 	Simple guardian room estimate method at any scale or boost for scaled solos.
 
@@ -77,7 +77,7 @@ class MysticModes(Enum):
 	chin_ten = auto()
 
 
-def mystics_estimates(scale: int, mode: MysticModes, **kwargs) -> (float, int):
+def mystics_estimates(scale: int, mode: MysticModes, **kwargs) -> tuple[float, int]:
 	"""
 	Simple mystic room estimate method for afk-tbow-thralling them as usual and chinning big stacks of large lads.
 
@@ -155,13 +155,7 @@ def mystics_estimates(scale: int, mode: MysticModes, **kwargs) -> (float, int):
 	return total_ticks, mystic.points_per_room(**options)
 
 
-def shamans_estimates(
-		scale: int,
-		boost: Boost,
-		vulnerability: bool = False,
-		bone_crossbow_specs: int = 0,
-		**kwargs
-) -> (float, int):
+def shamans_estimates(scale: int, boost: Boost, vulnerability: bool = False, bone_crossbow_specs: int = 0, **kwargs) -> tuple[float, int]:
 	"""
 	Simple shaman room estimate method for chinning big stacks of large lads.
 
@@ -229,13 +223,7 @@ class RopeModes(Enum):
 	chin_both = auto()
 
 
-def rope_estimates(
-		mode: RopeModes,
-		scale: int,
-		vulnerability: bool = False,
-		bone_crossbow_specs: int = 0,
-		**kwargs
-) -> (float, int):
+def rope_estimates(mode: RopeModes,	scale: int,	vulnerability: bool = False, bone_crossbow_specs: int = 0, **kwargs) -> tuple[float, int]:
 	options = {}
 	options.update(kwargs)
 
@@ -318,9 +306,11 @@ def rope_estimates(
 	return total_ticks, total_points
 
 
-def thieving_estimates(scale: int, **kwargs) -> (float, int):
+def thieving_estimates(scale: int, **kwargs) -> tuple[float, int]:
 	options = {
 		'ticks_per_grub': 5,
+		'party_average_thieving_level_at_load': 50
+		# TODO: Implement scales with accounts with skills to make this bit automatic
 	}
 	options.update(kwargs)
 
@@ -353,7 +343,8 @@ class PuzzleRotations(Enum):
 	crope: auto()
 
 
-def main(rotation: CombatRotations, scale: int, cap_overload: bool = True, cap_food: bool = True, **kwargs) -> float:
+def main(rotation: CombatRotations, scale: int, cap_overload: bool = True, cap_food: bool = True, **kwargs) -> \
+		tuple[float, int, float]:
 	options = {
 		'vulnerability': True,
 		'bone_crossbow_specs': 0,
@@ -442,7 +433,7 @@ def main(rotation: CombatRotations, scale: int, cap_overload: bool = True, cap_f
 		pt_data.append(food_points)
 		col_labels.append('food')
 
-	pt_data.insert(0, sum(pt_data) - individual_point_cap)
+	pt_data.insert(0, sum(pt_data) - individual_point_cap)  # loss from leaving
 
 	row_labels = ['points']
 	list_of_data = [pt_data]
@@ -450,23 +441,23 @@ def main(rotation: CombatRotations, scale: int, cap_overload: bool = True, cap_f
 
 	# points per hour ##################################################################################################
 	adjusted_total_points = pt_data[0]
-	points_per_hour = adjusted_total_points / data_hours[0]
+	total_hours = data_hours[0]
+	points_per_hour = adjusted_total_points / total_hours
 
 	print('\n'.join(['\n', time_table, '\n', points_table, '\n', f'points per hr: {points_per_hour:.0f}']))
-	return points_per_hour
+	return points_per_hour, adjusted_total_points, total_hours
 
 
 if __name__ == '__main__':
 	my_rot = CombatRotations.gms
-	my_scales = list(range(27, 29, 1))
-	my_specs_list = [0] * len(my_scales)
-	# my_specs_list = [*(0, )*4, *(0, )*6]     # bone crossbow only worth the jank in 31+ imo
-	my_trials = int(5e1)
+	my_scales = list(range(15, 51, 1))
+	my_specs_list = [0] * len(my_scales)    # bone crossbow only worth the jank in 31+ imo
+	my_trials = int(2e1)
 	outer_cap_ovl = True
 	outer_cap_food = False
 	vulnerability = True
-	guardian_alts = 4
-	dwh_attempts_per_mystic = 4
+	guardian_alts = 0
+	dwh_attempts_per_mystic = 3
 
 	my_setup_ticks = 15 * 100   # 30 minutes to wrangle a reasonable scale + scalers + gear the lads
 
@@ -475,9 +466,10 @@ if __name__ == '__main__':
 
 	scales_ary = np.asarray(my_scales)
 	pph_data = np.empty(shape=scales_ary.shape, dtype=float)
+	uph_data = np.empty(shape=scales_ary.shape, dtype=float)
 
 	for index, (my_scale, my_specs) in enumerate(zip(my_scales, my_specs_list)):
-		pph_data[index] = main(
+		pph, total_pts, total_hrs = main(
 			rotation=my_rot,
 			scale=my_scale,
 			cap_overload=outer_cap_ovl,
@@ -487,14 +479,27 @@ if __name__ == '__main__':
 			dwh_specialist_strength_level=dwh_specialist_strength_level,
 			setup_ticks_meta=my_setup_ticks,
 			guardian_alts=guardian_alts,
-			vulnerability=False,
+			vulnerability=True,
 			dwh_attempts_per_mystic=dwh_attempts_per_mystic
 		)
+		pph_data[index] = pph
+		any_unique_chance = 1 - zero_purple_chance(total_pts)
+		uph_data[index] = any_unique_chance / total_hrs
 
-	plt.plot(scales_ary, pph_data)
-	plt.xlabel('scale')
-	plt.ylabel('points per hr (pph)')
-	plot_title = 'PPH vs scale for scaled iron gimmick solos'
+	# graph
+	fig, ax1 = plt.subplots()
+
+	ax1.set_xlabel('scale')
+	ax1.set_ylabel('points per hr (pph)', color='red')
+	ax1.plot(scales_ary, pph_data, color='red')
+	ax1.tick_params(axis='y', labelcolor='red')
+
+	ax2 = ax1.twinx()
+	ax2.set_ylabel('uniques per hr (uph)', color='blue')
+	ax2.plot(scales_ary, uph_data, color='blue')
+	ax2.tick_params(axis='y', labelcolor='blue')
+
+	plot_title = 'Points and Uniques per hour for scaled solo iron gimmick raids'
 	plt.title(plot_title)
+	fig.savefig(plot_title + '.png', format='png')
 	plt.show()
-	# plt.savefig(plot_title, format='png')

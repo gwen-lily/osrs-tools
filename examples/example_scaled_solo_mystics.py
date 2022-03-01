@@ -79,7 +79,7 @@ def dwh_setup(**kwargs):
 	set_3 = Equipment()
 	set_3.equip_void_set(elite=True)
 
-	equipments = [set_1, set_2, set_3]
+	equipments = [set_1, set_2]     # , set_3]
 
 	mystics = [SkeletalMystic.from_de0(ps) for ps in options['scales']]
 
@@ -134,4 +134,4 @@ if __name__ == '__main__':
 	data_modes = [DataMode.DWH_SUCCESS, DataMode.MAX_HIT]
 
 	for ff, dm in zip(float_fmts, data_modes):
-		dwh_setup(scales=(1, ), strength_levels=range(16, 32+1), floatfmt=ff, datamode=dm)
+		dwh_setup(scales=(1, ), strength_levels=range(0, 20+1), floatfmt=ff, datamode=dm)

@@ -99,9 +99,9 @@ def lookup_gear_base_attributes_by_name(name: str, gear_df: pd.DataFrame = None)
         ranged=item_df['ranged defence'].values[0]
     )
     prayer_bonus = item_df['prayer'].values[0]
-    combat_requirements = PlayerLevels(mining=item_df['mining level req'].values[0])
+    level_requirements = PlayerLevels(mining=item_df['mining level req'].values[0])
 
-    return name, slot, aggressive_bonus, defensive_bonus, prayer_bonus, combat_requirements
+    return name, slot, aggressive_bonus, defensive_bonus, prayer_bonus, level_requirements
 
 
 def lookup_weapon_attributes_by_name(name: str, gear_df: pd.DataFrame = None):
@@ -136,11 +136,11 @@ class Gear:
     aggressive_bonus: AggressiveStats = field(validator=validators.instance_of(AggressiveStats))
     defensive_bonus: DefensiveStats = field(validator=validators.instance_of(DefensiveStats))
     prayer_bonus: int
-    combat_requirements: PlayerLevels = field(validator=validators.instance_of(PlayerLevels))
+    level_requirements: PlayerLevels = field(validator=validators.instance_of(PlayerLevels))
 
     @classmethod
     def from_bb(cls, name: str):
-        name, slot, aggressive_bonus, defensive_bonus, prayer_bonus, combat_requirements = \
+        name, slot, aggressive_bonus, defensive_bonus, prayer_bonus, level_requirements = \
             lookup_gear_base_attributes_by_name(name)
 
         return cls(
@@ -149,7 +149,7 @@ class Gear:
             aggressive_bonus=aggressive_bonus,
             defensive_bonus=defensive_bonus,
             prayer_bonus=prayer_bonus,
-            combat_requirements=combat_requirements,
+            level_requirements=level_requirements,
         )
 
     @classmethod
@@ -202,7 +202,7 @@ class Gear:
                 ranged=eqp.defence_ranged
             ),
             prayer_bonus=eqp.prayer,
-            combat_requirements=PlayerLevels(**reqs),
+            level_requirements=PlayerLevels(**reqs),
         )
 
     @classmethod
@@ -216,7 +216,7 @@ class Gear:
                 aggressive_bonus=AggressiveStats.no_bonus(),
                 defensive_bonus=DefensiveStats.no_bonus(),
                 prayer_bonus=0,
-                combat_requirements=PlayerLevels.no_requirements(),
+                level_requirements=PlayerLevels.no_requirements(),
             )
 
     def __str__(self):
@@ -245,7 +245,7 @@ class Weapon(Gear):
     aggressive_bonus: AggressiveStats = field(validator=validators.instance_of(AggressiveStats))
     defensive_bonus: DefensiveStats = field(validator=validators.instance_of(DefensiveStats))
     prayer_bonus: int
-    combat_requirements: PlayerLevels = field(validator=validators.instance_of(PlayerLevels))
+    level_requirements: PlayerLevels = field(validator=validators.instance_of(PlayerLevels))
     weapon_styles: WeaponStyles = field(validator=validators.instance_of(WeaponStyles))
     attack_speed: int
     two_handed: bool
@@ -266,7 +266,7 @@ class Weapon(Gear):
             aggressive_bonus=AggressiveStats.no_bonus(),
             defensive_bonus=DefensiveStats.no_bonus(),
             prayer_bonus=0,
-            combat_requirements=PlayerLevels.no_requirements(),
+            level_requirements=PlayerLevels.no_requirements(),
             weapon_styles=UnarmedStyles,
             attack_speed=4,
             two_handed=False,
@@ -274,7 +274,7 @@ class Weapon(Gear):
 
     @classmethod
     def from_bb(cls, name: str):
-        name, slot, aggressive_bonus, defensive_bonus, prayer_bonus, combat_requirements = \
+        name, slot, aggressive_bonus, defensive_bonus, prayer_bonus, level_requirements = \
             lookup_gear_base_attributes_by_name(name)
         attack_speed, attack_range, two_handed, weapon_styles, _, _, _, _ = lookup_weapon_attributes_by_name(name)
 
@@ -287,7 +287,7 @@ class Weapon(Gear):
             aggressive_bonus=aggressive_bonus,
             defensive_bonus=defensive_bonus,
             prayer_bonus=prayer_bonus,
-            combat_requirements=combat_requirements,
+            level_requirements=level_requirements,
             weapon_styles=weapon_styles,
             attack_speed=attack_speed,
             two_handed=two_handed,
@@ -308,7 +308,7 @@ class SpecialWeapon(Weapon):
 
     @classmethod
     def from_bb(cls, name: str):
-        name, slot, aggressive_bonus, defensive_bonus, prayer_bonus, combat_requirements = \
+        name, slot, aggressive_bonus, defensive_bonus, prayer_bonus, level_requirements = \
             lookup_gear_base_attributes_by_name(name)
         attack_speed, attack_range, two_handed, weapon_styles, special_accuracy_modifier, special_damage_modifier_1, \
             special_damage_modifier_2, special_defence_roll = lookup_weapon_attributes_by_name(name)
@@ -322,7 +322,7 @@ class SpecialWeapon(Weapon):
             aggressive_bonus=aggressive_bonus,
             defensive_bonus=defensive_bonus,
             prayer_bonus=prayer_bonus,
-            combat_requirements=combat_requirements,
+            level_requirements=level_requirements,
             weapon_styles=weapon_styles,
             attack_speed=attack_speed,
             two_handed=two_handed,
@@ -405,9 +405,9 @@ class Equipment:
         return sum([g.prayer_bonus for g in astuple(self, recurse=False)])
 
     @property
-    def combat_requirements(self) -> PlayerLevels:
+    def level_requirements(self) -> PlayerLevels:
         # x * y defined by PlayerLevels class to combine requirements.
-        return functools.reduce(lambda x, y: x * y, [x.combat_requirements for x in astuple(self, recurse=False)])
+        return functools.reduce(lambda x, y: x * y, [x.level_requirements for x in astuple(self, recurse=False)])
 
     def equip(self, *gear: Gear | Weapon | SpecialWeapon, style: PlayerStyle = None, **kwargs) -> PlayerStyle | None:
         weapon_style = None

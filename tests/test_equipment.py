@@ -28,7 +28,7 @@ class TestWeapon(TestCase):
 		self.assertEqual(scythe.aggressive_bonus.melee_strength, 75)
 
 		scythe.choose_style_by_name(PlayerStyle.chop)
-		self.assertEqual(scythe.combat_requirements.strength, 75)
+		self.assertEqual(scythe.level_requirements.strength, 75)
 		scythe.choose_style_by_name(PlayerStyle.jab)
 
 

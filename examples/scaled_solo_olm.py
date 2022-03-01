@@ -12,7 +12,7 @@ ring_of_endurance = Gear(
 	aggressive_bonus=AggressiveStats.no_bonus(),
 	defensive_bonus=DefensiveStats.no_bonus(),
 	prayer_bonus=0,
-	combat_requirements=PlayerLevels.no_requirements()
+	level_requirements=PlayerLevels.no_requirements()
 )
 
 book_of_the_dead = Gear(
@@ -21,7 +21,7 @@ book_of_the_dead = Gear(
 	aggressive_bonus=AggressiveStats(magic=6),
 	defensive_bonus=DefensiveStats.no_bonus(),
 	prayer_bonus=3,
-	combat_requirements=PlayerLevels.no_requirements()
+	level_requirements=PlayerLevels.no_requirements()
 )
 
 

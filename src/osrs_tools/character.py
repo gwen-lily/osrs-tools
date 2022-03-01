@@ -43,8 +43,8 @@ character_attrs_settings = {'order': False, 'frozen': False}
 
 
 def player_equipment_level_requirements_validator(instance, attribute, value):
-    if not instance.levels >= value.combat_requirements:
-        raise EquipableError(f'Player with {instance.levels=} cannot equip Equipment with {value.combat_requirements=}')
+    if not instance.levels >= value.level_requirements:
+        raise EquipableError(f'Player with {instance.levels=} cannot equip Equipment with {value.level_requirements=}')
 
 
 class ArmDmTuple(NamedTuple):
@@ -758,7 +758,7 @@ class Player(Character):
 
     def _guardians_modifier(self, other: Character) -> float:
         if isinstance(other, Guardian) and 'pickaxe' in self.equipment.weapon.name:
-            modifier = (50 + min([100, self.active_levels.mining]) + self.equipment.weapon.combat_requirements.mining) \
+            modifier = (50 + min([100, self.active_levels.mining]) + self.equipment.weapon.level_requirements.mining) \
                        / 150
         else:
             modifier = 1
