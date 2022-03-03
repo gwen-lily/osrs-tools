@@ -1,10 +1,10 @@
-from .equipment import *
-from .style import *
-from .prayer import *
-from .stats import *
-from .damage import *
-from .spells import *
-from .exceptions import *
+from osrs_tools.equipment import *
+from osrs_tools.style import *
+from osrs_tools.prayer import *
+from osrs_tools.stats import *
+from osrs_tools.damage import *
+from osrs_tools.spells import *
+from osrs_tools.exceptions import *
 import osrs_tools.resource_reader as rr
 from osrsbox import monsters_api, monsters_api_examples
 
@@ -2085,6 +2085,21 @@ class TektonEnraged(Tekton):
         )
 
 
+def AbyssalPortal(CoxMonster):
+
+    @classmethod
+    def from_de0(
+            cls,
+            party_size: int,
+            challenge_mode: bool = False,
+            **kwargs,
+    ):
+        raise NotImplementedError
+
+    def party_offensive_scaling_factor(self):
+        return self.defensive_scaling_factor()
+
+
 # noinspection PyArgumentList
 @define(**character_attrs_settings)
 class Olm(CoxMonster, ABC):
@@ -2092,10 +2107,6 @@ class Olm(CoxMonster, ABC):
     def player_hp_scaling_factor(self):
         _ = self
         return 1
-
-    def party_offensive_scaling_factor(self):
-        n = self.party_size
-        return (1 + (0.07 * (1 + math.floor(n/5)))) + 0.01*(n-1)
 
     def player_offensive_defensive_scaling_factor(self):
         _ = self

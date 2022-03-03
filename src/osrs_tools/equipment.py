@@ -3,9 +3,9 @@ from osrsbox.items_api.item_properties import ItemEquipment, ItemProperties, Ite
 import functools
 import pandas as pd
 
-from .style import *
-from .stats import *
-from .exceptions import *
+from osrs_tools.style import *
+from osrs_tools.stats import *
+from osrs_tools.exceptions import *
 import osrs_tools.resource_reader as rr
 
 
@@ -1078,7 +1078,8 @@ class Equipment:
 
     def equip_sang(self, arcane: bool = True, style: PlayerStyle = None) -> PlayerStyle:
         gear = (Gear.from_bb('arcane spirit shield'),) if arcane else tuple()
-        style = style if style else PoweredStaffStyles(PlayerStyle.accurate)
+        style = style if style else PoweredStaffStyles.get_style(PlayerStyle.accurate)
+        
         return self.equip(
             Weapon.from_bb('sanguinesti staff'),
             *gear,

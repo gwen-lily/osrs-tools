@@ -109,6 +109,10 @@ class Prayer:
 	def eagle_eye(cls):
 		return cls.from_osrsbox(prayer_id=20, drain_effect=12)
 
+	@classmethod
+	def mystic_lore(cls):
+		return cls.from_osrsbox(prayer_id=13, drain_effect=6)
+
 
 def prayer_collection_validator(instance, attribute: str, value: tuple[Prayer, ...]):
 	pass    # TODO: Create validators that handle better than the current system.
