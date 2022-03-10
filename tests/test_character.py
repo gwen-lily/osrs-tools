@@ -4,7 +4,7 @@ from osrs_tools.equipment import *
 from osrs_tools.stats import *
 
 Torva = Player(name='torva')
-Torva.equipment = EquipmentLoadout()
+Torva.equipment = Equipment()
 Torva.equipment.equip_basic_melee_gear()
 Torva.equipment.equip_torva_set()
 Torva.active_style = Torva.equipment.equip_scythe()
@@ -33,7 +33,7 @@ class TestPlayer(TestCase):
 		Torva.prayers.reset_prayers()
 		Torva.boost(Overload.overload())
 		Torva.prayers.pray(Prayer.piety())
-		self.assertEqual(Torva.effective_attack_level, 152)
+		self.assertEqual(Torva.effective_melee_attack_level, 152)
 
 	def test_effective_melee_strength_level(self):
 		self.fail()

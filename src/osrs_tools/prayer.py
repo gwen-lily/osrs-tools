@@ -181,8 +181,7 @@ class PrayerCollection:
 		return self._get_prayer_collection_attribute('magic_defence')
 
 	def __iter__(self):
-		for p in self.prayers:
-			yield p
+		return iter(self.prayers)
 
 	def __next__(self):
 		try:

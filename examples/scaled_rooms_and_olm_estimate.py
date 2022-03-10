@@ -7,6 +7,7 @@ from itertools import product
 from matplotlib import pyplot as plt
 import math
 from enum import Enum, auto
+import sys
 
 
 def guardian_estimates(scale: int, boost: Boost, **kwargs) -> tuple[float, int]:
@@ -73,6 +74,7 @@ def guardian_estimates(scale: int, boost: Boost, **kwargs) -> tuple[float, int]:
 
 class MysticModes(Enum):
 	tbow_thralls = auto()
+	tbow_thralls_simulated_spec_transfer = auto()
 	chin_six_by_two = auto()
 	chin_ten = auto()
 
@@ -85,14 +87,20 @@ def mystics_estimates(scale: int, mode: MysticModes, **kwargs) -> tuple[float, i
 	"""
 	options = {
 		'scale_at_load_time': scale,
-		'dwh_attempts_per_mystic': 4,
+		'dwh_attempts_per_mystic': 3,
 		'dwh_specialist_equipment': None,
-		'dwh_specialist_target_strength_level': 13
+		'dwh_specialist_target_strength_level': 13,
+		'spec_transfer_alts': 6,
+		'dwh_target_per_mystic': 3,
+		'dwh_health_remaining_ratio_threshold': 0.50,
 	}
 	options.update(kwargs)
-	trials = options['trials']
 
-	mystic = SkeletalMystic.from_de0(scale)
+
+	# top level information
+	mystic = SkeletalMystic.from_de0(options['scale_at_load_time'])
+	mystics_per_room = mystic.count_per_room(options['scale_at_load_time'])
+	trials = options['trials']
 
 	if mode is MysticModes.tbow_thralls:
 		lad = Player(name='mystics fit')
@@ -144,6 +152,111 @@ def mystics_estimates(scale: int, mode: MysticModes, **kwargs) -> tuple[float, i
 		tank_ticks = 200
 		jank_ticks = 6*options['dwh_attempts_per_mystic']
 		total_ticks = damage_ticks + tank_ticks + jank_ticks
+
+	elif mode is MysticModes.tbow_thralls_simulated_spec_transfer:
+		lad = Player(name='mystics fit')
+		dwh_specialist = Player(name='dwh specialist')
+		trials = options['trials']
+		scale_at_load_time = options['scale_at_load_time']
+		spec_transfer_alts = options['spec_transfer_alts']
+		dwh_target = options['dwh_target_per_mystic']
+		hp_threshold = options['dwh_health_remaining_ratio_threshold']
+
+		# gear
+		lad.active_style = lad.equipment.equip_twisted_bow()
+		lad.equipment.equip_arma_set(zaryte=True)
+		lad.equipment.equip_basic_ranged_gear(anguish=False)
+		lad.equipment.equip_salve()
+		assert lad.equipment.full_set
+
+		if options['dwh_specialist_equipment'] is None:
+			dwh_specialist.equipment.equip_basic_melee_gear(torture=False, infernal=False, berserker=False)
+			dwh_specialist.active_style = dwh_specialist.equipment.equip_dwh(inquisitor_set=True, avernic=True,
+			                                                                 tyrannical=True)
+			dwh_specialist.equipment.equip_salve()
+			dwh_specialist.equipment.equip(mythical_cape)
+			assert dwh_specialist.equipment.full_set
+
+		# prayers
+		lad.prayers.pray(Prayer.rigour(), Prayer.protect_from_magic())
+		dwh_specialist.prayers.pray(Prayer.piety(), Prayer.protect_from_magic())
+
+		# data setup
+		trials = np.arange(trials)
+		data = np.empty(shape=trials.shape, dtype=int)
+
+
+		ticks_per_lad_attack = lad.attack_speed()
+		ticks_per_dwh_specialist_action = int(dwh_specialist.attack_speed() + 2)
+		thrall_dam = Damage.thrall()
+
+		for trial_index in trials:
+			trial_ticks = 0
+
+			mystics = [mystic.from_de0(ps) for ps in [scale_at_load_time]*mystics_per_room]
+			st_alts = [Player(name=f'spec transfer alt {num}') for num in range(spec_transfer_alts)]
+			tracked_spec_lads = [dwh_specialist, *st_alts]
+			
+			# boosts
+			lad.reset_stats()
+			dwh_specialist.reset_stats()
+
+			lad.boost(Overload.overload())
+			dwh_specialist.active_levels.strength = options['dwh_specialist_target_strength_level']
+			dwh_specialist.boost(Boost.super_attack_potion())
+
+			for mys in mystics:
+				tc = 0
+				remaining_ticks = 0
+				dwh_landed = 0
+
+				cached_dam = lad.damage_distribution(mys)
+
+				while mys.alive:
+					if dwh_landed == dwh_target:
+						remaining_ticks = mys.active_levels.hitpoints // (cached_dam.per_tick + thrall_dam.per_tick)
+						mys.active_levels.hitpoints = 0
+
+				else:
+						if tc % ticks_per_lad_attack == 0:
+							mys.damage(lad, *cached_dam.random())
+
+						if tc % int(thrall_dam.attack_speed) == 0:
+							mys.damage(None, thrall_dam.random()[0])
+
+						if dwh_landed < dwh_target and (hp_ratio := mys.active_levels.hitpoints / mys.levels.hitpoints) > hp_threshold:
+							if dwh_specialist.special_energy >= 50:
+								if tc % ticks_per_dwh_specialist_action == 0:
+									p = dwh_specialist.damage_distribution(mys, special_attack=True).chance_to_deal_positive_damage
+									dwh_specialist.special_energy -= 50 	# TODO: Part of SpecialWeapon class
+
+									if random.random() < p:
+										dwh_landed += 1
+										mys.apply_dwh()
+										cached_dam = lad.damage_distribution(mys)
+							
+							else:
+								for sta in st_alts:
+									if sta.special_energy_full:
+										try:
+											sta.cast_energy_transfer(dwh_specialist)
+										except PlayerError:
+											sta.active_levels.hitpoints = sta.levels.hitpoints 	# hp cape + regen bracelet = ez
+											sta.cast_energy_transfer(dwh_specialist)
+						
+						tc += 1
+						for spec_lad in tracked_spec_lads:
+							spec_lad.update_special_energy_counter()
+					
+				trial_ticks += tc + remaining_ticks
+
+
+			
+			data[trial_index] = trial_ticks
+
+		mean_kill_ticks = data.mean()	
+		tank_ticks = 200
+		total_ticks = mean_kill_ticks + tank_ticks
 
 	elif mode is MysticModes.chin_six_by_two:
 		pass
@@ -346,10 +459,14 @@ class PuzzleRotations(Enum):
 def main(rotation: CombatRotations, scale: int, cap_overload: bool = True, cap_food: bool = True, **kwargs) -> \
 		tuple[float, int, float]:
 	options = {
-		'vulnerability': True,
+		'trials': int(1e0),
+		'setup_ticks_meta': 15 * 100, 	# 30 minutes to wrangle a reasonable scale + scalers + gear the lads
+		'spec_transfer_alts': 0,
+		'guardian_alts': 4,
 		'bone_crossbow_specs': 0,
-		'trials': int(1e3),
-		'setup_ticks_meta': 30 * 100,   # 30 minutes to wrangle a scale, the lads, and gear
+		'dwh_specialist_strength_level': 13,
+		'dwh_target_per_mystic': 3,
+		'dwh_health_remaining_ratio_threshold': 0.50,
 		'points_per_overload_dose': 600,
 		'points_per_food': 90,
 	}
@@ -371,7 +488,7 @@ def main(rotation: CombatRotations, scale: int, cap_overload: bool = True, cap_f
 	)
 	mystics_ticks, mystics_points = mystics_estimates(
 		scale=scale,
-		mode=MysticModes.tbow_thralls,
+		mode=MysticModes.tbow_thralls_simulated_spec_transfer,
 		**options,
 	)
 	shamans_ticks, shamans_points = shamans_estimates(
@@ -449,38 +566,57 @@ def main(rotation: CombatRotations, scale: int, cap_overload: bool = True, cap_f
 
 
 if __name__ == '__main__':
+	my_scale = 27
+	my_spec_transfer_alts = 6
+	dwh_target_range = np.arange(0, 5+1)
+	my_trials = int(1e2)
+	mythical_cape = Gear.from_bb('mythical cape')
+	mystic_sim_data = np.empty(shape=dwh_target_range.shape, dtype=float)
+
+	for alts_index, dwh_target in enumerate(dwh_target_range):
+		my_kwargs = {
+			'trials': my_trials,
+			'spec_transfer_alts': my_spec_transfer_alts,
+			'dwh_target_per_mystic': dwh_target,
+			'dwh_health_remaining_ratio_threshold': 0.50,
+		}
+
+		room_ticks, _ = mystics_estimates(my_scale, mode=MysticModes.tbow_thralls_simulated_spec_transfer, **my_kwargs)
+		mystic_sim_data[alts_index] = room_ticks
+	
+	plt.plot(dwh_target_range, mystic_sim_data)
+	plt.show() 
+
+	sys.exit(0)
+
+
 	my_rot = CombatRotations.gms
 	my_scales = list(range(15, 51, 1))
-	my_specs_list = [0] * len(my_scales)    # bone crossbow only worth the jank in 31+ imo
-	my_trials = int(2e1)
 	outer_cap_ovl = True
 	outer_cap_food = False
-	vulnerability = True
-	guardian_alts = 0
-	dwh_attempts_per_mystic = 3
 
-	my_setup_ticks = 15 * 100   # 30 minutes to wrangle a reasonable scale + scalers + gear the lads
+
+	my_kwargs = {
+		'trials': int(1e0),
+		'setup_ticks_meta': 15 * 100, 	# 30 minutes to wrangle a reasonable scale + scalers + gear the lads
+		'spec_transfer_alts': 6,
+		'guardian_alts': 4,
+		'dwh_target_per_mystic': 3,
+	}
 
 	mythical_cape = Gear.from_bb('mythical cape')
-	dwh_specialist_strength_level = 13
 
 	scales_ary = np.asarray(my_scales)
 	pph_data = np.empty(shape=scales_ary.shape, dtype=float)
 	uph_data = np.empty(shape=scales_ary.shape, dtype=float)
 
-	for index, (my_scale, my_specs) in enumerate(zip(my_scales, my_specs_list)):
+	for index, my_scale in enumerate(my_scales):
 		pph, total_pts, total_hrs = main(
 			rotation=my_rot,
 			scale=my_scale,
 			cap_overload=outer_cap_ovl,
 			cap_food=outer_cap_food,
-			trials=my_trials,
-			bone_crossbow_specs=my_specs,
-			dwh_specialist_strength_level=dwh_specialist_strength_level,
-			setup_ticks_meta=my_setup_ticks,
-			guardian_alts=guardian_alts,
-			vulnerability=True,
-			dwh_attempts_per_mystic=dwh_attempts_per_mystic
+			**my_kwargs
 		)
 		pph_data[index] = pph
 		any_unique_chance = 1 - zero_purple_chance(total_pts)

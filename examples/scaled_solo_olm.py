@@ -115,7 +115,6 @@ def olm_ticks_estimate(scale: int, **kwargs):
 	melee_ticks = melee_hand.count_per_room() * melee_damage_ticks_per_phase
 	melee_hand_points = melee_hand.points_per_room()
 
-
 	# HEAD PHASE #######################################################################################################
 	ranger_lad = Player(name='ranger lad')
 	ranger_lad.boost(Overload.overload())
@@ -145,24 +144,73 @@ def olm_damage_estimate(**kwargs):
 	options.update(kwargs)
 
 	melee_lad = Player(name='melee_lad')
-	melee_lad.boost(Overload.overload())
-	melee_lad.prayers.pray(Prayer.piety())
+	mage_lad = Player(name='mage_lad')
+
+	# equipment
 	melee_lad.equipment.equip_basic_melee_gear(berserker=False, torture=False)
 	melee_lad.equipment.equip_torva_set()
 	melee_lad.active_style = melee_lad.equipment.equip_lance(avernic=False)
 	melee_lad.equipment.equip_fury(blood=True)
-	melee_lad.equipment.equip(ring_of_endurance)
+	melee_lad.equipment.equip(ring_of_endurance, avernic_defender)
+	assert melee_lad.equipment.full_set
 
-	equipments = [Equipment(shield=x) for x in (elysian_spirit_shield, avernic_defender)]
+
+	# boosts / inits
+	melee_lad.boost(Overload.overload())
+	melee_lad.prayers.pray(Prayer.piety())
+ 
 	olms = [OlmHead.from_de0(ps) for ps in options['scales']]
+	ref_olm = olms[0]
 
-	olm = OlmHead.from_de0(1)
-	melee_lad.equipment.equip(avernic_defender)
-	dam_1 = olm.damage_distribution(melee_lad)
-	melee_lad.equipment.equip(elysian_spirit_shield)
-	dam_2 = olm.damage_distribution(melee_lad)
+	def switch_to_last(player: Player, last_auto: NpcStyle):
+		if last_auto == ref_olm.styles.get_style(Style.ranged):
+			player.prayers.reset_prayers()
+			player.pray(Prayer.piety(), Prayer.protect_from_missiles())
+		elif last_auto == ref_olm.styles.get_style(Style.magic):
+			player.prayers.reset_prayers()
+			player.prayers.pray(Prayer.piety(), Prayer.protect_from_magic())
+		else:
+			raise NotImplementedError(f'{last_auto}')
 
-	print(dam_1, dam_2)
+	def camp_mage(player: Player, last_auto: NpcStyle):
+		if Prayer.protect_from_magic() in player.prayers and Prayer.piety() in player.prayers:
+			pass
+		else:
+			player.prayers.reset_prayers()
+			player.pray(Prayer.piety(), Prayer.protect_from_magic())
+		
+
+	for olm in olms:
+		scale = olm.party_size
+		
+		# praying magic
+		melee_lad.prayers.reset_prayers()
+		melee_lad.pray(Prayer.piety(), Prayer.protect_from_magic())
+
+		olm.active_style = olm.styles.get_style(Style.magic)
+		magic_mean_dmg = olm.chance_to_attack_magic() * olm.damage_distribution(melee_lad).mean
+		
+		olm.active_style = olm.styles.get_style(Style.ranged)
+		ranged_mean_dmg = (1 - olm.chance_to_attack_magic()) * olm.damage_distribution(melee_lad).mean
+
+		print(f'{scale}, {magic_mean_dmg}, {ranged_mean_dmg}, (praying magic)')
+
+		# praying ranged
+		melee_lad.prayers.reset_prayers()
+		melee_lad.pray(Prayer.piety(), Prayer.protect_from_missiles())
+		magic_mean_dmg = olm.chance_to_attack_magic() * olm.damage_distribution(melee_lad).mean
+
+		olm.active_style = olm.styles.get_style(Style.magic)
+		magic_mean_dmg = olm.chance_to_attack_magic() * olm.damage_distribution(melee_lad).mean
+
+		olm.active_style = olm.styles.get_style(Style.ranged)
+		ranged_mean_dmg = (1 - olm.chance_to_attack_magic()) * olm.damage_distribution(melee_lad).mean
+		
+		print(f'{scale}, {magic_mean_dmg}, {ranged_mean_dmg}, (praying ranged)')
+	
+
+
+
 
 
 def melee_hand_mean_defence(scale: int, total_specs: int, hammers_first: int, **kwargs):
@@ -254,7 +302,8 @@ if __name__ == '__main__':
 	avernic_defender = Gear.from_bb('avernic defender')
 	elysian_spirit_shield = Gear.from_bb('elysian spirit shield')
 
+	olm_damage_estimate()
 	# magic_shield_comparison(floatfmt='.2f')
 	# olm_ticks_estimate(scales=(31, ))
-	olm_max_hits()
+	# olm_max_hits()
 	# olm_damage_estimate(scales=(31, ))

@@ -35,10 +35,8 @@ class Hitsplat:     # TODO: Dataclass/attrs
         self.max_hit = self.damage.max()
         self.mean = np.dot(self.damage, self.probability)
 
-
-
-    def random(self, attempts: int = 1) -> list[int]:
-        return random.choices(self.damage, self.probability, k=attempts)
+    def random(self, attempts: int = 1) -> tuple[int]:
+        return tuple(random.choices(self.damage, self.probability, k=attempts))
 
     def asdict(self):
         return {d: p for d, p in zip(self.damage, self.probability)}
@@ -76,6 +74,12 @@ class Hitsplat:     # TODO: Dataclass/attrs
                 probability[i] = 0
 
         return cls(damage=damage, probability=probability)
+
+    @classmethod
+    def thrall(cls):
+        dmg = np.arange(0, 4+1)
+        prb = (1/dmg.size) * np.ones(shape=dmg.shape)
+        return cls(dmg, prb)
 
     def __str__(self):
         message = f'{self.__class__.__name__}(min={self.min_hit}, max={self.max_hit}, mean={self.mean:.1f}'
@@ -124,26 +128,27 @@ class Damage:
         zero_chances = (hs.probability[0] for hs in self.hitsplats)
         return 1 - functools.reduce(lambda x, y: x*y, zero_chances)
 
-    def random(self, attempts: int = 1) -> list[int]:
+    def random(self, attempts: int = 1) -> tuple[int]:
         hits = []
         for hs in self.hitsplats:
             hits.extend(hs.random(attempts))
 
-        return hits
+        return tuple(hits)
+
 
     @classmethod
     def from_max_hit_acc(cls, max_hit: int, accuracy: float, attack_speed: int, hitpoints_cap: int = None, **kwargs):
         hs = Hitsplat.from_max_hit_acc(max_hit=max_hit, accuracy=accuracy, hitpoints_cap=hitpoints_cap)
         return cls(attack_speed, hs, **kwargs)
 
+    @classmethod
+    def thrall(cls):
+        thrall_attack_speed = 4
+        hs = Hitsplat.thrall()
+        return cls(thrall_attack_speed, hs)
+
     def __iter__(self):
         return iter(self.hitsplats)
-
-    def __next__(self):
-        try:
-            return next(self.__iter__())
-        except IndexError:
-            raise StopIteration
 
     def __str__(self):
         message = f'{self.__class__.__name__}({self.hitsplats})'

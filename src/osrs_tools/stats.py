@@ -3,7 +3,7 @@ from typing import Callable
 import math
 from copy import copy, deepcopy
 
-from .exceptions import *
+from osrs_tools.exceptions import *
 import osrs_tools.resource_reader as rr
 
 player_skill_field = field(converter=lambda s: min([max([1, int(s)]), 99]), default=1)
@@ -360,7 +360,7 @@ class Boost:
         Generator function for easily writing Boost class methods.
 
         OSRS boosts tend to have the form: boost(level) = base_boost + math.floor(ratio_boost*level).
-        This method simplifies definition to one line of the form: [f': (int,float,bool | None)] -> [f: (int,) -> int].
+        This method simplifies definition to one line of the form: [f': (int, float, bool | None)] -> [f: (int,) -> int].
         
         :param base: Note that's "base boost", not to be confused with the "bass boost" you might find on your speaker. 
         :param ratio: Get ratio'd nerd.
@@ -377,7 +377,7 @@ class Boost:
         :return: Boost
         """
         if isinstance(other, self.__class__):
-            return NotImplemented
+            return NotImplemented   # changed how boosts are applied via Player class
             # args = (lambda x: f(g(x)) for g, f in zip(astuple(self), astuple(other)))
             # return self.__class__(*args)
         elif isinstance(other, PlayerLevels) or isinstance(other, PlayerLevelsUnbounded):

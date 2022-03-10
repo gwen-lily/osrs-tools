@@ -1,3 +1,7 @@
+from __future__ import annotations
+from abc import abstractproperty
+
+from numpy import isin
 from osrs_tools.equipment import *
 from osrs_tools.style import *
 from osrs_tools.prayer import *
@@ -62,11 +66,18 @@ class Character(ABC):
     active_levels: Stats = field(init=False)
     # TODO: implement more general defence_floor with minimum_levels: Stats = field()
 
-    def damage(self, other, amount: int):
-        assert amount >= 0
-        damage_allowed = min([self.active_levels.hitpoints, amount])
-        self.active_levels.hitpoints = max([0, self.active_levels.hitpoints - damage_allowed])
-        return damage_allowed
+    def damage(self, other: Character, *amount: int):
+        damage_dealt = 0
+
+        for a in amount:
+            if a <= 0:
+                continue
+
+            damage_allowed = min([self.active_levels.hitpoints, a])
+            self.active_levels.hitpoints -= damage_allowed
+            damage_dealt += damage_allowed
+        
+        return damage_dealt
 
     def heal(self, amount: int, overheal: bool = False):
         assert amount >= 0
@@ -85,7 +96,7 @@ class Character(ABC):
 
     @property
     @abstractmethod
-    def effective_attack_level(self) -> int:
+    def effective_melee_attack_level(self) -> int:
         pass
 
     @property
@@ -304,30 +315,14 @@ class Player(Character):
     weight: int = field(default=0, init=False, repr=False)
     run_energy: int = field(default=10000, init=False, converter=lambda v: min([max([0, v]), 10000]), repr=False)
     stamina_potion: bool = field(default=False, init=False, repr=False)
+    special_energy: int = field(default=100, init=False, converter=lambda v: min([max([0, v]), 100]), repr=False)
+    special_energy_counter: int = field(default=0, init=False, repr=False)
 
     def __attrs_post_init__(self):
         self.active_levels = self.levels.to_unbounded()
         self.active_style = self.equipment.weapon.weapon_styles.default
 
-    def reset_stats(self):
-        self.active_levels = self.levels.to_unbounded()
-
-    def boost(self, *effects: Boost | BoostCollection):
-        for effect in effects:
-            effect_coll = effect if isinstance(effect, BoostCollection) else BoostCollection(boosts=(effect, ))
-
-            for b in effect_coll.boosts:
-                boosted_from_base = self.levels + b
-
-                differential = boosted_from_base - self.levels
-                boosted_from_active = self.active_levels + differential
-
-                for skill in astuple(Skills):
-                    boosted_level = min((
-                        boosted_from_base.__getattribute__(skill),
-                        boosted_from_active.__getattribute__(skill)
-                    ))
-                    self.active_levels.__setattr__(skill, boosted_level)
+    # properties
 
     @property
     def combat_level(self) -> int:
@@ -341,6 +336,10 @@ class Player(Character):
     @staticmethod
     def max_combat_level() -> int:
         return 126
+
+    @property
+    def special_energy_full(self) -> bool:
+        return self.special_energy == 100
 
     @property
     def prayer_drain_resistance(self):
@@ -405,7 +404,7 @@ class Player(Character):
         return math.floor(self.visible_ranged * self.prayers.ranged_strength)
 
     @property
-    def effective_attack_level(self) -> int:
+    def effective_melee_attack_level(self) -> int:
         style_bonus = self.active_style.combat_bonus.attack
         void_atk_lvl_mod, _ = self._void_modifiers()
         return self.effective_accuracy_level(self.invisible_attack, style_bonus, void_atk_lvl_mod)
@@ -447,6 +446,8 @@ class Player(Character):
         visible_magic_defence = math.floor(0.3*self.visible_defence + 0.7*self.visible_magic)
         invisible_magic_defence = math.floor(visible_magic_defence * self.prayers.magic_defence)
         return self.effective_accuracy_level(invisible_magic_defence, style_bonus)
+
+    # accuracy & strength modifiers
 
     def _void_modifiers(self) -> ArmDmTuple:
         if self.equipment.elite_void_set:
@@ -765,12 +766,28 @@ class Player(Character):
 
         return modifier
 
+    def _dinhs_modifier(self) -> int:
+        """
+        Bonus equipment strength bonus when using Dinh's offensively.
+
+        Source: https://oldschool.runescape.wiki/w/Dinh's_bulwark#Strength_buff
+        """
+        if self.equipment.dinhs_bulwark and self.active_style == BulwarkStyles.get_style(PlayerStyle.pummel):
+            db = self.equipment.defensive_bonus
+            bonus = math.floor((math.floor(sum([db.stab, db.slash, db.crush, db.ranged])/4) - 200) / 3) - 38
+        else:
+            bonus = 0
+        
+        return bonus
+
+    # combat methods
+
     def attack_roll(self, other: Character, special_attack: bool = False, distance: int = None) -> int:
 
         aggressive_cb = self.equipment.aggressive_bonus
 
         if (dt := self.active_style.damage_type) in Style.melee_damage_types:
-            effective_level = self.effective_attack_level
+            effective_level = self.effective_melee_attack_level
             bonus = aggressive_cb.__getattribute__(dt)
         elif dt in Style.ranged_damage_types:
             effective_level = self.effective_ranged_attack_level
@@ -881,7 +898,7 @@ class Player(Character):
             if dt in Style.melee_damage_types or dt in Style.ranged_damage_types:
                 if dt in Style.melee_damage_types:
                     effective_level = self.effective_melee_strength_level
-                    bonus = aggressive_cb.melee_strength
+                    bonus = aggressive_cb.melee_strength + self._dinhs_modifier()
                 else:
                     effective_level = self.effective_ranged_strength_level
                     bonus = aggressive_cb.ranged_strength
@@ -1091,24 +1108,62 @@ class Player(Character):
         else:
             raise PlayerError(f'{other=}')
 
-    def attack(
-            self,
-            other: Character,
-            special_attack: bool = False,
-            distance: int = None,
-            spell: Spell = None,
-            additional_targets: int | Character | list[Character] = 0,
-            **kwargs,
-    ):
+    def attack(self, other: Character, special_attack: bool = False, distance: int = None, spell: Spell = None,
+               additional_targets: int | Character | list[Character] = 0, **kwargs):
         dam = self.damage_distribution(other, special_attack, distance, spell, additional_targets, **kwargs)
-        random_value = dam.random(attempts=1)[0]
-        other.damage(random_value)
+        random_value = dam.random(attempts=1)
+        other.damage(self, *random_value)
 
         if self.equipment.blood_fury and np.random.random() < (blood_fury_activation_chance := 0.20):
             self.heal(math.floor(random_value*0.30), overheal=False)
 
+    def reset_stats(self):
+        self.active_levels = self.levels.to_unbounded()
+        self.run_energy = 10000
+        self.special_energy = 100
+        self.special_energy_counter = 0
 
+    def boost(self, *effects: Boost | BoostCollection):
+        for effect in effects:
+            effect_coll = effect if isinstance(effect, BoostCollection) else BoostCollection(boosts=(effect, ))
 
+            for b in effect_coll.boosts:
+                boosted_from_base = self.levels + b
+
+                differential = boosted_from_base - self.levels
+                boosted_from_active = self.active_levels + differential
+
+                for skill in astuple(Skills):
+                    boosted_level = min((
+                        boosted_from_base.__getattribute__(skill),
+                        boosted_from_active.__getattribute__(skill)
+                    ))
+                    self.active_levels.__setattr__(skill, boosted_level)
+
+    def pray(self, *prayers: Prayer | PrayerCollection):
+        self.prayers.pray(*prayers)
+
+    def regenerate_special_attack(self):
+        self.special_energy += 10
+
+    def update_special_energy_counter(self, ticks: int = 1):
+        self.special_energy_counter += ticks
+        if self.special_energy_counter >= 50:   # 30 seconds / 50 ticks
+            self.special_energy_counter = 0
+            self.regenerate_special_attack()
+
+    def cast_energy_transfer(self, other: Player):
+        if self.special_energy_full and self.active_levels.hitpoints > 10:
+            self.active_levels.hitpoints -= 10
+            
+            self.special_energy = 0
+            other.special_energy = 100
+
+            self.special_energy_counter = 0
+            other.special_energy_counter = 0
+        else:
+            raise PlayerError(f'{self.special_energy=}, {self.active_levels.hitpoints}')
+        
 
 # noinspection PyArgumentList
 @define(**character_attrs_settings)
@@ -1134,7 +1189,7 @@ class Monster(Character):
         self.active_levels = copy(self.levels)
 
     @property
-    def effective_attack_level(self) -> int:
+    def effective_melee_attack_level(self) -> int:
         style_bonus = self.active_style.combat_bonus.attack
         return self.effective_accuracy_level(self.active_levels.attack, style_bonus)
 
@@ -1821,7 +1876,7 @@ class SkeletalMystic(CoxMonster):
         """
         scale_at_load_time = self.party_size if scale_at_load_time is None else scale_at_load_time
 
-        count = np.floor(3 + scale_at_load_time/3)
+        count = math.floor(3 + scale_at_load_time/3)
         count = min([count, 12])
         return count
 
@@ -2209,6 +2264,14 @@ class OlmHead(Olm):
     def count_per_room(self) -> int:
         _ = self
         return 1
+    
+    def chance_to_switch_style(self) -> float:
+        """The probability that Olm will switch main attack styles, either from ranged to magic or magic to ranged.
+
+        Returns:
+            float: The probability that Olm will switch main attack styles, either from ranged to magic or magic to ranged.
+        """
+        return 0.75     # source: me: 1785 data points w/ 95% confidence interval (0.72, 0.76)
 
     @classmethod
     def from_de0(

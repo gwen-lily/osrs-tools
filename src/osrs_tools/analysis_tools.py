@@ -49,7 +49,15 @@ def tabulate_wrapper(data, col_labels: list, row_labels: list, meta_header: str 
 	options.update(kwargs)
 
 	if isinstance(data, np.ndarray):
-		m, n = data.shape
+		try:
+			m, n = data.shape
+		
+		except ValueError as exc:
+			if data.size == data.shape[0] and len(data.shape) == 1:
+				m, n = (data.shape[0], 1)
+			else:
+				raise exc
+
 		assert m == len(row_labels)
 		assert n == len(col_labels) or n == len(col_labels) - 1
 
@@ -272,18 +280,18 @@ def generic_damage_method(
 
 
 def generic_comparison_better(
-		players: Player | list[Player, ...],
+		players: Player | list[Player],
 		*,
-		levels: PlayerLevels | list[PlayerLevels, ...] = None,
-		prayers: Prayer | PrayerCollection | list[Prayer | PrayerCollection, ...] = None,
-		boosts: Boost | BoostCollection | list[Boost | BoostCollection, ...] = None,
-		equipment: Equipment | list[Equipment, ...] = None,
-		active_style: PlayerStyle | list[PlayerStyle, ...] = None,
-		target: Character | list[Character, ...] = None,
+		levels: PlayerLevels | list[PlayerLevels] = None,
+		prayers: Prayer | PrayerCollection | list[Prayer | PrayerCollection] = None,
+		boosts: Boost | BoostCollection | list[Boost | BoostCollection] = None,
+		equipment: Equipment | list[Equipment] = None,
+		active_style: PlayerStyle | list[PlayerStyle] = None,
+		target: Character | list[Character] = None,
 		comparison_mode: ComparisonMode.PARALLEL,
 		data_mode: DataMode = DataMode.DPS,
 		**kwargs,
-) -> tuple[tuple[int, ...], list[list, ...], np.ndarray]:
+) -> tuple[tuple[int], list[list], np.ndarray]:
 	if isinstance(players, Player):
 		players = [players]
 
@@ -379,7 +387,7 @@ def generic_comparison_better(
 
 def generic_comparison(
 		*,
-		players: list[Player, ...],
+		players: list[Player],
 		data_func: Callable[P, R],
 		input_vals: Iterable,
 		**kwargs

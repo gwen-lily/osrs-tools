@@ -394,15 +394,15 @@ class Equipment:
 
     @property
     def aggressive_bonus(self) -> AggressiveStats:
-        return sum([g.aggressive_bonus for g in astuple(self, recurse=False)])
+        return sum(g.aggressive_bonus for g in astuple(self, recurse=False))
 
     @property
     def defensive_bonus(self) -> DefensiveStats:
-        return sum([g.defensive_bonus for g in astuple(self, recurse=False)])
+        return sum(g.defensive_bonus for g in astuple(self, recurse=False))
 
     @property
     def prayer_bonus(self) -> int:
-        return sum([g.prayer_bonus for g in astuple(self, recurse=False)])
+        return sum(g.prayer_bonus for g in astuple(self, recurse=False))
 
     @property
     def level_requirements(self) -> PlayerLevels:
