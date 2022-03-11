@@ -393,7 +393,7 @@ SpearStyles = WeaponStyles(
     PlayerStyle(PlayerStyle.lunge, PlayerStyle.stab, PlayerStyle.controlled),
 )
 
-SpikedWeapons = WeaponStyles(
+SpikedWeaponsStyles = WeaponStyles(
     'spiked weapons',
     (
         PlayerStyle(PlayerStyle.pound, PlayerStyle.crush, PlayerStyle.accurate),
@@ -520,7 +520,7 @@ AllWeaponStyles = (
     ScytheStyles,
     SlashSwordStyles,
     SpearStyles,
-    SpikedWeapons,
+    SpikedWeaponsStyles,
     StabSwordStyles,
     UnarmedStyles,
     WhipStyles,
