@@ -37,8 +37,8 @@ def shaun_vs_normie(**kwargs):
     old_shaun.equipment = copy(shaun.equipment)
     old_shaun.active_style = old_shaun.equipment.equip(Weapon.from_bb('trident of the swamp'))
 
-    assert shaun.equipment.aggressive_bonus.magic == 133
-    assert shaun.equipment.aggressive_bonus.magic_strength == 0.17
+    assert shaun.aggressive_bonus.magic == 133
+    assert shaun.aggressive_bonus.magic_strength == 0.17
 
     normie.equipment.equip_basic_magic_gear()
     normie.active_style = normie.equipment.equip_sang()

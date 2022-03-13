@@ -1,5 +1,5 @@
 from osrsbox import items_api
-from osrsbox.items_api.item_properties import ItemEquipment, ItemProperties, ItemWeapon
+from osrsbox.items_api.item_properties import ItemEquipment, ItemProperties, ItemWeapon, ItemSpecialWeapon, Modifier
 import functools
 import pandas as pd
 
@@ -48,6 +48,9 @@ class _GearSlots:
     hands = field(default='hands', init=False)
     feet = field(default='feet', init=False)
     ring = field(default='ring', init=False)
+
+    def to_tuple(self) -> tuple[str]:
+        return astuple(self)
 
 
 GearSlots = _GearSlots()
@@ -125,7 +128,7 @@ def lookup_weapon_attributes_by_name(name: str, gear_df: pd.DataFrame = None):
     special_defence_roll = item_df['special defence roll'].values[0]
 
     return attack_speed, attack_range, two_handed, weapon_styles, special_accuracy_modifier, \
-           special_damage_modifier_1, special_damage_modifier_2, special_defence_roll
+        special_damage_modifier_1, special_damage_modifier_2, special_defence_roll
 
 
 # noinspection PyArgumentList
@@ -387,13 +390,10 @@ class Equipment:
     feet: Gear = equipment_field(GearSlots.feet)
     ring: Gear = equipment_field(GearSlots.ring)
 
-    @classmethod
-    def from_unordered(cls, *gear: Gear | Weapon | SpecialWeapon):
-        gear_dict = {g.slot: g for g in gear if isinstance(g, Gear)}
-        return cls(**gear_dict)
-
+    # Basic properties and methods for manipulating Equipment objects ######################################################
     @property
     def aggressive_bonus(self) -> AggressiveStats:
+        # Notably does not account for Dinh's strength bonus, which is handled via Player._dinhs_modifier()
         return sum(g.aggressive_bonus for g in astuple(self, recurse=False))
 
     @property
@@ -406,8 +406,10 @@ class Equipment:
 
     @property
     def level_requirements(self) -> PlayerLevels:
-        # x * y defined by PlayerLevels class to combine requirements.
-        return functools.reduce(lambda x, y: x * y, [x.level_requirements for x in astuple(self, recurse=False)])
+        # PlayerLevels.__mul__(self, other) handles the behavior of aggregating level requirements.
+        individual_level_reqs = tuple(x.level_requirements for x in astuple(self, recurse=False))
+        combined_level_reqs = functools.reduce(lambda x, y: x * y, individual_level_reqs)
+        return combined_level_reqs
 
     def equip(self, *gear: Gear | Weapon | SpecialWeapon, style: PlayerStyle = None, **kwargs) -> PlayerStyle | None:
         weapon_style = None
@@ -450,10 +452,70 @@ class Equipment:
     def wearing(self, **kwargs) -> bool:
         return all([self.__getattribute__(k) == v for k, v in kwargs.items()])
 
-    # wearing properties, if any Character methods needs to know it I'll define it here for re-use and standardization
+    def __add__(self, other):
+        """
+        Directional addition, right-hand operand has priority except in the case of empty slots.
+        :param other:
+        :return:
+        """
+        if isinstance(other, self.__class__):
+            for gear in astuple(other, recurse=False):
+                if not gear == Gear.empty_slot(gear.slot):
+                    self.equip(gear)
+            return self
+        else:
+            return NotImplemented
 
+    def __sub__(self, other):
+        """
+        Directional subtraction, remove right-hand gear if and only if it exists in the left-hand set. Pass otherwise.
+        :param other:
+        :return:
+        """
+        if isinstance(other, self.__class__):
+            for slot, gear in asdict(other).items():
+                if self.__getattribute__(slot) == gear:
+                    self.unequip(slot)
+                else:
+                    continue
+
+    def __str__(self):
+        notable_gear = [g.name for g in astuple(self, recurse=False) if 'empty' not in g.name]
+        message = f'{self.__class__.__name__}({str(notable_gear)})'
+        return message
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __copy__(self):
+        gear_items = astuple(self, recurse=False)
+        return self.__class__(*gear_items)
+
+    # class methods ########################################################################################################
+    @classmethod
+    def from_unordered(cls, *gear: Gear | Weapon | SpecialWeapon):
+        gear_dict = {g.slot: g for g in gear if isinstance(g, Gear)}
+        return cls(**gear_dict)
+
+    @classmethod
+    def no_equipment(cls):
+        return cls()
+
+    # Wearing Properties ###################################################################################################
     @property
     def full_set(self, requires_ammo: bool = None, assume_2h: bool = True) -> bool:
+        """Property which returns True if the Equipment slots are fulfilled as needed to perform attacks.
+
+        # TODO: implement osrsbox-db wrapper which eliminates the need for assume_2h parameter.
+
+        Args:
+            requires_ammo (bool, optional): If True, requires Ammunition to be equipped even for styles which don't make use
+             of it. Defaults to None.
+            assume_2h (bool, optional): If True, requires the Equipment.shield slot to be empty. Defaults to True. 
+
+        Returns:
+            bool: True 
+        """
         if requires_ammo is not None:
             if self.weapon.weapon_styles in [BowStyles, CrossbowStyles, ThrownStyles]:
                 requires_ammo = True
@@ -462,13 +524,13 @@ class Equipment:
 
         for slot in asdict(GearSlots, recurse=False):
             if slot == GearSlots.ammunition:
-                if requires_ammo and 'empty' in self.ammunition:
+                if requires_ammo and self.ammunition == Gear.empty_slot(GearSlots.ammunition):
                     return False
                 else:
                     continue
 
             if slot == GearSlots.shield:
-                if not assume_2h and 'empty' in self.shield:
+                if not assume_2h and self.shield == Gear.empty_slot(GearSlots.shield):
                     return False
                 else:
                     continue
@@ -476,8 +538,7 @@ class Equipment:
             if 'empty' in self.__getattribute__(slot).name:
                 return False
 
-        return True
-
+        return True     # return True if no flags triggered
 
     @property
     def normal_void_set(self) -> bool:
@@ -540,7 +601,6 @@ class Equipment:
 
     @property
     def obsidian_armor_set(self) -> bool:
-        # weapon_bool = self.weapon.name in ["obsidian dagger", "obsidian mace", "obsidian maul", "obsidian sword"]
         return self.wearing(
             head=Gear.from_bb("obsidian helm"),
             body=Gear.from_bb("obsidian platebody"),
@@ -568,7 +628,10 @@ class Equipment:
 
     @property
     def keris(self) -> bool:
-        return self.wearing(weapon=Weapon.from_bb('keris'))
+        qualifying_weapons = (
+            Weapon.from_bb('keris'),
+        )
+        return self.weapon in qualifying_weapons
 
     @property
     def crystal_armor_set(self) -> bool:
@@ -615,20 +678,12 @@ class Equipment:
 
     @property
     def chinchompas(self) -> bool:
-        grey = Weapon.from_bb('chinchompa')
-        red = Weapon.from_bb('red chinchompa')
-        black = Weapon.from_bb('black chinchompa')
-        return self.weapon in (black, red, grey)
-
-    @property
-    def enchanted_ruby_bolts(self) -> bool:
-        return self.wearing(ammunition=Gear.from_bb('ruby dragon bolts (e)')) or \
-               self.wearing(ammunition=Gear.from_bb('ruby bolts (e)'))
-
-    @property
-    def enchanted_diamond_bolts(self) -> bool:
-        return self.wearing(ammunition=Gear.from_bb('diamond dragon bolts (e)')) or \
-               self.wearing(ammunition=Gear.from_bb('diamond bolts (e)'))
+        qualifying_weapons = (
+            Weapon.from_bb('chinchompa'),
+            Weapon.from_bb('red chinchompa'),
+            Weapon.from_bb('black chinchompa'),
+        )
+        return self.weapon in qualifying_weapons
 
     @property
     def brimstone_ring(self) -> bool:
@@ -644,74 +699,197 @@ class Equipment:
 
     @property
     def staff_of_the_dead(self) -> bool:
-        bb_names = (
-            'staff of light',
-            'staff of the dead',
-            'toxic staff of the dead',
+        qualifying_weapons = (
+            SpecialWeapon.from_bb('staff of light'),
+            SpecialWeapon.from_bb('staff of the dead'),
+            SpecialWeapon.from_bb('toxic staff of the dead'),
         )
-        options = [SpecialWeapon.from_bb(name) for name in bb_names]
-
-        if self.weapon in options:
-            return True
-        else:
-            return False
+        return self.weapon in qualifying_weapons
 
     @property
     def elysian_spirit_shield(self) -> bool:
+        """Property representing whether or not an Elysian Spirit Shield Gear object is equipped.
+
+        Returns:
+            bool: True if the equipped shield slot is an Elysian Spirit Shield Gear object, False otherwise.
+        """
         return self.wearing(shield=Gear.from_bb('elysian spirit shield'))
 
     @property
     def dinhs_bulwark(self) -> bool:
+        """Property representing whether or not a Dinh's Bulwark SpecialWeapon is equipped.
+
+        Returns:
+            bool: True if the equipped Weapon is a Dinh's Bulwark SpecialWeapon, False otherwise.
+        """
         return self.wearing(weapon=SpecialWeapon.from_bb("dinh's bulwark"))
 
     @property
     def blood_fury(self) -> bool:
+        """Property representing whether or not an Amulet of Blood Fury is equipped.
+
+        Returns:
+            bool: True if the equipped Gear is an Amulet of Blood Fury Gear object, False otherwise.
+        """
         return self.wearing(neck=Gear.from_bb('amulet of blood fury'))
 
-    @classmethod
-    def no_equipment(cls):
-        return cls()
+    @property
+    def dorgeshuun_special_weapon(self) -> bool:
+        """Property representing whether or not an Equipment class weapon is a Bone Special Weapon.
 
-    def __add__(self, other):
+        Bone Special Weapon is a term I created to include the Bone Dagger & Dorgeshuun Crossbow, both of
+        which have similar accuracy behavior.
+
+        Returns:
+            bool: True if the equipped Weapon is a Bone Dagger or Crossbow SpecialWeapon object, False otherwise.
         """
-        Directional addition, right-hand operand has priority except in the case of empty slots.
-        :param other:
-        :return:
+        matching_weapons = [
+            SpecialWeapon.from_bb('bone dagger'),
+            SpecialWeapon.from_bb('dorgeshuun crossbow'),
+        ]
+        return self.weapon in matching_weapons
+
+    @property
+    def dragon_claws(self) -> bool:
+        """Property representing whether or not a Dragon Claws SpecialWeapon is equipped.
+
+        Returns:
+            bool: True if the equipped Weapon is a Dragon Claws. SpecialWeapon, False otherwise.
         """
-        if isinstance(other, self.__class__):
-            for gear in astuple(other, recurse=False):
-                if not gear == Gear.empty_slot(gear.slot):
-                    self.equip(gear)
-            return self
-        else:
-            return NotImplemented
+        return self.wearing(weapon=SpecialWeapon.from_bb('dragon claws'))
 
-    def __sub__(self, other):
+    @property
+    def abyssal_bludgeon(self) -> bool:
+        """Property representing whether or not an Abbysal Bludgeon SpecialWeapon is equipped.
+
+        Returns:
+            bool: True if the equipped Weapon is an Abyssal Bludgeon. SpecialWeapon, False otherwise.
         """
-        Directional subtraction, remove right-hand gear if and only if it exists in the left-hand set. Pass otherwise.
-        :param other:
-        :return:
+        return self.wearing(weapon=SpecialWeapon.from_bb('abyssal bludgeon'))
+
+    @property
+    def crossbow(self) -> bool:
+        """Property representing whether or not any form of crossbow is equipped.
+        
+        This generic property checks a few obvious values to ensure that other modules can interact with Crossbows simply.
+
+        Returns:
+            bool: True if any crossbow is equiped, otherwise False.
         """
-        if isinstance(other, self.__class__):
-            for slot, gear in asdict(other).items():
-                if self.__getattribute__(slot) == gear:
-                    self.unequip(slot)
-                else:
-                    continue
+        # use names because crossbows may be SpecialWeapon or Weapon.
+        # TODO: Re-assess whether using name search is still valid.
+        return 'crossbow' in self.weapon.name and self.weapon.weapon_styles == CrossbowStyles
 
-    def __str__(self):
-        notable_gear = [g.name for g in astuple(self, recurse=False) if 'empty' not in g.name]
-        message = f'{self.__class__.__name__}({str(notable_gear)})'
-        return message
+    # Ammunition / Bolts ###################################################################################################
 
-    def __repr__(self):
-        return self.__str__()
+    @property
+    def enchanted_opal_bolts(self) -> bool:
+        return NotImplemented
 
-    def __copy__(self):
-        gear_items = astuple(self, recurse=False)
-        return self.__class__(*gear_items)
+    @property
+    def enchanted_jade_bolts(self) -> bool:
+        return NotImplemented
 
-    # general gear swaps
+    @property
+    def enchanted_pearl_bolts(self) -> bool:
+        return NotImplemented
+
+    @property
+    def enchanted_topaz_bolts(self) -> bool:
+        return NotImplemented
+
+    @property
+    def enchanted_sapphire_bolts(self) -> bool:
+        return NotImplemented
+
+    @property
+    def enchanted_emerald_bolts(self) -> bool:
+        return NotImplemented
+
+    @property
+    def enchanted_ruby_bolts(self) -> bool:
+        """Property representing whether or not any form of enchanted ruby bolts are equipped.
+
+        Returns:
+            bool: True if the equipped ammunition is either Ruby Dragon Bolts (e) or Ruby Bolts (e)
+        """
+        matching_ammunition = [
+            Gear.from_bb('ruby dragon bolts (e)'),
+            Gear.from_bb('ruby bolts (e)'),
+        ]
+
+        return self.ammunition in matching_ammunition
+
+    @property
+    def enchanted_diamond_bolts(self) -> bool:
+        """Property representing whether or not any form of enchanted diamond bolts are equipped.
+
+        Returns:
+            bool: True if the equipped ammunition is either Diamond Dragon Bolts (e) or Diamond Bolts (e)
+        """
+        matching_ammunition = [
+            Gear.from_bb('diamond dragon bolts (e)'),
+            Gear.from_bb('diamond bolts (e)'),
+        ]
+
+        return self.ammunition in matching_ammunition
+
+    @property
+    def enchanted_dragonstone_bolts(self) -> bool:
+        """Property representing whether or not any form of enchanted dragonstone bolts are equipped.
+
+        Returns:
+            bool: True if the equipped ammunition is either Dragonstone Dragon Bolts (e) or Dragonstone Bolts (e)
+        """
+        matching_ammunition = [
+            Gear.from_bb('dragonstone dragon bolts (e)'),
+            Gear.from_bb('dragonstone bolts (e)'),
+        ]
+
+        return self.ammunition in matching_ammunition
+
+    @property
+    def enchanted_onyx_bolts(self) -> bool:
+        """Property representing whether or not any form of enchanted onyx bolts are equipped.
+
+        Returns:
+            bool: True if the equipped ammunition is either Onyx Dragon Bolts (e) or Onyx Bolts (e)
+        """
+        matching_ammunition = [
+            Gear.from_bb('onyx dragon bolts (e)'),
+            Gear.from_bb('onyx bolts (e)'),
+        ]
+
+        return self.ammunition in matching_ammunition
+
+    @property
+    def enchanted_bolts_equipped(self) -> bool:
+        """Property representing whether or not any form of enchanted bolts are equipped.
+
+        This generic property implements all of the ammunition / bolt properties and removes properties which return 
+        NotImplemented. Use in conjunction with specific properties to simplify decision trees in other modules.
+
+        Returns:
+            bool: True if any enchanted bolts are equipped, False otherwise.
+        """
+        properties = [
+            self.enchanted_opal_bolts,
+            self.enchanted_jade_bolts,
+            self.enchanted_pearl_bolts,
+            self.enchanted_topaz_bolts,
+            self.enchanted_sapphire_bolts,
+            self.enchanted_emerald_bolts,
+            self.enchanted_ruby_bolts,
+            self.enchanted_diamond_bolts,
+            self.enchanted_dragonstone_bolts,
+            self.enchanted_onyx_bolts,
+        ]
+        implemented_properties = tuple(p for p in properties if isinstance(p, bool))    # Filter only implemented properties
+        return any(implemented_properties)
+
+    ########################################################################################################################
+    # Equipment helpers ####################################################################################################
+    ########################################################################################################################
 
     def equip_basic_melee_gear(self, torture: bool = True, primordial: bool = True, infernal: bool = True,
                                ferocious: bool = True, berserker: bool = True, brimstone: bool = False):
@@ -780,10 +958,26 @@ class Equipment:
 
         self.equip(*gear)
 
+    def equip_void_set(self, elite: bool = True):
+        """Equip an entire void set, either elite (default) or normal.
+
+        # TODO: Specific void items per style (with osrsbox-db implementation) & provide parameter support.
+        Args:
+            elite (bool, optional): If True, equip elite void components instead of normal ones. Defaults to True.
+        """
+        void_gear_names = ['void knight helm', 'void knight gloves']
+
+        if elite:
+            specific_void_gear_names = ['elite void top', 'elite void robe']
+        else:
+            specific_void_gear_names = ['void knight top', 'void knight robe']
+
+        void_gear_names.extend(specific_void_gear_names)
+        gear = [Gear.from_bb(name) for name in void_gear_names]
+        self.equip(*gear)
+
     def equip_slayer_helm(self, imbued: bool = True):
-        self.equip(
-            Gear.from_bb('slayer helmet (i)'),
-        )
+        self.equip(Gear.from_bb('slayer helmet (i)'))
 
     def equip_salve(self, e: bool = True, i: bool = True):
         if e and i:
@@ -797,8 +991,7 @@ class Equipment:
         fury = Gear.from_bb('amulet of blood fury') if blood else Gear.from_bb('amulet of fury')
         self.equip(fury)
 
-    # melee gear swaps
-
+    # melee gear helpers ###################################################################################################
     def equip_bandos_set(self):
         self.equip(
             Gear.from_bb('neitiznot faceguard'),
@@ -940,8 +1133,7 @@ class Equipment:
             style=style
         )
 
-    # ranged gear swaps
-
+    # ranged gear helpers ##################################################################################################
     def equip_arma_set(self, zaryte: bool = False, barrows: bool = False):
         if zaryte:
             gear = (Gear.from_bb('zaryte vambraces'),)
@@ -964,15 +1156,6 @@ class Equipment:
             Gear.from_bb("god d'hide chaps"),
             Gear.from_bb('god bracers'),
             Gear.from_bb("blessed d'hide boots"),
-        )
-
-    def equip_void_set(self, elite: bool = True):
-        body, legs = ('elite void top', 'elite void robe') if elite else ('void knight top', 'void knight robe')
-        self.equip(
-            Gear.from_bb('void knight helm'),
-            Gear.from_bb(body),
-            Gear.from_bb(legs),
-            Gear.from_bb('void knight gloves'),
         )
 
     def equip_crystal_set(self, zaryte: bool = False, barrows: bool = False):
@@ -1067,8 +1250,7 @@ class Equipment:
             style=style
         )
 
-    # magic gear swaps
-
+    # magic gear helpers ###################################################################################################
     def equip_ancestral_set(self):
         self.equip(
             Gear.from_bb('ancestral hat'),
@@ -1079,7 +1261,7 @@ class Equipment:
     def equip_sang(self, arcane: bool = True, style: PlayerStyle = None) -> PlayerStyle:
         gear = (Gear.from_bb('arcane spirit shield'),) if arcane else tuple()
         style = style if style else PoweredStaffStyles.get_style(PlayerStyle.accurate)
-        
+
         return self.equip(
             Weapon.from_bb('sanguinesti staff'),
             *gear,
