@@ -3,6 +3,7 @@ import functools
 import numpy as np
 import random
 from cached_property import cached_property
+from osrs_tools.modifier import MaxHit
 
 from osrs_tools.exceptions import *
 
@@ -42,7 +43,7 @@ class Hitsplat:     # TODO: Dataclass/attrs
         return {d: p for d, p in zip(self.damage, self.probability)}
 
     @classmethod
-    def from_max_hit_acc(cls, max_hit: int, accuracy: float, hitpoints_cap: int = None):
+    def from_max_hit_acc(cls, max_hit: MaxHit, accuracy: float, hitpoints_cap: int = None):
         """
         Simple constructor for normal hit distributions with equal chance of all damage values from 0 to max_hit.
         :param max_hit: The highest damage value that can be dealt.
@@ -50,8 +51,8 @@ class Hitsplat:     # TODO: Dataclass/attrs
         :param hitpoints_cap: The hitpoints of the target, disallows damage values over the cap and shifts distribution.
         :return: A Hitsplat object.
         """
-        damage = np.arange(0, max_hit+1)
-        probability = np.asarray([accuracy * (1 / (max_hit+1)) for _ in damage])
+        damage = np.arange(0, int(max_hit)+1)
+        probability = np.asarray([accuracy * (1 / (int(max_hit)+1)) for _ in damage])
         probability[0] = probability[0] + (1 - accuracy)
         return cls(
             damage=damage,
@@ -95,20 +96,11 @@ class Damage:
     _ticks_per_minute = 100
     _ticks_per_hour = 6000
 
-    def __init__(self, attack_speed: int, *hitsplats: Hitsplat, **kwargs):
+    def __init__(self, attack_speed: int, *hitsplats: Hitsplat):
         # TODO: Make the default __iter__ behavior of this class yield hitsplats
-        # KWARGS
-        tick_efficiency_key = 'tick_efficiency_ratio'
-
-        options = {
-            tick_efficiency_key: 1
-        }
-        options.update(kwargs)
-
-        self.tick_efficiency_ratio = options[tick_efficiency_key]
 
         # INIT
-        self._attack_speed = attack_speed
+        self.attack_speed = attack_speed
         assert len(hitsplats) > 0
         self.hitsplats = hitsplats
         self.mean = sum(hs.mean for hs in self.hitsplats)
@@ -118,10 +110,6 @@ class Damage:
         self.per_second = self.per_tick * Damage._ticks_per_second
         self.per_minute = self.per_tick * Damage._ticks_per_minute
         self.per_hour = self.per_tick * Damage._ticks_per_hour
-
-    @property
-    def attack_speed(self) -> float:
-        return self._attack_speed / self.tick_efficiency_ratio
 
     @property
     def chance_to_deal_positive_damage(self) -> float:
@@ -135,11 +123,10 @@ class Damage:
 
         return tuple(hits)
 
-
     @classmethod
-    def from_max_hit_acc(cls, max_hit: int, accuracy: float, attack_speed: int, hitpoints_cap: int = None, **kwargs):
-        hs = Hitsplat.from_max_hit_acc(max_hit=max_hit, accuracy=accuracy, hitpoints_cap=hitpoints_cap)
-        return cls(attack_speed, hs, **kwargs)
+    def from_max_hit_acc(cls, max_hit: MaxHit, accuracy: float, attack_speed: int, hitpoints_cap: int = None, **kwargs):
+        hs = Hitsplat.from_max_hit_acc(max_hit, accuracy, hitpoints_cap)
+        return cls(attack_speed, hs)
 
     @classmethod
     def thrall(cls):
@@ -148,7 +135,8 @@ class Damage:
         return cls(thrall_attack_speed, hs)
 
     def __iter__(self):
-        return iter(self.hitsplats)
+        for hs in self.hitsplats:
+            yield hs
 
     def __str__(self):
         message = f'{self.__class__.__name__}({self.hitsplats})'

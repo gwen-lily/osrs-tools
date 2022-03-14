@@ -6,6 +6,7 @@ import pandas as pd
 from osrs_tools.style import *
 from osrs_tools.stats import *
 from osrs_tools.exceptions import *
+from osrs_tools.modifier import DamageModifier, AttackRollModifier
 import osrs_tools.resource_reader as rr
 
 
@@ -304,9 +305,8 @@ class Weapon(Gear):
 # noinspection PyArgumentList
 @define(order=True, frozen=True)
 class SpecialWeapon(Weapon):
-    special_accuracy_modifier: float
-    special_damage_modifier_1: float
-    special_damage_modifier_2: float
+    special_attack_roll_modifiers: list[AttackRollModifier] = field(factory=list)
+    special_damage_modifiers: list[DamageModifier] = field(factory=list)
     special_defence_roll: str = field(validator=special_defence_roll_validator, factory=str)
 
     @classmethod
@@ -315,6 +315,13 @@ class SpecialWeapon(Weapon):
             lookup_gear_base_attributes_by_name(name)
         attack_speed, attack_range, two_handed, weapon_styles, special_accuracy_modifier, special_damage_modifier_1, \
             special_damage_modifier_2, special_defence_roll = lookup_weapon_attributes_by_name(name)
+
+        special_attack_roll_modifiers = [AttackRollModifier(special_accuracy_modifier, 'bitter')]
+        special_damage_modifiers = []
+        if special_damage_modifier_1 != 1:
+            special_damage_modifiers.append(special_damage_modifier_1)
+        if special_damage_modifier_2 != 1:
+            special_damage_modifiers.append(special_damage_modifier_2)
 
         if not slot == GearSlots.weapon:
             raise WeaponError(f'{name=}{slot=}')
@@ -329,9 +336,8 @@ class SpecialWeapon(Weapon):
             weapon_styles=weapon_styles,
             attack_speed=attack_speed,
             two_handed=two_handed,
-            special_accuracy_modifier=special_accuracy_modifier,
-            special_damage_modifier_1=special_damage_modifier_1,
-            special_damage_modifier_2=special_damage_modifier_2,
+            special_attack_roll_modifiers=special_attack_roll_modifiers,
+            special_damage_modifiers=special_damage_modifiers,
             special_defence_roll=special_defence_roll,
         )
 
@@ -669,8 +675,12 @@ class Equipment:
         )
 
     @property
+    def armadyl_crossbow(self) -> bool:
+        return self.wearing(weapon=SpecialWeapon.from_bb('armadyl crossbow'))
+
+    @property
     def zaryte_crossbow(self) -> bool:
-        return self.wearing(weapon=Weapon.from_bb('zaryte crossbow'))
+        return self.wearing(weapon=SpecialWeapon.from_bb('zaryte crossbow'))
 
     @property
     def scythe_of_vitur(self) -> bool:
@@ -779,6 +789,103 @@ class Equipment:
         # use names because crossbows may be SpecialWeapon or Weapon.
         # TODO: Re-assess whether using name search is still valid.
         return 'crossbow' in self.weapon.name and self.weapon.weapon_styles == CrossbowStyles
+
+    @property
+    def arclight(self) -> bool:
+        """Property representing whether or not an arclight Special Weapon is equipped.
+
+        Returns:
+            bool: True if wielding, else False.
+        """
+        return self.wearing(weapon=SpecialWeapon.from_bb('arclight'))
+
+    @property
+    def dragonbane_weapon(self) -> bool:
+        """Property representing whether a dragonbane weapon is equipped.
+
+        There are currently two dragonbane weapons in the game: Dragon Hunter Crossbow &
+        Dragon Hunter Lance. Returns True if either of these are equipped, else False.
+
+        Returns:
+            bool: 
+        """
+        qualifying_weapons = (
+            Weapon.from_bb('dragon hunter crossbow'),
+            Weapon.from_bb('dragon hunter lance')
+        )
+        return self.weapon in qualifying_weapons
+
+    @property
+    def salve(self) -> bool:
+        """Property representing whether any form of salve amulet is equipped.
+
+        Returns:
+            bool: 
+        """
+        qualifying_items = (
+            Gear.from_bb('salve amulet (i)'),
+            Gear.from_bb('salve amulet (ei)')
+        )
+        return self.neck in qualifying_items
+    
+    @property
+    def slayer(self) -> bool:
+        """Property representing whether the black mask / slayer helm effect is active.
+        
+        # TODO: Implement black mask
+
+        Returns:
+            bool: 
+        """
+        return self.wearing(head=Gear.from_bb('slayer helmet (i)'))
+
+    @property
+    def wilderness_weapon(self) -> bool:
+        """Property representing whether the equipped weapon is one of the wilderness weapons.
+
+        Currently, there are three wilderness weapons: Viggora's chain mace, Craw's bow, and
+        Thammaron's sceptre.
+
+        Returns:
+            bool: 
+        """
+        qualifying_weapons = (
+            Weapon.from_bb("craw's bow"),
+            Weapon.from_bb("viggora's chainmace"),
+            Weapon.from_bb("thammaron's sceptre"),
+        )
+        return self.weapon in qualifying_weapons
+
+    @property
+    def twisted_bow(self) -> bool:
+        return self.wearing(weapon=Weapon.from_bb('twisted bow'))
+
+    @property
+    def berserker_necklace(self) -> bool:
+        return self.wearing(neck=Gear.from_bb('berserker necklace'))
+
+    @property
+    def chaos_gauntlets(self) -> bool:
+        return self.wearing(hands=Gear.from_bb('chaos gauntlets'))
+
+    @property
+    def pickaxe(self) -> bool:
+        """Returns true if the player is wielding a pickaxe.
+
+        Returns:
+            bool: _description_
+        """
+        return 'pickaxe' in self.weapon.name
+
+    @property
+    def abyssal_dagger(self) -> bool:
+        qualifying_weapons = (SpecialWeapon.from_bb('abyssal dagger'), )
+        return self.weapon in qualifying_weapons
+
+    @property
+    def dragon_dagger(self) -> bool:
+        qualifying_weapons = (SpecialWeapon.from_bb('dragon dagger'), )
+        return self.weapon in qualifying_weapons
 
     # Ammunition / Bolts ###################################################################################################
 

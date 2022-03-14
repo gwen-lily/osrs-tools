@@ -9,8 +9,10 @@ from osrs_tools.stats import *
 from osrs_tools.damage import *
 from osrs_tools.spells import *
 from osrs_tools.exceptions import *
+from osrs_tools.modifier import Roll, MaxHit, DamageModifier, AttackRollModifier, create_modifier_pair
 import osrs_tools.resource_reader as rr
 from osrsbox import monsters_api, monsters_api_examples
+
 
 
 @define(frozen=True)
@@ -49,14 +51,6 @@ character_attrs_settings = {'order': False, 'frozen': False}
 def player_equipment_level_requirements_validator(instance, attribute, value):
     if not instance.levels >= value.level_requirements:
         raise EquipableError(f'Player with {instance.levels=} cannot equip Equipment with {value.level_requirements=}')
-
-
-class ArmDmTuple(NamedTuple):
-    """
-    Tuple containing an attack roll modifier (ARM) and damage_multiplier(DM)
-    """
-    attack_roll_modifier: float
-    damage_multiplier: float
 
 
 @define(**character_attrs_settings)
@@ -131,89 +125,7 @@ class Character(ABC):
     def effective_magic_defence_level(self) -> int:
         pass
 
-    def attack_roll(self, other: Character, distance: int = None, spell: Spell = None, *special_attack_roll_modifiers: float) -> int:
-        """Return the attack roll made by self when attacking other, with optional special attack roll modifiers.
-        
-        Args:
-            other (Character): The targeted object which inherits Character.
-            distance (int, optional): Distance between self and other in tiles. Defaults to None.
-            spell (Spell, optional): Spell being cast, if any. Defaults to None.
-
-        Raises:
-            StyleError: Raised if the active style doesn't behave properly
-
-        Returns:
-            int: The attack roll as an integer.
-        """
-        active_style: Style = self.active_style
-        dt = active_style.damage_type if spell is None else Style.magic
-        ab: AggressiveStats = self.aggressive_bonus
-
-        if dt in Style.melee_damage_types:
-            effective_accuracy_level = self.effective_melee_attack_level
-            accuracy_bonus = ab.__getattribute__(dt)
-        elif dt in Style.ranged_damage_types:
-            effective_accuracy_level = self.effective_ranged_attack_level
-            accuracy_bonus = ab.ranged
-        elif dt in Style.magic_damage_types:
-            effective_accuracy_level = self.effective_magic_attack_level
-            accuracy_bonus = ab.magic
-        else:
-            raise StyleError(active_style)
-
-        # normal attack roll modifiers
-        if isinstance(self, "Player"):  # even with from __future__ import annotations you need to string these
-            salve_arm, _ = self._salve_modifier(other)
-            slayer_arm, _ = self._slayer_modifier(other)
-
-            # salve and slayer helm cannot stack, only use salve effect
-            if salve_arm > 1 and slayer_arm > 1:
-                slayer_arm = 1
-
-            arclight_arm, _ = self._arclight_modifier(other)
-            draconic_arm, _ = self._draconic_modifier(other)
-            wilderness_arm, _ = self._wilderness_modifier(other)
-            twisted_bow_arm, _ = self._twisted_bow_modifier(other)
-            obsidian_arm, _ = self._obsidian_armor_modifier()
-            crystal_arm, _ = self._crystal_armor_modifier()
-            chin_arm = self._chinchompa_arm_modifier(distance)
-            inquisitor_arm, _ = self._inquisitor_modifier()
-
-            if spell:
-                active_spell = spell
-            elif self.active_style.is_spell_style():
-                if isinstance(self.autocast, Spell):
-                    active_spell = self.autocast
-                else:
-                    raise SpellError(f'{self.active_style.is_spell_style()=} w/ {spell=} & {self.autocast=}')
-            else:
-                active_spell = None
-
-            smoke_arm, _ = self._smoke_modifier(active_spell)
-
-            all_roll_modifiers = [
-                salve_arm,
-                slayer_arm,
-                arclight_arm,
-                draconic_arm,
-                wilderness_arm,
-                twisted_bow_arm,
-                obsidian_arm,
-                crystal_arm,
-                chin_arm,
-                inquisitor_arm,
-                smoke_arm,
-            ]
-        elif isinstance(self, "Monster"):   # even with from __future__ import annotations you need to string these
-            all_roll_modifiers = []     # Not sure if these even exist
-
-        for sarm in special_attack_roll_modifiers:
-            all_roll_modifiers.append(sarm)
-
-        active_roll_modifiers = [float(x) for x in all_roll_modifiers if not x == 1]
-        return self.maximum_roll(effective_accuracy_level, accuracy_bonus, *active_roll_modifiers)
-
-    def defence_roll(self, other: Character, special_defence_roll: str = None) -> int:
+    def defence_roll(self, other: Character, special_defence_roll: str = None) -> Roll:
         """Returns the defence roll of self when attacked by other, optionally with a specific damage type.
 
         Args:
@@ -225,7 +137,7 @@ class Character(ABC):
             StyleError: Raised when a Style's damage type is unsupported.
 
         Returns:
-            int: The defence roll.
+            Roll: The defence roll.
         """
         # Basic definitions and error handling
         db = self.defensive_bonus
@@ -243,8 +155,8 @@ class Character(ABC):
 
         if isinstance(other, Player):
             if other.equipment.brimstone_ring and dt in Style.magic_damage_types:
-                reduction = math.floor(defensive_roll / 10) / 4
-                defensive_roll = math.floor(defensive_roll - reduction)
+                reduction = math.floor(int(defensive_roll) / 10) / 4
+                defensive_roll = Roll(math.floor(defensive_roll - reduction))
 
         return defensive_roll
 
@@ -332,7 +244,7 @@ class Character(ABC):
         return effective_level
 
     @staticmethod
-    def maximum_roll(effective_level: int, aggressive_or_defensive_bonus: int, *roll_modifiers: float) -> int:
+    def maximum_roll(effective_level: int, aggressive_or_defensive_bonus: int, *roll_modifiers: AttackRollModifier) -> Roll:
         """
 
         :param effective_level: A function of stat, (potion), prayers, other modifiers, and stance
@@ -340,24 +252,26 @@ class Character(ABC):
         :param roll_modifiers: A direct multiplier (or multipliers) on the roll, such as a BGS special attack.
         :return:
         """
-        roll = effective_level * (aggressive_or_defensive_bonus + 64)
-        for step in roll_modifiers:
-            roll = math.floor(roll * step)
+        roll = Roll(effective_level * (aggressive_or_defensive_bonus + 64))
+        for roll_mod in roll_modifiers:
+            roll = roll * roll_mod
 
         return roll
 
     @staticmethod
-    def accuracy(offensive_roll: int, defensive_roll: int) -> float:
+    def accuracy(offensive_roll: Roll, defensive_roll: Roll) -> float:
         """
 
         :param offensive_roll: The maximum offensive roll of the attacker.
         :param defensive_roll: The maximum defensive roll of the defender.
         :return: Accuracy, or the chance that an attack is successful. This is NOT the chance to not deal 0 damage.
         """
-        if offensive_roll > defensive_roll:
-            return 1 - (defensive_roll + 2) / (2 * (offensive_roll + 1))
+        off_val = int(offensive_roll)
+        def_val = int(defensive_roll)
+        if off_val > def_val:
+            return 1 - (def_val + 2) / (2 * (off_val + 1))
         else:
-            return offensive_roll / (2 * (defensive_roll + 1))
+            return off_val / (2 * (def_val + 1))
 
     @staticmethod
     def base_damage(effective_strength_level: int, strength_bonus: int) -> float:
@@ -373,10 +287,10 @@ class Character(ABC):
         return base_damage
 
     @staticmethod
-    def static_max_hit(base_damage: float, *damage_modifiers: float) -> int:
-        max_hit = math.floor(base_damage)
-        for step in damage_modifiers:
-            max_hit = math.floor(max_hit * step)
+    def static_max_hit(base_damage: MaxHit, *damage_modifiers: DamageModifier) -> MaxHit:
+        max_hit = base_damage
+        for dmg_mod in damage_modifiers:
+            max_hit = max_hit * dmg_mod
 
         return max_hit
 
@@ -439,13 +353,19 @@ class Player(Character):
     # properties
     @property
     def aggressive_bonus(self) -> AggressiveStats:
-        """Simple wrapper for Equipment.aggressive_bonus which accounts for Dinh's melee strength bonus.
+        """Simple wrapper for Equipment.aggressive_bonus which accounts for edge cases.
+
+        Dinh's Bulwark melee strength bonus and Smoke Staff's magic damage gear bonus are
+        unique mechanics that don't fit into the usual DPS scheme.
 
         Returns:
             AggressiveStats: AggressiveStats object.
         """
-        ab = self.equipment.aggressive_bonus
+        ab = copy(self.equipment.aggressive_bonus)
         ab.melee_strength += self._dinhs_modifier()
+        ab.magic_strength += self._smoke_modifier()
+        return ab
+
 
     @property
     def defensive_bonus(self) -> DefensiveStats:
@@ -614,124 +534,71 @@ class Player(Character):
 
         return ArmDmTuple(void_attack_level_modifier, void_strength_level_modifier)
 
-    def _salve_modifier(self, other: Character) -> ArmDmTuple:
-        if isinstance(other, Monster):
-            if MonsterTypes.undead in other.special_attributes:
-                if self.equipment.wearing(neck=Gear.from_bb('salve amulet (i)')):
-                    modifier = 7/6
-                elif self.equipment.wearing(neck=Gear.from_bb('salve amulet (ei)')):
-                    modifier = 1.2
-                else:
-                    modifier = 1
+    def _salve_modifier(self, other: Character) -> tuple[AttackRollModifier, DamageModifier] | None:
+        if self.equipment.salve and isinstance(other, Monster) and MonsterTypes.undead in other.special_attributes:
+            comment = 'salve'
+            if self.equipment.wearing(neck=Gear.from_bb('salve amulet (i)')):
+                modifier = 7/6
+            elif self.equipment.wearing(neck=Gear.from_bb('salve amulet (ei)')):
+                modifier = 1.2
+
+            return create_modifier_pair(modifier, comment)
+
+    def _slayer_modifier(self, other: Character) -> tuple[AttackRollModifier, DamageModifier] | None:       
+        if self.task and self.equipment.slayer and isinstance(other, Monster):
+            comment = 'slayer'
+            if (dt := self.active_style.damage_type) in Style.melee_damage_types:
+                modifier = 7/6
+            elif dt in Style.ranged_damage_types:
+                modifier = 1.15
+            elif dt in Style.magic_damage_types:
+                modifier = 1.15
             else:
-                modifier = 1
+                raise StyleError(self.active_style)
 
-        elif isinstance(other, Player):
-            modifier = 1
-        else:
-            raise PlayerError(f'{other=}')
+            return create_modifier_pair(modifier, comment)
 
-        return ArmDmTuple(modifier, modifier)
+    def _arclight_modifier(self, other: Character) -> tuple[AttackRollModifier, DamageModifier] | None:
+        if self.equipment.arclight and isinstance(other, Monster) and MonsterTypes.demon in other.special_attributes:
+            modifier = 1.7
+            comment = 'arclight'
+            return create_modifier_pair(modifier, comment)
 
-    def _slayer_modifier(self, other: Character) -> ArmDmTuple:
-        if isinstance(other, Monster):
-            if self.task:
-                if self.equipment.wearing(head=Gear.from_bb('slayer helmet (i)')):
-                    if (dt := self.active_style.damage_type) in Style.melee_damage_types:
-                        modifier = 7/6
-                    elif dt in Style.ranged_damage_types:
-                        modifier = 1.15
-                    elif dt in Style.magic_damage_types:
-                        modifier = 1.15
-                    else:
-                        raise StyleError(f'{self.active_style.damage_type=}')
-                # elif self.equipment.wearing(head=Gear.from_bb('slayer helmet')):
-                #     raise NotImplemented('slayer helmet / black mask / black mask (i) / ...')
-                else:
-                    modifier = 1
+    def _draconic_modifier(self, other: Character) -> tuple[AttackRollModifier, DamageModifier] | None:
+        if self.equipment.dragonbane_weapon and isinstance(other, Monster) and MonsterTypes.draconic in other.special_attributes:
+            comment = 'draconic'
+            if self.equipment.wearing(weapon=Weapon.from_bb('dragon hunter lance')):
+                modifier = 1.2
+            elif self.equipment.wearing(weapon=Weapon.from_bb('dragon hunter crossbow')):
+                modifier = 1.3
             else:
-                modifier = 1
-        elif isinstance(other, Player):
-            modifier = 1
-        else:
-            raise PlayerError(f'{other=}')
+                raise NotImplementedError
 
-        return ArmDmTuple(modifier, modifier)
+            return create_modifier_pair(modifier, comment)
 
-    def _arclight_modifier(self, other: Character) -> ArmDmTuple:
-        if isinstance(other, Monster):
-            arclight = SpecialWeapon.from_bb('arclight')
-            modifier = 1.7 if MonsterTypes.demon in other.special_attributes and \
-                self.equipment.wearing(weapon=arclight) else 1
-        elif isinstance(other, Player):
-            modifier = 1
-        else:
-            raise PlayerError(f'{other=}')
-
-        return ArmDmTuple(modifier, modifier)
-
-    def _draconic_modifier(self, other: Character) -> ArmDmTuple:
-        if isinstance(other, Monster):
-            if MonsterTypes.draconic in other.special_attributes:
-                if self.equipment.wearing(weapon=Weapon.from_bb('dragon hunter lance')):
-                    modifier = 1.2
-                elif self.equipment.wearing(weapon=Weapon.from_bb('dragon hunter crossbow')):
-                    modifier = 1.3
-                else:
-                    modifier = 1
+    def _wilderness_modifier(self, other: Character) -> tuple[AttackRollModifier, DamageModifier] | None:
+        if self.equipment.wilderness_weapon and isinstance(other, Monster) and other.location == MonsterLocations.wilderness:
+            comment = 'wilderness'
+            if self.equipment.wearing(weapon=Weapon.from_bb("craw's bow")):
+                arm = 1.5
+                dm = 1.5
+            elif self.equipment.wearing(weapon=Weapon.from_bb("viggora's chainmace")):
+                arm = 1.5
+                dm = 1.5
+            elif self.equipment.wearing(weapon=Weapon.from_bb("thammaron's sceptre")):
+                arm = 2
+                dm = 1.25
             else:
-                modifier = 1
+                raise NotImplementedError
 
-        elif isinstance(other, Player):
-            modifier = 1
-        else:
-            raise PlayerError(f'{other=}')
+            return AttackRollModifier(arm, comment), DamageModifier(dm, comment)
 
-        return ArmDmTuple(modifier, modifier)
-
-    def _wilderness_modifier(self, other: Character) -> ArmDmTuple:
-        if isinstance(other, Monster):
-            if other.location == MonsterLocations.wilderness:
-                if self.equipment.wearing(weapon=Weapon.from_bb("craw's bow")):
-                    arm = 1.5
-                    sm = 1.5
-                elif self.equipment.wearing(weapon=Weapon.from_bb("viggora's chainmace")):
-                    arm = 1.5
-                    sm = 1.5
-                elif self.equipment.wearing(weapon=Weapon.from_bb("thammaron's sceptre")):
-                    arm = 2
-                    sm = 1.25
-                else:
-                    arm = 1
-                    sm = 1
-            else:
-                arm = 1
-                sm = 1
-
-        elif isinstance(other, Player):
-            arm = 1
-            sm = 1
-        else:
-            raise PlayerError(f'{other=}')
-
-        return ArmDmTuple(arm, sm)
-
-    def _twisted_bow_modifier(self, other: Character) -> ArmDmTuple:
-        if self.equipment.wearing(weapon=Weapon.from_bb('twisted bow')):
-            accuracy_modifier_ceiling = 1.40
-            damage_modifier_ceiling = 2.50
-
-            if isinstance(other, Monster):
-                if MonsterTypes.xerician in other.special_attributes:
-                    magic_ceiling = 350
-                else:
-                    magic_ceiling = 250
-            elif isinstance(other, CoxMonster):
-                magic_ceiling = 350
-            elif isinstance(other, Player):
-                magic_ceiling = 250
-            else:
-                raise PlayerError(f'{other=}')
+    def _twisted_bow_modifier(self, other: Character) -> tuple[AttackRollModifier, DamageModifier] | None:
+        if self.equipment.twisted_bow:
+            comment = 'twisted bow'
+            accuracy_modifier_ceiling = 1.40    # 140%
+            damage_modifier_ceiling = 2.50      # 250%
+            magic_ceiling = 350 if isinstance(other, CoxMonster) else 250
 
             magic = min([max([other.active_levels.magic, other.aggressive_bonus.magic]), magic_ceiling])
 
@@ -740,53 +607,43 @@ class Player(Character):
             damage_modifier_percent = 250 + math.floor((10*3*magic/10 - 14)/100) - math.floor(
                 ((3*magic/10 - 140)**2/100))
 
-            twisted_bow_arm = min([accuracy_modifier_ceiling, accuracy_modifier_percent / 100])
-            twisted_bow_dm = min([damage_modifier_ceiling, damage_modifier_percent / 100])
-        else:
-            twisted_bow_arm = 1
-            twisted_bow_dm = 1
+            arm = min([accuracy_modifier_ceiling, accuracy_modifier_percent / 100])
+            dm = min([damage_modifier_ceiling, damage_modifier_percent / 100])
+            return AttackRollModifier(arm, comment), DamageModifier(dm, comment)
 
-        return ArmDmTuple(twisted_bow_arm, twisted_bow_dm)
-
-    def _obsidian_armor_modifier(self) -> ArmDmTuple:
+    def _obsidian_modifier(self) -> tuple[AttackRollModifier, DamageModifier] | None:
         if self.equipment.obsidian_armor_set and self.equipment.obsidian_weapon:
             modifier = 1.1
-        else:
-            modifier = 1
+            comment = 'obsidian weapon & armour set'
+            return create_modifier_pair(modifier, comment)
 
-        return ArmDmTuple(modifier, modifier)
+    def _berserker_necklace_damage_modifier(self) -> DamageModifier | None:
+        if self.equipment.berserker_necklace and self.equipment.obsidian_weapon:
+            modifier = 1.2
+            comment = 'obsidian weapon & berserker necklace'
+            return DamageModifier(modifier, comment)
 
-    def _berserker_necklace_modifier(self) -> float:
-        if self.equipment.wearing(neck=Gear.from_osrsbox('berserker necklace')) and self.equipment.obsidian_weapon:
-            return 1.2
-        else:
-            return 1
-
-    def _dharok_damage_modifier(self) -> float:
+    def _dharok_damage_modifier(self) -> DamageModifier | None:
         if self.equipment.dharok_set:
-            return 1 + (self.levels.hitpoints - self.active_levels.hitpoints)/100 * (self.levels.hitpoints/100)
-        else:
-            return 1
+            modifier = 1 + (self.levels.hitpoints - self.active_levels.hitpoints)/100 * (self.levels.hitpoints/100)
+            comment = "dharok's set"
+            return DamageModifier(modifier, comment)
 
-    def _leafy_modifier(self, other: Character) -> ArmDmTuple:
-        if isinstance(other, Monster) and MonsterTypes.leafy in other.special_attributes \
-                and self.equipment.leafy_weapon:
+    def _leafy_modifier(self, other: Character) -> tuple[AttackRollModifier, DamageModifier] | None:
+        if self.equipment.leafy_weapon and isinstance(other, Monster) and MonsterTypes.leafy in other.special_attributes
             modifier = 1.175
-        else:
-            modifier = 1
+            comment = 'leafy'
+            return create_modifier_pair(modifier, comment)
 
-        return ArmDmTuple(modifier, modifier)
-
-    def _keris_damage_modifier(self, other: Character) -> float:
+    def _keris_damage_modifier(self, other: Character) -> DamageModifier | None:
         if self.equipment.keris and isinstance(other, Monster) and MonsterTypes.kalphite in other.special_attributes:
             modifier = 4/3
-        else:
-            modifier = 1
+            comment = 'keris'
+            return DamageModifier(modifier, comment)
 
-        return modifier
-
-    def _crystal_armor_modifier(self) -> ArmDmTuple:
+    def _crystal_armor_modifier(self) -> tuple[AttackRollModifier, DamageModifier] | None:
         if self.equipment.crystal_weapon:
+            comment = "crystal weapon & armour"
             piece_arm_bonus = 0.06
             piece_dm_bonus = 0.03
             set_arm_bonus = 0.12
@@ -808,14 +665,16 @@ class Player(Character):
                 if self.equipment.wearing(legs=Gear.from_bb('crystal legs')):
                     crystal_arm += piece_arm_bonus
                     crystal_dm += piece_dm_bonus
-        else:
-            crystal_arm = 1
-            crystal_dm = 1
 
-        return ArmDmTuple(crystal_arm, crystal_dm)
+                # don't return if no crystal pieces are equipped
+                if crystal_arm == 1 and crystal_dm == 1:
+                    return
 
-    def _inquisitor_modifier(self) -> ArmDmTuple:
+            return AttackRollModifier(crystal_arm, comment), DamageModifier(crystal_dm, comment)
+
+    def _inquisitor_modifier(self) -> tuple[AttackRollModifier, DamageModifier] | None:
         if self.active_style.damage_type == Style.crush:
+            comment = 'inquisitor'
             piece_bonus = 0.005
             set_bonus = 0.01
 
@@ -831,27 +690,28 @@ class Player(Character):
                 if self.equipment.wearing(legs=Gear.from_bb("inquisitor's plateskirt")):
                     modifier += piece_bonus
 
-        else:
-            modifier = 1
+                # don't return if no inquisitor pieces are equipped
+                if modifier == 1:
+                    return
 
-        return ArmDmTuple(modifier, modifier)
+            return create_modifier_pair(modifier, comment)
 
-    def _chinchompa_arm_modifier(self, distance: int = None) -> float:
-        if distance:
-            if self.active_style == ChinchompaStyles.get_style(PlayerStyle.short_fuse):
+    def _chin_attack_roll_modifier(self, distance: int = None) -> AttackRollModifier | None:
+        if self.equipment.chinchompas and distance is not None:
+            comment = 'chinchompa'
+            if (style := self.active_style) == ChinchompaStyles.get_style(PlayerStyle.short_fuse):
                 if 0 <= distance <= 3:
                     chin_arm = 1.00
                 elif 4 <= distance <= 6:
                     chin_arm = 0.75
                 else:
                     chin_arm = 0.50
-
-            elif self.active_style == ChinchompaStyles.get_style(PlayerStyle.medium_fuse):
+            elif style == ChinchompaStyles.get_style(PlayerStyle.medium_fuse):
                 if 4 <= distance <= 6:
                     chin_arm = 1.00
                 else:
                     chin_arm = 0.75
-            elif self.active_style.name == ChinchompaStyles.get_style(PlayerStyle.long_fuse):
+            elif style == ChinchompaStyles.get_style(PlayerStyle.long_fuse):
                 if 0 <= distance <= 3:
                     chin_arm = 0.50
                 elif 4 <= distance <= 6:
@@ -859,45 +719,56 @@ class Player(Character):
                 else:
                     chin_arm = 1.00
             else:
-                raise StyleError(f'{self.active_style} not in {ChinchompaStyles}')
+                raise StyleError(style)
 
-        else:
-            chin_arm = 1
+            return AttackRollModifier(chin_arm, comment)
 
-        return chin_arm
+    def _vampyric_modifier(self, other: Character):
+        raise NotImplementedError
 
-    def _vampyric_modifier(self, other: Character) -> ArmDmTuple:
-        raise NotImplemented
+    def _tome_of_fire_damage_modifier(self, spell: Spell = None) -> DamageModifier | None:
+        if self.equipment.tome_of_fire and spell in asdict(FireSpells):
+            modifier = 1.5
+            comment = 'tome of fire'
+            return DamageModifier(modifier, comment)
 
-    def _tome_of_fire_dm(self, spell: Spell = None):
-        dm = 1.5 if spell in asdict(FireSpells) and self.equipment.tome_of_fire else 1
-        return dm
+    def _chaos_gauntlets_flat_damage_bonus(self, spell: Spell = None) -> int | None:
+        """Returns the flat damage bonus provided by chaos gauntlets.
 
-    def _chaos_gauntlets_bonus(self, spell: Spell = None) -> int:
-        if spell in asdict(BoltsSpells) and self.equipment.wearing(hands=Gear.from_bb('chaos gauntlets')):
-            damage_boost = 3
-        else:
-            damage_boost = 0
-        return damage_boost
+        Args:
+            spell (Spell, optional): The spell being cast. Defaults to None.
 
-    def _smoke_modifier(self, spell: Spell = None) -> tuple[float, float]:
+        Returns:
+            int | None: 
+        """
+        if self.equipment.chaos_gauntlets:
+            spell = spell if spell is not None else self.autocast
+            if spell in asdict(BoltsSpells):
+                damage_boost = 3
+                return damage_boost
+
+    def _smoke_modifier(self, spell: Spell = None) -> tuple[AttackRollModifier, float] | None:
         # TODO: Implment ARM & DM float wrapper classes for simplicity & type security.
+
+        spell = spell if spell is not None else self.autocast
         if self.equipment.smoke_staff and isinstance(spell, StandardSpell):
             arm = 1.1
-            db = 0.1
-        else:
-            arm = 1
-            db = 0
-        return arm, db
+            gear_damage_bonus = 0.1    # strange mechanic, applied to the gear bonus
+            comment = 'smoke staff'
 
-    def _guardians_modifier(self, other: Character) -> float:
-        if isinstance(other, Guardian) and 'pickaxe' in self.equipment.weapon.name:
-            modifier = (50 + min([100, self.active_levels.mining]) + self.equipment.weapon.level_requirements.mining) \
-                / 150
-        else:
-            modifier = 1
+            return AttackRollModifier(arm, comment), gear_damage_bonus
 
-        return modifier
+    def _guardians_damage_modifier(self, other: Character) -> DamageModifier | None:
+        if self.equipment.pickaxe and isinstance(other, Guardian):
+            dm = (50 + min([100, self.active_levels.mining]) + self.equipment.weapon.level_requirements.mining) / 150
+            comment = 'guardian'
+            return DamageModifier(dm, comment)
+
+    def _ice_demon_damage_modifier(self, other: Character, spell: None) -> DamageModifier | None:
+        if isinstance(other, IceDemon):            
+            damage_modifier = 1.5 if spell in asdict(FireSpells) else 0.33
+            comment = 'ice demon'
+            return DamageModifier(damage_modifier, comment)
 
     def _dinhs_modifier(self) -> int:
         """
@@ -913,33 +784,39 @@ class Player(Character):
 
         return bonus
 
-    def _abyssal_bludgeon_special_modifier(self, special_attack: bool) -> float:
+    def _abyssal_bludgeon_special_modifier(self, special_attack: bool) -> DamageModifier | None:
         """Returns the damage modifier an abyssal bludgeon would apply under variable conditions.
 
         Args:
             special_attack (bool): True if performing a special attack, False otherwise.
 
         Returns:
-            float: Damage modifier, a float greater than or equal to 1.
+            DamageModifier | None: 
         """
         if special_attack and self.equipment.abyssal_bludgeon:  # Abyssal Bludgeon: Penance
             pp_missing = min([0, self.levels.prayer - self.active_levels.prayer])
             damage_modifier = 1 + (0.005 * pp_missing)
-        else:
-            damage_modifier = 1
+            comment = 'abyssal bludgeon: penance'
 
-        return damage_modifier
+            return DamageModifier(damage_modifier, comment)
 
     # combat methods
-    def max_hit(self, other: Character, spell: Spell = None) -> int:
+    def max_hit(self, other: Character, spell: Spell = None) -> MaxHit:
         # TODO: Documentation
 
         # basic defintions and error handling
-        dt = self.active_style.damage_type
         ab = self.aggressive_bonus
 
         if not isinstance(other, Character):
             raise PlayerError(other)
+
+        if spell is not None:
+            dt = Style.magic
+        elif isinstance(self.autocast, Spell) and self.active_style.is_spell_style():
+            spell = self.autocast
+            dt = Style.magic
+        else:
+            dt = self.active_style.damage_type
 
         # Main logic tree, each damage type has its own particulars.
         if dt in Style.melee_damage_types or dt in Style.ranged_damage_types:
@@ -951,53 +828,7 @@ class Player(Character):
                 bonus = ab.ranged_strength
 
             base_damage = self.base_damage(effective_level, bonus)
-
-            _, salve_dm = self._salve_modifier(other)
-            _, slayer_dm = self._slayer_modifier(other)
-
-            # salve and slayer helm cannot stack, only use salve effect
-            if salve_dm > 1 and slayer_dm > 1:
-                slayer_dm = 1
-
-            _, crystal_dm = self._crystal_armor_modifier()
-            _, arclight_dm = self._arclight_modifier(other)
-            _, draconic_dm = self._draconic_modifier(other)
-            _, wilderness_dm = self._wilderness_modifier(other)
-            _, twisted_bow_dm = self._twisted_bow_modifier(other)
-            _, obsidian_dm = self._obsidian_armor_modifier()
-            _, inquisitor_dm = self._inquisitor_modifier()
-            berserker_dm = self._berserker_necklace_modifier()
-            guardians_dm = self._guardians_modifier(other)
-
-            ice_demon_dm = 0.33 if isinstance(other, IceDemon) else 1
-
-            all_roll_modifiers = [
-                salve_dm,
-                slayer_dm,
-                arclight_dm,
-                draconic_dm,
-                wilderness_dm,
-                twisted_bow_dm,
-                obsidian_dm,
-                crystal_dm,
-                inquisitor_dm,
-                berserker_dm,
-                ice_demon_dm,
-                guardians_dm,
-            ]
-
-            # if special_attack:
-            #     if isinstance(self.equipment.weapon, SpecialWeapon):
-            #         if self.equipment.weapon == SpecialWeapon
-            #         all_roll_modifiers.extend([
-            #             self.equipment.weapon.special_damage_modifier_1,
-            #             self.equipment.weapon.special_damage_modifier_2
-            #         ])
-            #     else:
-            #         raise PlayerError(f'{self.equipment.weapon=} is not {SpecialWeapon}')
-
-            active_roll_modifiers = [float(x) for x in all_roll_modifiers if not x == 1]
-            max_hit = self.static_max_hit(base_damage, *active_roll_modifiers)
+            return MaxHit(math.floor(base_damage))
 
         elif dt in Style.magic_damage_types:
             if spell is None:
@@ -1007,8 +838,6 @@ class Player(Character):
                     self.autocast = PoweredSpells.trident_of_the_swamp
                 elif self.equipment.weapon == Weapon.from_bb('trident of the seas'):
                     self.autocast = PoweredSpells.trident_of_the_seas
-
-            spell = spell if spell else self.autocast
 
             if isinstance(spell, Spell):
                 if isinstance(spell, StandardSpell) or isinstance(spell, AncientSpell):
@@ -1020,33 +849,10 @@ class Player(Character):
                 else:
                     raise SpellError(f'{spell=} {self.autocast=}')
 
-                cg_bonus = self._chaos_gauntlets_bonus(spell)
-                _, smoke_db = self._smoke_modifier(spell)
-                gear_bonus_modifier = 1 + self.aggressive_bonus.magic_strength + smoke_db
-                _, salve_dm = self._salve_modifier(other)
-                _, slayer_dm = self._slayer_modifier(other)
-                tome_dm = self._tome_of_fire_dm(spell)
+                return MaxHit(base_damage)
 
-                max_hit = base_damage + cg_bonus
-                max_hit = math.floor(max_hit * gear_bonus_modifier)
-
-                if salve_dm > 1:
-                    max_hit = math.floor(max_hit * salve_dm)
-                elif slayer_dm > 1:
-                    max_hit = math.floor(max_hit * slayer_dm)
-
-                max_hit = math.floor(max_hit * tome_dm)
-
-                if isinstance(other, IceDemon):
-                    ice_demon_dm = 1.5 if spell in asdict(FireSpells) else 0.33
-                    max_hit = math.floor(max_hit * ice_demon_dm)
-
-            else:
-                raise NotImplemented
         else:
             raise StyleError(self.active_style)
-
-        return max_hit
 
     def attack_speed(self, spell: Spell = None) -> int:
         active_spell = spell if spell else self.autocast
@@ -1088,7 +894,7 @@ class Player(Character):
         # Error handling and simple reference assignments
         eqp = self.equipment
         wp = eqp.weapon
-        dt = self.active_style.damage_type
+        ab = self.aggressive_bonus
 
         if not isinstance(other, Character):
             raise PlayerError(other)
@@ -1096,14 +902,136 @@ class Player(Character):
         if special_attack:
             if not isinstance(wp, SpecialWeapon):
                 raise SpecialWeaponError(wp)
+
+        if spell is not None:
+            spell = spell
+            dt = Style.magic
+        elif isinstance(self.autocast, Spell) and self.active_style.is_spell_style():
+            spell = self.autocast
+            dt = self.active_style.damage_type
+        else:
+            dt = self.active_style.damage_type
+
+        if dt in Style.melee_damage_types:
+            effective_accuracy_level = self.effective_melee_attack_level
+            effective_strength_level = self.effective_melee_strength_level
+            accuracy_bonus = ab.__getattribute__(dt)
+            strength_bonus = ab.melee_strength
+        elif dt in Style.ranged_damage_types:
+            effective_accuracy_level = self.effective_ranged_attack_level
+            effective_strength_level = self.effective_ranged_strength_level
+            accuracy_bonus = ab.ranged
+            strength_bonus = ab.ranged_strength
+        elif dt in Style.magic_damage_types:
+            effective_accuracy_level = self.effective_magic_attack_level
+            accuracy_bonus = ab.magic
+            strength_bonus = ab.magic_strength
+        else:
+            raise StyleError(self.active_style)
+
+        def process_variable_modifiers(*args: AttackRollModifier | DamageModifier | tuple[AttackRollModifier, DamageModifier] | None) -> tuple[list[AttackRollModifier], list[DamageModifier]]:
+            """Inner function for processing the return values offered by modifier methods.
+
+            Raises:
+                TypeError: Raised if an illegal type is passed as an argument.
+
+            Returns:
+                tuple[list[AttackRollModifier], list[DamageModifier]]: 
+            """
+            filtered_arms: list[AttackRollModifier] = []
+            filtered_dms: list[DamageModifier] = []
+
+            for item in args:
+                if isinstance(item, AttackRollModifier):
+                    filtered_arms.append(item)
+                elif isinstance(item, DamageModifier):
+                    filtered_dms.append(item)
+                elif isinstance(item, tuple):
+                    arm, dm = item
+                    filtered_arms.append(arm)
+                    filtered_dms.append(dm)
+                elif item is None:
+                    continue
+                else:
+                    raise TypeError(item)
+
+            return filtered_arms, filtered_dms
+
+        # basic attack roll and damage modifiers
+        salve_modifiers = self._salve_modifier(other)
+        slayer_modifiers = self._slayer_modifier(other)
         
+        # Only one of slayer or salve bonus is allowed
+        if salve_modifiers is not None:
+            slayer_or_salve_modifiers = salve_modifiers
+        elif slayer_modifiers is not None:
+            slayer_or_salve_modifiers = slayer_modifiers
+        else:
+            slayer_or_salve_modifiers = None
+        
+        # Attack roll & damage modifiers
+        crystal_modifiers = self._crystal_armor_modifier()
+        arclight_modifiers = self._arclight_modifier(other)
+        draconic_modifiers = self._draconic_modifier(other)
+        wilderness_modifiers = self._wilderness_modifier(other)
+        twisted_bow_modifiers = self._twisted_bow_modifier(other)
+        obsidian_modifiers = self._obsidian_modifier()
+        inquisitor_modifiers = self._inquisitor_modifier()
+
+        # attack roll modifiers
+        chinchompa_arm = self._chin_attack_roll_modifier(distance)
+
+        # damage modifiers
+        berserker_dm = self._berserker_necklace_damage_modifier()
+        guardians_dm = self._guardians_damage_modifier(other)
+        ice_demon_dm = self._ice_demon_damage_modifier(other, spell)
+        tome_dm = self._tome_of_fire_damage_modifier(spell)
+
+        # unique or tricky modifiers and bonuses
+        smoke_arm, smoke_magic_damage_gear_bonus = self._smoke_modifier(spell)
+        chaos_gauntlet_bonus_damage = self._chaos_gauntlets_flat_damage_bonus(spell)
+        
+        attack_roll_modifiers, damage_modifiers = process_variable_modifiers(
+            slayer_or_salve_modifiers,
+            crystal_modifiers,
+            arclight_modifiers,
+            draconic_modifiers,
+            wilderness_modifiers,
+            twisted_bow_modifiers,
+            obsidian_modifiers,
+            inquisitor_modifiers,
+            chinchompa_arm,
+            berserker_dm,
+            guardians_dm,
+            ice_demon_dm,
+            tome_dm,
+            smoke_arm,
+        )
+
         # basic damage parameters, true in the general case, overwritten otherwise
-        att_roll = self.attack_roll(other, distance, spell)
+        att_roll = self.maximum_roll(effective_accuracy_level, accuracy_bonus, *attack_roll_modifiers)
         def_roll = other.defence_roll(self)
         accuracy = self.accuracy(att_roll, def_roll)
-        max_hit = self.max_hit(other, spell)
+        max_hit = self.max_hit(other, spell)    # base max
 
-        hitpoints_cap = other.active_levels.hitpoints
+        # max hit calculation
+        if dt in Style.melee_damage_types or dt in Style.ranged_damage_types:
+            max_hit = self.static_max_hit(max_hit, *damage_modifiers)
+        elif dt in Style.magic_damage_types:
+            if chaos_gauntlet_bonus_damage is not None:
+                max_hit = max_hit + chaos_gauntlet_bonus_damage
+
+            gear_bonus_dm = DamageModifier(1 + strength_bonus + smoke_magic_damage_gear_bonus, 'gear')
+
+            _, damage_modifiers = process_variable_modifiers(
+                gear_bonus_dm,
+                slayer_or_salve_modifiers,
+                tome_dm,
+                ice_demon_dm
+            )
+            max_hit = self.static_max_hit(max_hit, *damage_modifiers)   # max hit before special modifiers
+
+        hitpoints_cap: int = other.active_levels.hitpoints
         attack_speed = self.attack_speed(spell)
         damage = None
 
@@ -1113,32 +1041,187 @@ class Player(Character):
         if not (self.equipment.crossbow and self.equipment.enchanted_bolts_equipped):
             # General Special Weapons
             if special_attack:
-                special_dms = None
+                special_arms: list[AttackRollModifier] = []
+                special_dms: list[DamageModifier] = []
+                hs = None
 
                 if self.equipment.dorgeshuun_special_weapon:   # Bone Dagger: Backstab & Dorgeshuun Crossbow: Snipe
                     accuracy = 1 if other.last_attacked_by != self else accuracy
-                elif self.equipment.abyssal_bludgeon:   # Abyssal Bludgeon: Penance
+                elif self.equipment.abyssal_bludgeon:
                     pp_missing = min([0, self.levels.prayer - self.active_levels.prayer])
-                    special_dms = tuple(1 + special_attack*(0.005 * pp_missing))
+                    dm = DamageModifier(1 + special_attack*(0.005 * pp_missing), 'Abyssal bludgeon: Penance')
+                    special_dms.append(dm)
                 elif self.equipment.dragon_claws:    # Dragon Claws: Slice and Dice
-                    raise NotImplementedError
+                    # scenario A: first attack is successful (4-2-1-1)
+                    p_A = accuracy
+                    min_hit_A = math.floor(max_hit.value / 2)
+                    max_hit_A = max_hit.value - 1
+
+                    dmg_val_A1 = list(range(min_hit_A, max_hit_A + 1))
+                    dmg_val_A2 = [math.floor(dmg/2) for dmg in dmg_val_A1]
+                    dmg_val_A3 = [math.floor(dmg/2) for dmg in dmg_val_A2]
+                    dmg_val_A4 = [dmg for dmg in dmg_val_A3]    # TODO: probability of the 1 ocurring?
+                    n_A = len(dmg_val_A1)
+
+                    # scenario B: second attack is successful (0-4-2-2)
+                    p_B = accuracy * (1 - accuracy)
+                    min_hit_B = math.floor(max_hit.value * 3/8)
+                    max_hit_B = math.floor(max_hit.value * 7/8)
+
+                    dmg_val_B2 = list(range(min_hit_B, max_hit_B + 1))
+                    dmg_val_B3 = [math.floor(dmg/2) for dmg in dmg_val_B2]
+                    dmg_val_B4 = [dmg for dmg in dmg_val_A3]
+                    n_B = len(dmg_val_B2)
+
+                    # scenario C: third attack is successful (0-0-3-3)
+                    p_C = accuracy * (1 - accuracy)**2
+                    min_hit_C = math.floor(max_hit.value * 1/4)
+                    max_hit_C = math.floor(max_hit.value * 3/4)
+
+                    dmg_val_C3 = list(range(min_hit_C, max_hit_C + 1))
+                    dmg_val_C4 = [dmg for dmg in dmg_val_C3]
+                    n_C = len(dmg_val_C3)
+
+                    # scenario D: fourth attack is successful (0-0-0-5)
+                    p_D = accuracy * (1 - accuracy)**3
+                    min_hit_D = math.floor(max_hit.value * 1/4)
+                    max_hit_D = math.floor(max_hit.value * 5/4)
+
+                    dmg_val_D4 = list(range(min_hit_D, max_hit_D + 1))
+                    n_D = len(dmg_val_D4)
+
+                    # scenario E: The big buh (0-0-0-0)
+                    p_E = (1 - accuracy)**4
+                    assert sum([p_A, p_B, p_C, p_D, p_E]) == 1
+
+                    # Hitsplat 1
+                    hs_1_min = 0
+                    hs_1_max = max_hit_A
+                    hs_1_dmg = np.arange(hs_1_min, hs_1_max+1)
+                    hs_1_prb = np.zeros(shape=hs_1_dmg.shape)
+
+                    hs_1_prb[0] = p_B + p_C + p_D + p_E
+                    for idx, dv in enumerate(hs_1_dmg):
+                        if dv in dmg_val_A1:
+                            hs_1_prb[idx] += p_A / n_A
+
+                    # Hitsplat 2
+                    hs_2_min = 0
+                    hs_2_max = max_hit_B
+                    hs_2_dmg = np.arange(hs_2_min, hs_2_max+1)
+                    hs_2_prb = np.zeros(shape=hs_2_dmg.shape)
+
+                    hs_2_prb[0] = p_C + p_D + p_E
+                    for idx, dv in enumerate(hs_2_dmg):
+                        if dv in dmg_val_A2:
+                            hs_2_prb[idx] += p_A / n_A
+                        
+                        if dv in dmg_val_B2:
+                            hs_2_prb[idx] += p_B / n_B
+                    
+                    # Hitsplat 3
+                    hs_3_min = 0
+                    hs_3_max = max_hit_C
+                    hs_3_dmg = np.arange(hs_3_min, hs_3_max+1)
+                    hs_3_prb = np.zeros(shape=hs_3_dmg.shape)
+
+                    hs_3_prb[0] += p_D + 0.5*p_E
+                    hs_3_prb[1] += 0.5*p_E
+                    for idx, dv in enumerate(hs_3_dmg):
+                        if dv in dmg_val_A3:
+                            hs_3_prb[idx] += p_A / n_A
+                        
+                        if dv in dmg_val_B3:
+                            hs_3_prb[idx] += p_B / n_B
+                        
+                        if dv in dmg_val_C3:
+                            hs_3_prb[idx] += p_C / n_C
+                    
+                    # Hitsplat 4
+                    hs_4_min = 0
+                    hs_4_max = max_hit_D
+                    hs_4_dmg = np.arange(hs_4_min, hs_4_max+1)
+                    hs_4_prb = np.zeros(shape=hs_4_dmg.shape)
+
+                    hs_4_prb[0] += 0.5*p_E
+                    hs_4_prb[1] += 0.5*p_E
+                    for idx, dv in enumerate(hs_4_dmg):
+                        if dv in dmg_val_A4:
+                            hs_4_prb[idx] += p_A / n_A
+                    
+                        if dv in dmg_val_B4:
+                            hs_4_prb[idx] += p_B / n_B
+                        
+                        if dv in dmg_val_C4:
+                            hs_4_prb[idx] += p_C / n_C
+                        
+                        if dv in dmg_val_D4:
+                            hs_4_prb[idx] += p_D / n_D
+                    
+                    hs = [Hitsplat(dmg, prb, hitpoints_cap) for dmg, prb in [
+                        (hs_1_dmg, hs_1_prb),
+                        (hs_2_dmg, hs_2_prb),
+                        (hs_3_dmg, hs_3_prb),
+                        (hs_4_dmg, hs_4_prb),
+                    ]]
+
+                elif self.equipment.abyssal_dagger:
+                    special_arms = wp.special_attack_roll_modifiers
+                    special_dms = wp.special_damage_modifiers
+                    defence_roll_dt = wp.special_defence_roll if wp.special_defence_roll else dt
+
+                    all_arms = attack_roll_modifiers.extend(special_arms)
+                    att_roll = self.maximum_roll(effective_accuracy_level, accuracy_bonus, *all_arms)
+                    def_roll = other.defence_roll(self, defence_roll_dt)
+                    accuracy = self.accuracy(att_roll, def_roll)
+                    max_hit = self.static_max_hit(max_hit, *special_dms)
+
+                    hs_1 = Hitsplat.from_max_hit_acc(max_hit, accuracy, hitpoints_cap)
+
+                    dmg_2 = np.arange(0, max_hit+1)
+                    prb_2 = np.zeros(shape=dmg_2.shape)
+                    n_2 = dmg_2.size
+                    prb_2[0] += (1 - accuracy)    # second attack will always miss if the first does
+                    for idx, dv in enumerate(dmg_2):
+                        prb_2[idx] += accuracy**2 / n_2
+                    
+                    hs_2 = Hitsplat(dmg_2, prb_2, hitpoints_cap)
+                    hs = [hs_1, hs_2]
+                
+                elif self.equipment.dragon_dagger:
+                    special_arms = wp.special_attack_roll_modifiers
+                    special_dms = wp.special_damage_modifiers
+                    defence_roll_dt = wp.special_defence_roll if wp.special_defence_roll else dt
+
+                    all_arms = attack_roll_modifiers.extend(special_arms)
+                    att_roll = self.maximum_roll(effective_accuracy_level, accuracy_bonus, *all_arms)
+                    def_roll = other.defence_roll(self, defence_roll_dt)
+                    accuracy = self.accuracy(att_roll, def_roll)
+                    max_hit = self.static_max_hit(max_hit, *special_dms)
+                    hs = [Hitsplat.from_max_hit_acc(max_hit, accuracy, hitpoints_cap) for _ in range(2)]
+
                 else:   # For non-specific special attack behavior
-                    sarm_modifiers = tuple(wp.special_accuracy_modifier)    # TODO: Implement roll modifier float wrapper
-                    special_dms = tuple(wp.special_damage_modifier_1, wp.special_damage_modifier_2)
+                    special_arms = wp.special_attack_roll_modifiers
+                    special_dms = wp.special_damage_modifiers
                     defence_roll_dt = wp.special_defence_roll if wp.special_defence_roll else dt
                     
-                    att_roll = self.attack_roll(other=other, distance=distance, spell=spell, *sarm_modifiers)
-                    def_roll = other.defence_roll(other=self, special_defence_roll=defence_roll_dt)
+                    all_arms = attack_roll_modifiers.extend(special_arms)
+                    att_roll = self.maximum_roll(effective_accuracy_level, accuracy_bonus, *all_arms)
+                    def_roll = other.defence_roll(self, defence_roll_dt)
                     accuracy = self.accuracy(att_roll, def_roll)
                 
                 if damage is None:  # create Damage under variable conditions
-                    if special_dms is not None:
-                        max_hit = self.static_max_hit(max_hit, *special_dms)
+                    if hs is not None:
+                        damage = Damage(attack_speed, *hs)
+                    else:
+                        if special_dms:
+                            max_hit = self.static_max_hit(max_hit, *special_dms)
 
-                    damage = Damage.from_max_hit_acc(max_hit, accuracy, attack_speed, hitpoints_cap, **kwargs)
+                        damage = Damage.from_max_hit_acc(max_hit, accuracy, attack_speed, hitpoints_cap)
 
             # General Normal Weapons
             else:
+                # definition / cases
                 if self.equipment.scythe_of_vitur:
                     mh = tuple(math.floor(max_hit*2**modifier_power) for modifier_power in range(0, -3, -1))
                     hs = [Hitsplat.from_max_hit_acc(adj_mh, accuracy, hitpoints_cap) for adj_mh in mh]
@@ -1155,16 +1238,30 @@ class Player(Character):
                     else:
                         raise NotImplementedError
                 
+                # cleanup
                 if hs:
-                    damage = Damage(attack_speed, *hs, **kwargs)
+                    damage = Damage(attack_speed, *hs)
                 elif damage is None:
-                    damage = Damage.from_max_hit_acc(max_hit, accuracy, attack_speed, hitpoints_cap, **kwargs)
+                    damage = Damage.from_max_hit_acc(max_hit, accuracy, attack_speed, hitpoints_cap)
 
         # Ammuntion / Bolt effects transcend Special Attack binary (Zaryte Crossbow especially), handle them here
         else:
+            def modified_proc_chance(base_activation_chance: float):
+                activation_chance = base_activation_chance
+
+                if self.equipment.armadyl_crossbow and special_attack:
+                    activation_chance = 2 * activation_chance
+                
+                if self.kandarin_hard:
+                    activation_chance += (1/10) * base_activation_chance
+                
+                return activation_chance
+
+
             if self.equipment.enchanted_diamond_bolts:
                 # TODO: Pester wiki admins about adding generic bolt_activation_chance for ammunition slot :3
-                activation_chance = 0.11 if self.kandarin_hard else 0.10        #
+                proc_chance = modified_proc_chance(0.10)
+
                 damage_modifier = 1.15 + 0.015*self.equipment.zaryte_crossbow   # Ammunition Effect: Armour Piercing
                 effect_max_hit = math.floor(damage_modifier * max_hit)
 
@@ -1173,14 +1270,14 @@ class Player(Character):
 
                 for index, dv in enumerate(damage_values):
                     # each damage value assigned probability weights from unique
-                    p_miss = (1 - activation_chance) * (1 - accuracy) if dv == 0 else 0
-                    p_norm = 0 if dv > max_hit else (1 - activation_chance) * accuracy * 1 / (max_hit + 1)
-                    p_effect = 0 if dv > effect_max_hit else activation_chance * 1 / (effect_max_hit + 1)
+                    p_miss = (1 - modified_proc_chance) * (1 - accuracy) if dv == 0 else 0
+                    p_norm = 0 if dv > max_hit else (1 - modified_proc_chance) * accuracy * 1 / (max_hit + 1)
+                    p_effect = 0 if dv > effect_max_hit else modified_proc_chance * 1 / (effect_max_hit + 1)
                     probabilities[index] = p_miss + p_norm + p_effect
 
             elif self.equipment.enchanted_ruby_bolts:
                 # TODO: Pester wiki admins about adding generic bolt_activation_chance for ammunition slot :3
-                activation_chance = 0.06 + 0.006*self.kandarin_hard
+                proc_chance = modified_proc_chance(0.06)
                 target_hp = other.active_levels.hitpoints
                 max_effective_hp = 500
                 hp_ratio = 0.20 + 0.02*self.equipment.zaryte_crossbow
@@ -1192,22 +1289,22 @@ class Player(Character):
                 probabilities = np.zeros(damage_values.shape)
 
                 for index, dv in enumerate(damage_values):
-                    p_miss = 0 if dv > 0 else (1 - activation_chance) * (1 - accuracy)
-                    p_norm = 0 if dv > max_hit else (1 - activation_chance) * accuracy * 1 / (max_hit + 1)
-                    p_effect = activation_chance if dv == effect_damage else 0
+                    p_miss = 0 if dv > 0 else (1 - proc_chance) * (1 - accuracy)
+                    p_norm = 0 if dv > max_hit else (1 - proc_chance) * accuracy * 1 / (max_hit + 1)
+                    p_effect = proc_chance if dv == effect_damage else 0
                     probabilities[index] = p_miss + p_norm + p_effect
 
             else:
                 raise NotImplementedError
 
-            damage = Damage(attack_speed, Hitsplat(damage_values, probabilities, hitpoints_cap), **kwargs)
+            damage = Damage(attack_speed, Hitsplat(damage_values, probabilities, hitpoints_cap))
 
         # Full generic cases with no extra special behavior needed
         if damage is None:
             if hs is None:
-                damage = Damage.from_max_hit_acc(max_hit, accuracy, attack_speed, hitpoints_cap, **kwargs)
+                damage = Damage.from_max_hit_acc(max_hit, accuracy, attack_speed, hitpoints_cap)
             else:
-                damage = Damage(attack_speed, *hs, **kwargs)
+                damage = Damage(attack_speed, *hs)
 
         return damage
 
