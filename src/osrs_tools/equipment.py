@@ -1,12 +1,24 @@
+from __future__ import annotations
 from osrsbox import items_api
-from osrsbox.items_api.item_properties import ItemEquipment, ItemProperties, ItemWeapon, ItemSpecialWeapon, Modifier
+from osrsbox.items_api.item_properties import ItemEquipment, ItemProperties, ItemWeapon
 import functools
 import pandas as pd
+from enum import Enum, unique
+from attrs import define, field, validators, astuple
 
-from osrs_tools.style import *
-from osrs_tools.stats import *
-from osrs_tools.exceptions import *
-from osrs_tools.modifier import DamageModifier, AttackRollModifier
+
+
+# TODO: submodule for style imports
+from osrs_tools.style import TwoHandedStyles, AxesStyles, BluntStyles, BludgeonStyles, BulwarkStyles
+from osrs_tools.style import ClawStyles, PickaxeStyles, PolearmStyles, ScytheStyles, SlashSwordStyles
+from osrs_tools.style import SpearStyles, SpikedWeaponsStyles, StabSwordStyles, UnarmedStyles, WhipStyles
+from osrs_tools.style import BowStyles, ChinchompaStyles, CrossbowStyles, ThrownStyles, BladedStaffStyles
+from osrs_tools.style import PoweredStaffStyles, StaffStyles
+
+from osrs_tools.style import Style, PlayerStyle, StylesCollection, StyleError
+from osrs_tools.stats import PlayerLevels, MonsterLevels, AggressiveStats, DefensiveStats
+from osrs_tools.exceptions import OsrsException
+from osrs_tools.modifier import DamageModifier, AttackRollModifier, Level, DT, Stances
 import osrs_tools.resource_reader as rr
 
 
@@ -36,37 +48,23 @@ class WeaponError(GearError):
     pass
 
 
-@define(order=True, frozen=True)
-class _GearSlots:
-    head = field(default='head', init=False)
-    cape = field(default='cape', init=False)
-    neck = field(default='neck', init=False)
-    ammunition = field(default='ammunition', init=False)
-    weapon = field(default='weapon', init=False)
-    shield = field(default='shield', init=False)
-    body = field(default='body', init=False)
-    legs = field(default='legs', init=False)
-    hands = field(default='hands', init=False)
-    feet = field(default='feet', init=False)
-    ring = field(default='ring', init=False)
-
-    def to_tuple(self) -> tuple[str]:
-        return astuple(self)
+@unique
+class Slots(Enum):
+    head = 'head'
+    cape = 'cape'
+    neck = 'neck'
+    ammunition = 'ammunition'
+    weapon = 'weapon'
+    shield = 'shield'
+    body = 'body'
+    legs = 'legs'
+    hands = 'hands'
+    feet = 'feet'
+    ring = 'ring'
 
 
-GearSlots = _GearSlots()
 Items = items_api.load()
-default_one_field = field(default=1)
 
-
-def slot_validator(instance, attribute, value):
-    if value not in asdict(GearSlots):
-        raise GearError(f'{attribute=} with {value=} not in {list(asdict(GearSlots))}')
-
-
-def weapon_validator(instance, attribute, value):
-    if not value == GearSlots.weapon:
-        raise WeaponError(f'{attribute=} with {value=} not equal to {GearSlots.weapon=}')
 
 
 def special_defence_roll_validator(instance, attribute, value):
@@ -84,13 +82,13 @@ def lookup_gear_base_attributes_by_name(name: str, gear_df: pd.DataFrame = None)
         raise GearNotFoundError(name)
 
     name = item_df['name'].values[0]
-    slot = item_df['slot'].values[0]
+
     aggressive_bonus = AggressiveStats(
         stab=item_df['stab attack'].values[0],
         slash=item_df['slash attack'].values[0],
         crush=item_df['crush attack'].values[0],
-        magic=item_df['magic attack'].values[0],
-        ranged=item_df['ranged attack'].values[0],
+        magic_attack=item_df['magic attack'].values[0],
+        ranged_attack=item_df['ranged attack'].values[0],
         melee_strength=item_df['melee strength'].values[0],
         ranged_strength=item_df['ranged strength'].values[0],
         magic_strength=item_df['magic damage'].values[0]  # stored as float in bitterkoekje's sheet
@@ -103,9 +101,20 @@ def lookup_gear_base_attributes_by_name(name: str, gear_df: pd.DataFrame = None)
         ranged=item_df['ranged defence'].values[0]
     )
     prayer_bonus = item_df['prayer'].values[0]
-    level_requirements = PlayerLevels(mining=item_df['mining level req'].values[0])
+    level_requirements = PlayerLevels(mining=Level(item_df['mining level req'].values[0]))
 
-    return name, slot, aggressive_bonus, defensive_bonus, prayer_bonus, level_requirements
+    slot_src = item_df['slot'].values[0]
+    slot_enum = None
+
+    for slot_e in Slots:
+        if slot_e.name == slot_src:
+            slot_enum = slot_e
+            break
+
+    if slot_enum is None:
+        raise TypeError(slot_src)
+    
+    return name, slot_enum, aggressive_bonus, defensive_bonus, prayer_bonus, level_requirements
 
 
 def lookup_weapon_attributes_by_name(name: str, gear_df: pd.DataFrame = None):
@@ -121,26 +130,39 @@ def lookup_weapon_attributes_by_name(name: str, gear_df: pd.DataFrame = None):
     attack_speed = item_df['attack speed'].values[0]
     attack_range = default_attack_range
     two_handed = item_df['two handed'].values[0]
-    weapon_styles = WeaponStyles.from_weapon_type(item_df['weapon type'].values[0])
+    weapon_styles = StylesCollection.from_weapon_type(item_df['weapon type'].values[0])
 
     special_accuracy_modifier = 1 + item_df['special accuracy'].values[0]
     special_damage_modifier_1 = 1 + item_df['special damage 1'].values[0]
     special_damage_modifier_2 = 1 + item_df['special damage 2'].values[0]
     special_defence_roll = item_df['special defence roll'].values[0]
 
+    sdr_enum = None
+    for dt in DT:
+        if dt.name == special_defence_roll:
+            sdr_enum = dt
+            break
+
     return attack_speed, attack_range, two_handed, weapon_styles, special_accuracy_modifier, \
-        special_damage_modifier_1, special_damage_modifier_2, special_defence_roll
+        special_damage_modifier_1, special_damage_modifier_2, sdr_enum
 
 
 # noinspection PyArgumentList
 @define(order=True, frozen=True)
 class Gear:
     name: str
-    slot: str = field(validator=slot_validator)
-    aggressive_bonus: AggressiveStats = field(validator=validators.instance_of(AggressiveStats))
-    defensive_bonus: DefensiveStats = field(validator=validators.instance_of(DefensiveStats))
-    prayer_bonus: int
-    level_requirements: PlayerLevels = field(validator=validators.instance_of(PlayerLevels))
+    slot: Slots = field(validator=validators.instance_of(Slots))
+    aggressive_bonus: AggressiveStats = field(validator=validators.instance_of(AggressiveStats), repr=False)
+    defensive_bonus: DefensiveStats = field(validator=validators.instance_of(DefensiveStats), repr=False)
+    prayer_bonus: int = field(repr=False)
+    level_requirements: PlayerLevels = field(validator=validators.instance_of(PlayerLevels), repr=False)
+
+    def __str__(self):
+        s = f'{self.__class__.__name__}({self.name!s})'
+        return s
+
+    def __repr__(self):
+        return str(self)
 
     @classmethod
     def from_bb(cls, name: str):
@@ -176,7 +198,7 @@ class Gear:
             assert item.equipable_by_player
             assert not item.equipable_weapon
         except AssertionError as exc:
-            raise GearError(f'{exc=}')
+            raise GearError(f'{exc=}') from exc
 
         magic_strength = 0.01 * eqp.magic_damage
 
@@ -192,8 +214,8 @@ class Gear:
                 stab=eqp.attack_stab,
                 slash=eqp.attack_slash,
                 crush=eqp.attack_crush,
-                magic=eqp.attack_magic,
-                ranged=eqp.attack_ranged,
+                magic_attack=eqp.attack_magic,
+                ranged_attack=eqp.attack_ranged,
                 melee_strength=eqp.melee_strength,
                 ranged_strength=eqp.ranged_strength,
                 magic_strength=magic_strength
@@ -209,23 +231,8 @@ class Gear:
             level_requirements=PlayerLevels(**reqs),
         )
 
-    @classmethod
     def empty_slot(cls, slot: str):
-        if slot == GearSlots.weapon:
-            return Weapon.empty_slot()
-        else:
-            return cls(
-                name='empty ' + slot,
-                slot=slot,
-                aggressive_bonus=AggressiveStats.no_bonus(),
-                defensive_bonus=DefensiveStats.no_bonus(),
-                prayer_bonus=0,
-                level_requirements=PlayerLevels.no_requirements(),
-            )
-
-    def __str__(self):
-        message = f'Gear({self.name})'
-        return message
+        return
 
 
 class SpecialWeaponError(WeaponError):
@@ -245,33 +252,26 @@ class TwoHandedError(EquipmentError):
 @define(order=True, frozen=True)
 class Weapon(Gear):
     name: str
-    slot: str = field(validator=weapon_validator)
-    aggressive_bonus: AggressiveStats = field(validator=validators.instance_of(AggressiveStats))
-    defensive_bonus: DefensiveStats = field(validator=validators.instance_of(DefensiveStats))
-    prayer_bonus: int
-    level_requirements: PlayerLevels = field(validator=validators.instance_of(PlayerLevels))
-    weapon_styles: WeaponStyles = field(validator=validators.instance_of(WeaponStyles))
+    slot: Slots = field(repr=False)
+    aggressive_bonus: AggressiveStats = field(validator=validators.instance_of(AggressiveStats), repr=False)
+    defensive_bonus: DefensiveStats = field(validator=validators.instance_of(DefensiveStats), repr=False)
+    prayer_bonus: int = field(repr=False)
+    level_requirements: PlayerLevels = field(validator=validators.instance_of(PlayerLevels), repr=False)
+    styles_coll: StylesCollection = field(validator=validators.instance_of(StylesCollection))
     attack_speed: int
-    two_handed: bool
-
-    def choose_style_by_name(self, name: str):
-        for style in self.weapon_styles.styles:
-            if style.name == name:
-                return style
-
-        raise StyleError(f'{name=} not in {self.weapon_styles.styles=}')
+    two_handed: bool = field(repr=False)
 
     @classmethod
-    def empty_slot(cls, slot: str = None):
-        slot = 'weapon'
+    def empty_slot(cls):
+        slot = Slots.weapon
         return cls(
-            name='empty ' + slot,
+            name='empty ' + slot.name,
             slot=slot,
             aggressive_bonus=AggressiveStats.no_bonus(),
             defensive_bonus=DefensiveStats.no_bonus(),
             prayer_bonus=0,
             level_requirements=PlayerLevels.no_requirements(),
-            weapon_styles=UnarmedStyles,
+            styles_coll=UnarmedStyles,
             attack_speed=4,
             two_handed=False,
         )
@@ -282,8 +282,8 @@ class Weapon(Gear):
             lookup_gear_base_attributes_by_name(name)
         attack_speed, attack_range, two_handed, weapon_styles, _, _, _, _ = lookup_weapon_attributes_by_name(name)
 
-        if not slot == GearSlots.weapon:
-            raise WeaponError(f'{name=}{slot=}')
+        if not slot is Slots.weapon:
+            raise WeaponError(slot)
 
         return cls(
             name=name,
@@ -292,22 +292,17 @@ class Weapon(Gear):
             defensive_bonus=defensive_bonus,
             prayer_bonus=prayer_bonus,
             level_requirements=level_requirements,
-            weapon_styles=weapon_styles,
+            styles_coll=weapon_styles,
             attack_speed=attack_speed,
             two_handed=two_handed,
         )
 
-    def __str__(self):
-        message = f'Weapon({self.name}, {self.weapon_styles})'
-        return message
 
-
-# noinspection PyArgumentList
 @define(order=True, frozen=True)
 class SpecialWeapon(Weapon):
-    special_attack_roll_modifiers: list[AttackRollModifier] = field(factory=list)
-    special_damage_modifiers: list[DamageModifier] = field(factory=list)
-    special_defence_roll: str = field(validator=special_defence_roll_validator, factory=str)
+    special_attack_roll_modifiers: list[AttackRollModifier] = field(factory=list, repr=False)
+    special_damage_modifiers: list[DamageModifier] = field(factory=list, repr=False)
+    special_defence_roll: DT | None = field(default=None, repr=False)
 
     @classmethod
     def from_bb(cls, name: str):
@@ -323,8 +318,8 @@ class SpecialWeapon(Weapon):
         if special_damage_modifier_2 != 1:
             special_damage_modifiers.append(special_damage_modifier_2)
 
-        if not slot == GearSlots.weapon:
-            raise WeaponError(f'{name=}{slot=}')
+        if not slot is Slots.weapon:
+            raise WeaponError(slot)
 
         return cls(
             name=name,
@@ -333,7 +328,7 @@ class SpecialWeapon(Weapon):
             defensive_bonus=defensive_bonus,
             prayer_bonus=prayer_bonus,
             level_requirements=level_requirements,
-            weapon_styles=weapon_styles,
+            styles_coll=weapon_styles,
             attack_speed=attack_speed,
             two_handed=two_handed,
             special_attack_roll_modifiers=special_attack_roll_modifiers,
@@ -345,37 +340,21 @@ class SpecialWeapon(Weapon):
     def empty_slot(cls, slot: str = None):
         raise WeaponError(f'Attempt to create empty special weapon')
 
-    def __str__(self):
-        message = f'SpecialWeapon({self.name}, {self.weapon_styles})'
-        return message
 
 
-def gear_slot_validator(instance, attribute, value: Gear):
-    if not attribute.name == value.slot:
-        raise GearError(f'{attribute=} & {value.slot=} should be the same')
+def Equipment_weapon_validator(instance: Equipment, attribute: str, value: Weapon):
+    if value is not None:
+        if not isinstance(value, Weapon):
+            raise WeaponError(f'Equipment.weapon was initialized as {value.__class__=}')
+
+        if value.two_handed and instance.shield is not None:
+            raise TwoHandedError(f'{value.name} equipped with {instance.shield.name}')
 
 
-def weapon_slot_validator(instance, attribute: str, value: Weapon):
-    if not isinstance(value, Weapon):
-        raise WeaponError(f'Weapon was initialized as {value.__class__=}')
 
-    try:
-        if value.two_handed and not instance.shield == Gear.empty_slot(GearSlots.shield):
-            raise TwoHandedError(f'{value=} equipped with {instance.shield=}')
-    except AttributeError:
-        pass
-
-
-def shield_slot_validator(instance, attribute: str, value: Gear):
-    try:
-        if instance.weapon.two_handed and not value == Gear.empty_slot(GearSlots.shield):
-            raise TwoHandedError(f'{value=} equipped with {instance.weapon}')
-    except AttributeError:
-        pass
-
-
-def equipment_field(slot: str):
-    return field(validator=gear_slot_validator, default=Gear.empty_slot(slot))
+def Equipment_shield_validator(instance: Equipment, attribute: str, value: Gear):
+    if instance.weapon is not None and instance.weapon.two_handed and value is not None:
+        raise TwoHandedError(f'{value.name} equipped with {instance.weapon.name}')
 
 
 @define(order=True)
@@ -384,123 +363,148 @@ class Equipment:
     The Equipment class has attributes for each piece of Gear a player can use as well as methods to query and change
     the gear.
     """
-    head: Gear = equipment_field(GearSlots.head)
-    cape: Gear = equipment_field(GearSlots.cape)
-    neck: Gear = equipment_field(GearSlots.neck)
-    ammunition: Gear = equipment_field(GearSlots.ammunition)
-    weapon: Weapon = field(validator=[weapon_slot_validator, gear_slot_validator], default=Weapon.empty_slot())
-    shield: Gear = field(validator=[shield_slot_validator, gear_slot_validator], default=Gear.empty_slot(GearSlots.shield))
-    body: Gear = equipment_field(GearSlots.body)
-    legs: Gear = equipment_field(GearSlots.legs)
-    hands: Gear = equipment_field(GearSlots.hands)
-    feet: Gear = equipment_field(GearSlots.feet)
-    ring: Gear = equipment_field(GearSlots.ring)
+    head: Gear | None = None
+    cape: Gear | None = None
+    neck: Gear | None = None
+    ammunition: Gear | None = None
+    weapon: Weapon = field(validator=Equipment_weapon_validator, default=None)
+    shield: Gear = field(validator=Equipment_shield_validator, default=None)
+    body: Gear | None = None
+    legs: Gear | None = None
+    hands: Gear | None = None
+    feet: Gear | None = None
+    ring: Gear | None = None
+
+    @property
+    def equipped_gear(self) -> tuple[Gear | Weapon | SpecialWeapon]:
+        return tuple(g for g in astuple(self, recurse=False) if isinstance(g, Gear))
 
     # Basic properties and methods for manipulating Equipment objects ######################################################
     @property
     def aggressive_bonus(self) -> AggressiveStats:
         # Notably does not account for Dinh's strength bonus, which is handled via Player._dinhs_modifier()
-        return sum(g.aggressive_bonus for g in astuple(self, recurse=False))
+        return sum(g.aggressive_bonus for g in self.equipped_gear)
 
     @property
     def defensive_bonus(self) -> DefensiveStats:
-        return sum(g.defensive_bonus for g in astuple(self, recurse=False))
+        return sum(g.defensive_bonus for g in self.equipped_gear)
 
     @property
     def prayer_bonus(self) -> int:
-        return sum(g.prayer_bonus for g in astuple(self, recurse=False))
+        return sum(g.prayer_bonus for g in self.equipped_gear)
 
     @property
     def level_requirements(self) -> PlayerLevels:
         # PlayerLevels.__mul__(self, other) handles the behavior of aggregating level requirements.
-        individual_level_reqs = tuple(x.level_requirements for x in astuple(self, recurse=False))
-        combined_level_reqs = functools.reduce(lambda x, y: x * y, individual_level_reqs)
-        return combined_level_reqs
+        individual_level_reqs = tuple(g.level_requirements for g in self.equipped_gear)
+
+        if len(individual_level_reqs) != 0:
+            combined_level_reqs = functools.reduce(lambda x, y: x.max_levels_per_skill(y), individual_level_reqs)
+            return combined_level_reqs
+        else:
+            return PlayerLevels.no_requirements()
 
     def equip(self, *gear: Gear | Weapon | SpecialWeapon, style: PlayerStyle = None, **kwargs) -> PlayerStyle | None:
-        weapon_style = None
+        weapon_style = style if style is not None else None
 
-        for g in (x for x in gear if isinstance(x, Gear)):
-            if self.__getattribute__(g.slot) == g or g == Gear.empty_slot(g.slot):
+        for g in gear:
+            if self.__getattribute__(g.slot.name) == g:
                 continue
             else:
                 if isinstance(g, Weapon):
-                    weapon_style = style if style else g.weapon_styles.default
+                    weapon_style = style if style is not None else g.styles_coll.default
 
-                    if weapon_style not in g.weapon_styles.styles:
-                        raise WeaponError(f'{weapon_style} not in {g.weapon_styles}')
+                    if weapon_style not in g.styles_coll.styles:
+                        raise StyleError(weapon_style)
                     else:
                         try:
                             self.weapon = g
                         except TwoHandedError:
-                            self.shield = Gear.empty_slot(GearSlots.shield)
+                            self.shield = None
                             self.weapon = g
 
                 else:
                     try:
-                        self.__setattr__(g.slot, g)
+                        self.__setattr__(g.slot.name, g)
                     except TwoHandedError:
-                        assert g.slot == GearSlots.shield
+                        assert g.slot is Slots.shield
                         self.weapon = Weapon.empty_slot()
                         self.shield = g
 
         return weapon_style
 
-    def unequip(self, *slots: str, style: PlayerStyle = None):
+    def unequip(self, *slots: Slots, style: PlayerStyle = None) -> PlayerStyle | None:
         return_style = None
 
         for slot in slots:
-            if slot == GearSlots.weapon:
+            if slot is Slots.weapon:
                 return_style = style if style else UnarmedStyles.default
+                self.weapon = Weapon.empty_slot()
+            else:
+                self.__setattr__(slot.name, None)
+        
+        return return_style
 
-            self.__setattr__(slot, Gear.empty_slot(slot))
+    def wearing(self, *args, **kwargs) -> bool:
+        m = len(args)
+        n = len(kwargs)
+        if m == 0 and n == 0:
+            raise EquipmentError(f'Equipment.wearing call with no *args or **kwargs')
 
-    def wearing(self, **kwargs) -> bool:
-        return all([self.__getattribute__(k) == v for k, v in kwargs.items()])
+        if m > 0:
+            if any(self.__getattribute__(g.slot.name) != g for g in args):
+                return False
+        
+        if n > 0:
+            if any(self.__getattribute__(k) != v for k, v in kwargs.items()):
+                return False
 
-    def __add__(self, other):
+        return True
+
+    def __add__(self, other: Equipment):
         """
         Directional addition, right-hand operand has priority except in the case of empty slots.
         :param other:
         :return:
         """
-        if isinstance(other, self.__class__):
-            for gear in astuple(other, recurse=False):
-                if not gear == Gear.empty_slot(gear.slot):
-                    self.equip(gear)
-            return self
+        if isinstance(other, Equipment):
+            self.equip(*other.equipped_gear)
         else:
-            return NotImplemented
+            raise NotImplementedError
 
-    def __sub__(self, other):
+        return self
+
+    def __sub__(self, other: Equipment):
         """
         Directional subtraction, remove right-hand gear if and only if it exists in the left-hand set. Pass otherwise.
         :param other:
         :return:
         """
-        if isinstance(other, self.__class__):
-            for slot, gear in asdict(other).items():
-                if self.__getattribute__(slot) == gear:
+        if isinstance(other, Equipment):
+            eqp_gear_dict = {g.slot: g for g in other.equipped_gear}
+
+            for slot, gear in eqp_gear_dict:
+                if self.__getattribute__(slot.name) == gear:
                     self.unequip(slot)
                 else:
                     continue
+        else:
+            raise NotImplementedError
+        
+        return self
 
     def __str__(self):
-        notable_gear = [g.name for g in astuple(self, recurse=False) if 'empty' not in g.name]
-        message = f'{self.__class__.__name__}({str(notable_gear)})'
+        message = f'{self.__class__.__name__}({", ".join([g.name for g in self.equipped_gear])})'
         return message
 
     def __repr__(self):
         return self.__str__()
 
-    def __copy__(self):
-        gear_items = astuple(self, recurse=False)
-        return self.__class__(*gear_items)
 
     # class methods ########################################################################################################
     @classmethod
     def from_unordered(cls, *gear: Gear | Weapon | SpecialWeapon):
-        gear_dict = {g.slot: g for g in gear if isinstance(g, Gear)}
+        gear_dict = {g.slot.name: g for g in gear if isinstance(g, Gear)}
         return cls(**gear_dict)
 
     @classmethod
@@ -509,7 +513,7 @@ class Equipment:
 
     # Wearing Properties ###################################################################################################
     @property
-    def full_set(self, requires_ammo: bool = None, assume_2h: bool = True) -> bool:
+    def full_set(self, requires_ammo: bool = None) -> bool:
         """Property which returns True if the Equipment slots are fulfilled as needed to perform attacks.
 
         # TODO: implement osrsbox-db wrapper which eliminates the need for assume_2h parameter.
@@ -522,29 +526,32 @@ class Equipment:
         Returns:
             bool: True 
         """
-        if requires_ammo is not None:
-            if self.weapon.weapon_styles in [BowStyles, CrossbowStyles, ThrownStyles]:
+        if requires_ammo is None:
+            if self.weapon.styles_coll in [BowStyles, CrossbowStyles, ThrownStyles]:
                 requires_ammo = True
             else:
                 requires_ammo = False
 
-        for slot in asdict(GearSlots, recurse=False):
-            if slot == GearSlots.ammunition:
-                if requires_ammo and self.ammunition == Gear.empty_slot(GearSlots.ammunition):
+        if requires_ammo and self.ammunition is None:
+            return False
+
+        if not self.weapon.two_handed and self.shield is None:
+            return False
+
+        for slot in Slots:
+            if slot is Slots.ammunition or slot is Slots.shield:
+                continue
+            elif slot is Slots.weapon:
+                if self.weapon == Weapon.empty_slot():
                     return False
-                else:
-                    continue
-
-            if slot == GearSlots.shield:
-                if not assume_2h and self.shield == Gear.empty_slot(GearSlots.shield):
+            
+            else:
+                if self.__getattribute__(slot.name) is None:
                     return False
-                else:
-                    continue
+        
+        return True
 
-            if 'empty' in self.__getattribute__(slot).name:
-                return False
 
-        return True     # return True if no flags triggered
 
     @property
     def normal_void_set(self) -> bool:
@@ -788,7 +795,7 @@ class Equipment:
         """
         # use names because crossbows may be SpecialWeapon or Weapon.
         # TODO: Re-assess whether using name search is still valid.
-        return 'crossbow' in self.weapon.name and self.weapon.weapon_styles == CrossbowStyles
+        return 'crossbow' in self.weapon.name and self.weapon.styles_coll == CrossbowStyles
 
     @property
     def arclight(self) -> bool:
@@ -1168,15 +1175,16 @@ class Equipment:
 
         return self.equip(
             SpecialWeapon.from_bb('bandos godsword'),
-            style=style
+            style=weapon_style
         )
 
     def equip_scythe(self, berserker: bool = False, style: PlayerStyle = None) -> PlayerStyle:
-        if style:
+        
+        if style is not None:
             weapon_style = style
         else:
             if self.inquisitor_set:
-                weapon_style = ScytheStyles.get_style(PlayerStyle.jab)
+                weapon_style = ScytheStyles.get_by_style(PlayerStyle.jab)
             else:
                 weapon_style = ScytheStyles.default
 
@@ -1303,7 +1311,7 @@ class Equipment:
         gear = (Gear.from_bb('twisted buckler'), ) if buckler else tuple()
         style = style if style else ChinchompaStyles.default
 
-        self.unequip(GearSlots.ammunition)
+        self.unequip(Slots.ammunition)
 
         return self.equip(
             Weapon.from_bb('black chinchompa'),
@@ -1367,7 +1375,7 @@ class Equipment:
 
     def equip_sang(self, arcane: bool = True, style: PlayerStyle = None) -> PlayerStyle:
         gear = (Gear.from_bb('arcane spirit shield'),) if arcane else tuple()
-        style = style if style else PoweredStaffStyles.get_style(PlayerStyle.accurate)
+        style = style if style else PoweredStaffStyles.get_by_stance(Stances.accurate)
 
         return self.equip(
             Weapon.from_bb('sanguinesti staff'),

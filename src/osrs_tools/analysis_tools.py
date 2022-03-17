@@ -2,11 +2,23 @@ import matplotlib.pyplot as plt
 from functools import wraps
 from itertools import product
 from tabulate import tabulate
-from typing import Iterable, Any, ParamSpec, TypeVar, Concatenate, NamedTuple
+from typing import ParamSpec, TypeVar, Callable
 from collections import namedtuple
 from enum import Enum, unique
+import numpy as np
 
-from .character import *
+from osrs_tools.character import Character, Player
+from osrs_tools.stats import PlayerLevels, Boost
+from osrs_tools.style import PlayerStyle
+from osrs_tools.prayer import Prayer, PrayerCollection
+from osrs_tools.equipment import Equipment
+from osrs_tools.damage import Damage
+from osrs_tools.exceptions import OsrsException
+from copy import copy
+
+# throwaway imports
+from osrs_tools.style import BulwarkStyles
+from osrs_tools.modifier import Styles
 
 P = ParamSpec('P')
 R = TypeVar('R')
@@ -14,26 +26,30 @@ datamode_type = namedtuple('datamode', ['key', 'dtype', 'attribute'])
 
 
 class DataMode(Enum):
-	DPS = datamode_type('damage per second', float, 'per_second')
-	DAMAGE_PER_SECOND = DPS
 	DPT = datamode_type('damage per tick', float, 'per_tick')
-	DAMAGE_PER_TICK = DPT
+	DPS = datamode_type('damage per second', float, 'per_second')
 	DPM = datamode_type('damage per minute', float, 'per_minute')
-	DAMAGE_PER_MINUTE = DPM
 	DPH = datamode_type('damage per hour', float, 'per_hour')
-	DAMAGE_PER_HOUR = DPH
 	MAX = datamode_type('max hit', int, 'max_hit')
-	MAX_HIT = MAX
 	MIN = datamode_type('min hit', int, 'min_hit')
-	MIN_HIT = MIN
 	MEAN = datamode_type('mean hit', float, 'mean')
-	MEAN_HIT = MEAN
 	POSITIVE_DAMAGE = datamode_type('chance to deal positive damage', float, 'chance_to_deal_positive_damage')
-	DWH_SUCCESS = POSITIVE_DAMAGE
 	TICKS_TO_KILL = datamode_type('ticks to kill', float, None)
 	SECONDS_TO_KILL = datamode_type('seconds to kill', float, None)
 	MINUTES_TO_KILL = datamode_type('minutes to kill', float, None)
 	HOURS_TO_KILL = datamode_type('hours to kill', float, None)
+	DAMAGE_PER_TICK = DPT
+	DAMAGE_PER_SECOND = DPS
+	DAMAGE_PER_MINUTE = DPM
+	DAMAGE_PER_HOUR = DPH
+	MAX_HIT = MAX
+	MIN_HIT = MIN
+	MEAN_HIT = MEAN
+	DWH_SUCCESS = POSITIVE_DAMAGE
+	TTK = TICKS_TO_KILL
+	STK = SECONDS_TO_KILL
+	MTK = MINUTES_TO_KILL
+	HTK = HOURS_TO_KILL
 
 
 @unique
@@ -46,12 +62,8 @@ class DataAxes(Enum):
 	equipment = 'equipment'
 	active_style = 'active_style'
 
-# class ComparisonMode(enum.Enum):
-# 	PARALLEL = 'parallel'       # (A | B) -> (A1, B1), (A2, B2)
-# 	CARTESIAN = 'cartesian'     # (A x B) -> (A1, B1), (A1, B2), (A2, B1), (A2, B2)
 
-
-def tabulate_wrapper(data, col_labels: list, row_labels: list, meta_header: str = None, **kwargs):
+def tabulate_enhanced(data, col_labels: list, row_labels: list, meta_header: str = None, **kwargs):
 	options = {
 		'floatfmt': '.1f',
 		'tablefmt': 'fancy',
@@ -94,7 +106,7 @@ def generic_player_damage_distribution(
 	target: Character,
     levels: PlayerLevels = None,
     prayers: PrayerCollection = None,
-    boost: Boost = None,
+    boosts: Boost = None,
     equipment: Equipment = None,
     active_style: PlayerStyle = None,
     **kwargs
@@ -115,7 +127,9 @@ def generic_player_damage_distribution(
 	Returns:
 		Damage: _description_
 	"""
+
 	play = copy(player) 	# make a copy of player
+	play.active_style = player.active_style
 
 	if levels is not None:
 		play.base_levels = levels
@@ -124,22 +138,82 @@ def generic_player_damage_distribution(
 	if prayers is not None:
 		play.prayers_coll = prayers
 
-	if boost is not None:
+	if boosts is not None:
 		play.reset_stats()
-		play.boost(boost)
+		play.boost(boosts)
 
-	if equip_reset := (equipment is not None):		
+	if equipment is not None:		
 		if active_style is not None:
-			play.active_style = play.equipment.equip(equipment.equipped_gear, style=active_style)
+			play.active_style = play.equipment.equip(*equipment.equipped_gear, style=active_style)
 		else:
-			return_style = play.equipment.equip(equipment.equipped_gear)
+			return_style = play.equipment.equip(*equipment.equipped_gear)
 			if return_style is not None:
 				play.active_style = return_style
 
-	elif style_changed := (active_style is not None):
+	elif active_style is not None:
 		play.active_style = active_style
 
+	assert play.equipment.full_set
 	return play.damage_distribution(other=target, **kwargs)
+
+
+def table_2d(f: Callable) -> Callable:
+	"""Creates a 2D table.
+
+	# TODO: Figure out output additional types.
+	Args:
+		func (Callable[P, R]): Method that behaves like 
+			bedevere_the_wise for I/O.
+
+	Raises:
+		AnalysisError: Raised if axes aren't 2D.
+
+	Returns:
+		Callable[P, R]: 
+	"""
+
+	@wraps(f)
+	def inner(*args, **kwargs):
+
+		transpose_key = 'transpose'
+		if transpose_key in kwargs.keys():
+			transpose = kwargs.pop(transpose_key)
+		else:
+			transpose = False
+
+		retval = _, axes_dict, data_ary = f(*args, **kwargs)
+
+		try:
+			(row_label, row), (col_label, col) = axes_dict.items()
+		except ValueError as exc:
+			raise AnalysisError("axes aren't 2D") from exc
+
+
+
+		col_labels = [str(c) for c in col]
+		row_labels = [str(r) for r in row]
+		meta_header = f'rows: {row_label.name}, cols: {col_label.name}'
+		
+		if transpose:
+			table = tabulate_enhanced(
+				data=data_ary.T, 
+				col_labels=row_labels,
+				row_labels=col_labels,
+				meta_header=meta_header,
+				**kwargs
+			)
+		else:
+			table = tabulate_enhanced(
+				data=data_ary, 
+				col_labels=col_labels,
+				row_labels=row_labels,
+				meta_header=meta_header,
+				**kwargs
+			)
+
+		return retval, table
+
+	return inner
 
 
 def bedevere_the_wise(
@@ -147,7 +221,7 @@ def bedevere_the_wise(
 	targets: Character | list[Character],
 	*,
 	levels: PlayerLevels | list[PlayerLevels] = None,
-	prayers: PrayerCollection | list[PrayerCollection] = None,
+	prayers: Prayer | PrayerCollection | list[PrayerCollection] = None,
 	boosts: Boost | list[Boost] = None,
 	equipment: Equipment | list[Equipment] = None,
 	active_style: PlayerStyle | list[PlayerStyle] = None,
@@ -156,7 +230,9 @@ def bedevere_the_wise(
 ) -> tuple[dict[DataAxes, list], tuple[int], np.ndarray]:
 	"""Smart comparison interface for a generic player damage method.
 
-	Args:																		||
+	# TODO: Make a **kwargs-heavy version of this method with priority ordering built into the way the user inputs these values
+
+	Args:
 		players (Player | list[Player]): Player objects, which all optional 
 			parameters may modify by some method.
 		targets (Character | list[Character]): Character objects against which to
@@ -165,7 +241,7 @@ def bedevere_the_wise(
 			objects which can modify the base_levels of players. May raise an 
 			EquippableError if the provided levels are beneath that of equipment 
 			requirements. Defaults to None.
-		prayers (PrayerCollection | list[PrayerCollection], optional): 
+		prayers (Prayer | PrayerCollection | list[PrayerCollection], optional): 
 			PrayerCollection objects to be prayed by the players. Defaults to None.
 		boosts (Boost | list[Boost], optional): Boosts objects to boost the 
 			players. Defaults to None.
@@ -209,6 +285,10 @@ def bedevere_the_wise(
 
 	if isinstance(prayers, PrayerCollection):
 		prayers = [prayers]
+	elif isinstance(prayers, Prayer):
+		pc = PrayerCollection()
+		pc.pray(prayers)
+		prayers = [pc]
 
 	if isinstance(boosts, Boost):
 		boosts = [boosts]
@@ -220,7 +300,7 @@ def bedevere_the_wise(
 		active_style = [active_style]
 
 	# prepare kw and tuple axes, eliminate None values.
-	axes_dict = {
+	axes_dict: dict[DataAxes, list]= {
 		DataAxes.players: players,
 		DataAxes.targets: targets,
 		DataAxes.levels: levels,
@@ -232,21 +312,27 @@ def bedevere_the_wise(
 	axes_dict = {k: v for k, v in axes_dict.items() if v is not None}
 	axes = tuple(axes_dict.values())
 	axes_dims = tuple(len(ax) for ax in axes)
-	# create an axes_index_dict for use within the loop
-	axes_index_dict = {k: axes.index(v) for k, v in axes_dict.items()}
 
 	# get generated indices and a complete parameter space with itertools.product
 	indices = tuple(product(*(range(n) for n in axes_dims)))
-	params_cart_prod = product(*axes) 	# cartesian product of all parameter axes
+	# cartesian product of all parameter axes
+	params_cart_prod = tuple(product(*axes))
+	kwargs_params_cp = tuple({k.name: v for k, v in zip(axes_dict.keys(), p, strict=True)} for p in params_cart_prod)
 	data_ary = np.empty(shape=axes_dims, dtype=data_mode.value.dtype)
 
-	for index, params in zip(indices, params_cart_prod, strict=True):
-		dam = generic_player_damage_distribution(*params, **kwargs)
+	for index, kw_params in zip(indices, kwargs_params_cp, strict=True):
+		pos_args = []
+		player = kw_params.pop(DataAxes.players.name)
+		pos_args.append(player)
+		target = kw_params.pop(DataAxes.targets.name)
+		pos_args.append(target)
+
+		dam = generic_player_damage_distribution(*pos_args, **kw_params, **kwargs)
 
 		if data_mode.value.attribute is not None:
-			data_ary[index] = dam.__getattribute__(data_mode.value.attribute)
+			value = dam.__getattribute__(data_mode.value.attribute)
 		else:
-			target: Character = params[axes_index_dict[DataAxes.targets]]
+			target: Character = kw_params[DataAxes.targets.name]
 			hp = target.levels.hitpoints
 
 			if data_mode is DataMode.TICKS_TO_KILL:
@@ -259,7 +345,25 @@ def bedevere_the_wise(
 				value = hp / dam.per_hour
 			else:
 				raise NotImplementedError
+		
+		data_ary[index] = value
+	
+	# final squeezing
+	ary_squeezed = data_ary.squeeze()
+	squeezed_axes_dict = {}
 
-			data_ary[index] = value
+	for (k, v), dim in zip(axes_dict.items(), axes_dims, strict=True):
+		if dim > 1:
+			squeezed_axes_dict[k] = v
 
-	return indices, axes_dict, data_ary
+	# re-calculate these values for the squeezed array
+	axes_dict = squeezed_axes_dict
+	axes = tuple(axes_dict.values())
+	axes_dims = tuple(len(ax) for ax in axes)
+	indices = tuple(product(*(range(n) for n in axes_dims)))
+	
+	return indices, axes_dict, ary_squeezed
+
+class AnalysisError(OsrsException):
+	"""Raised at malformed requests.
+	"""

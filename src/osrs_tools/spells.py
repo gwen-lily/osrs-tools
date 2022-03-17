@@ -1,8 +1,10 @@
 import math
 from abc import ABC, abstractmethod
 from attrs import define, field, validators
+from enum import Enum, unique
 
-from osrs_tools.exceptions import *
+
+from osrs_tools.exceptions import OsrsException
 
 
 @define(order=True, frozen=True)
@@ -61,8 +63,8 @@ class PoweredSpell(Spell):
             raise SpellError(f'{visible_magic_level=} must be an integer for {self.name=}')
 
 
-@define(frozen=True)
-class _StandardSpells:
+@unique
+class StandardSpells(Enum):
     wind_strike = StandardSpell('wind strike', 2)
     water_strike = StandardSpell('water strike', 4)
     earth_strike = StandardSpell('earth strike', 6)
@@ -94,25 +96,30 @@ class _StandardSpells:
     flames_of_zamorak = GodSpell('flames of zamorak')
 
 
-@define(frozen=True)
-class _FireSpells:
-    fire_strike = StandardSpell('fire strike', 8)
-    fire_bolt = StandardSpell('fire bolt', 12)
-    fire_blast = StandardSpell('fire blast', 16)
-    fire_wave = StandardSpell('fire wave', 20)
-    fire_surge = StandardSpell('fire surge', 24)
+FireSpells = (
+    StandardSpells.fire_strike,
+    StandardSpells.fire_bolt,
+    StandardSpells.fire_blast,
+    StandardSpells.fire_wave,
+    StandardSpells.fire_surge,
+)
+
+BoltSpells = (
+    StandardSpells.wind_bolt,
+    StandardSpells.water_bolt,
+    StandardSpells.earth_bolt,
+    StandardSpells.fire_bolt,
+)
+
+GodSpells = (
+    StandardSpells.saradomin_strike,
+    StandardSpells.claws_of_guthix,
+    StandardSpells.flames_of_zamorak,
+)
 
 
-@define(frozen=True)
-class _BoltSpells:
-    wind_bolt = StandardSpell('wind bolt', 9)
-    water_bolt = StandardSpell('water bolt', 10)
-    earth_bolt = StandardSpell('earth bolt', 11)
-    fire_bolt = StandardSpell('fire bolt', 12)
-
-
-@define(frozen=True)
-class _AncientSpells:
+@unique
+class AncientSpells(Enum):
     smoke_rush = AncientSpell('smoke rush', 13)
     shadow_rush = AncientSpell('shadow rush', 14)
     blood_rush = AncientSpell('blood rush', 15)
@@ -131,18 +138,11 @@ class _AncientSpells:
     ice_barrage = AncientSpell('ice barrage', 30, 9)
 
 
-@define(frozen=True)
-class _PoweredSpells:
+@unique
+class PoweredSpells(Enum):
     trident_of_the_seas = PoweredSpell('trident of the seas', 20)
     trident_of_the_swamp = PoweredSpell('trident of the swamp', 23)
     sanguinesti_staff = PoweredSpell('sanguinesti staff', 24)
-
-
-StandardSpells = _StandardSpells()
-FireSpells = _FireSpells()
-BoltsSpells = _BoltSpells()
-AncientSpells = _AncientSpells()
-PoweredSpells = _PoweredSpells()
 
 
 class SpellError(OsrsException):

@@ -3,7 +3,7 @@ import osrs_highscores
 import numpy as np
 from pathlib import Path
 
-from osrs_tools.exceptions import *
+from osrs_tools.exceptions import OsrsException
 
 RESOURCES_DIR = Path(__file__).absolute().parents[2].joinpath('resources')
 de0_cox_bosses = RESOURCES_DIR.joinpath('cox_base_stats.csv')
