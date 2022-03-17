@@ -188,28 +188,26 @@ def table_2d(f: Callable) -> Callable:
 		except ValueError as exc:
 			raise AnalysisError("axes aren't 2D") from exc
 
+		# swap rows and columns if specified
+		if transpose:
+			col_labels = [str(r) for r in row]
+			row_labels = [str(c) for c in col]
+			mov_label = row_label
+			row_label = col_label
+			col_label = mov_label
+		else:
+			col_labels = [str(c) for c in col]
+			row_labels = [str(r) for r in row]
 
-
-		col_labels = [str(c) for c in col]
-		row_labels = [str(r) for r in row]
 		meta_header = f'rows: {row_label.name}, cols: {col_label.name}'
 		
-		if transpose:
-			table = tabulate_enhanced(
-				data=data_ary.T, 
-				col_labels=row_labels,
-				row_labels=col_labels,
-				meta_header=meta_header,
-				**kwargs
-			)
-		else:
-			table = tabulate_enhanced(
-				data=data_ary, 
-				col_labels=col_labels,
-				row_labels=row_labels,
-				meta_header=meta_header,
-				**kwargs
-			)
+		table = tabulate_enhanced(
+			data=data_ary, 
+			col_labels=col_labels,
+			row_labels=row_labels,
+			meta_header=meta_header,
+			**kwargs
+		)
 
 		return retval, table
 
