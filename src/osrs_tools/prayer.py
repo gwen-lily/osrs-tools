@@ -121,7 +121,7 @@ class PrayerCollection:
 	def no_prayers(cls):
 		return cls()
 
-	def _get_prayer_collection_attribute(self, attribute: str):
+	def _get_prayer_collection_attribute(self, attribute: str) -> LevelModifier | None:
 		relevant_prayers = [p for p in self.prayers if p.__getattribute__(attribute) is not None]
 		if len(relevant_prayers) == 0:
 			return None

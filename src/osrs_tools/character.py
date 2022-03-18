@@ -3,7 +3,7 @@ import math
 import numpy as np
 from abc import ABC, abstractmethod
 from copy import copy
-from attrs import field, fields, define, validators
+from attrs import field, fields, define, validators, Factory
 
 
 from osrs_tools.equipment import Gear, Weapon, SpecialWeapon, Equipment, EquipableError, SpecialWeaponError
@@ -17,7 +17,7 @@ from osrs_tools.damage import Damage, Hitsplat
 from osrs_tools.spells import Spell, StandardSpell, GodSpell, AncientSpell, PoweredSpell, SpellError
 from osrs_tools.spells import StandardSpells, AncientSpells, PoweredSpells, FireSpells, BoltSpells, GodSpells
 from osrs_tools.exceptions import OsrsException
-from osrs_tools.modifier import DT, MagicDamageTypes, MeleeDamageTypes, RangedDamageTypes, Skills, Styles
+from osrs_tools.modifier import DT, MagicDamageTypes, MeleeDamageTypes, RangedDamageTypes, Skills, Styles, Stances
 from osrs_tools.modifier import Roll, Level, DamageValue
 from osrs_tools.modifier import AttackRollModifier, LevelModifier, DamageModifier, create_modifier_pair
 from osrs_tools.modifier import MonsterLocations, MonsterTypes
@@ -40,12 +40,25 @@ def player_equipment_level_requirements_validator(instance: Player, attribute, v
     if not instance.base_levels >= value.level_requirements:
         raise EquipableError(f'Player with {instance.base_levels=} cannot equip Equipment with {value.level_requirements=}')
 
+def get_character_level_bounds(instance: Character):
+    if isinstance(instance, Player):
+        value = PlayerLevels.zeros()
+    elif isinstance(instance, Monster):
+        value = MonsterLevels.zeros()
+    else:
+        raise PlayerError
+    
+    return value
+
 
 @define(**character_attrs_settings)
 class Character(ABC):
     base_levels: Stats
     levels: Stats = field(init=False)
-    level_bounds: Stats = field(init=False, repr=False)
+    name: str = field(factory=str)
+    level_bounds: Stats = field(init=False, repr=False, default=Factory(get_character_level_bounds, takes_self=True))
+    styles_coll: StylesCollection = field(default=None, repr=False)
+    active_style: Style | None = field(default=None, repr=False)
     last_attacked: Character | None = field(init=False, repr=False)
     last_attacked_by: Character | None = field(init=False, repr=False)
 
@@ -86,7 +99,7 @@ class Character(ABC):
     @property
     def alive(self) -> bool:
         # TODO: this probably works because of PlayerLevel.__int__??
-        return self.levels.hitpoints > 0
+        return self.levels.hitpoints > Level(0)
 
     @property
     @abstractmethod
@@ -154,13 +167,15 @@ class Character(ABC):
         if isinstance(other, Player):
             if other.equipment.brimstone_ring and dt in MagicDamageTypes:
                 reduction = math.floor(int(defensive_roll) / 10) / 4
-                defensive_roll = Roll(math.floor(defensive_roll - reduction))
+                defensive_roll = defensive_roll - reduction
 
         return defensive_roll
 
-    def apply_dwh(self, damage_dealt: bool = True) -> int:
+    def apply_dwh(self, damage_dealt: bool = True) -> Level:
         if damage_dealt:
-            self.levels.defence = 0.70 * self.levels.defence
+            DwhModifier = LevelModifier(0.70, 'dwh')
+            self.levels.defence *= DwhModifier
+        
         return self.levels.defence
 
     def apply_bgs(self, amount: int):
@@ -219,6 +234,9 @@ class Character(ABC):
 
     def apply_bone_weapon_special(self, amount: int):
         self.levels.defence -= amount
+
+    def apply_seercull(self, amount: int):
+        self.levels.magic -= amount
 
     def apply_vulnerability(self, success: bool = True, tome_of_water: bool = True):
         if success:
@@ -307,10 +325,12 @@ def Player_active_style_validator(instance: Player, attribute: str, value: Style
 class Player(Character):
     base_levels: PlayerLevels = field(factory=PlayerLevels.maxed_player, validator=validators.instance_of(PlayerLevels), repr=False)
     levels: PlayerLevels = field(init=False, validator=validators.instance_of(PlayerLevels))
-    level_bounds: PlayerLevels = field(init=False, factory=PlayerLevels.zeros, repr=False)
-    last_attacked: Character | None = field(init=False, default=None, repr=False)
-    last_attacked_by: Character | None = field(init=False, default=None, repr=False)
-    name: str = field(factory=str)
+    active_style: PlayerStyle = field(
+        init=False,
+        validator=[validators.instance_of(PlayerStyle), Player_active_style_validator],
+        repr=True,
+    )
+    # player only fields
     prayers_coll: PrayerCollection = field(
         factory=PrayerCollection.no_prayers,
         validator=validators.instance_of(PrayerCollection),
@@ -319,11 +339,6 @@ class Player(Character):
     equipment: Equipment = field(
         factory=Equipment.no_equipment,
         validator=[validators.instance_of(Equipment), player_equipment_level_requirements_validator],
-        repr=True,
-    )
-    active_style: PlayerStyle = field(
-        init=False,
-        validator=[validators.instance_of(PlayerStyle), Player_active_style_validator],
         repr=True,
     )
     autocast: Spell = field(default=None, repr=False)   # , validator=validators.instance_of(Spell))
@@ -459,8 +474,8 @@ class Player(Character):
 
     @property
     def invisible_magic(self) -> Level:
-        if isinstance(self.prayers_coll.magic, LevelModifier):
-            return self.visible_magic * self.prayers_coll.magic
+        if isinstance(self.prayers_coll.magic_attack, LevelModifier):
+            return self.visible_magic * self.prayers_coll.magic_attack
         else:
             return self.visible_magic
 
@@ -509,7 +524,7 @@ class Player(Character):
     @property
     def effective_ranged_attack_level(self) -> Level:
         accuracy_level = self.invisible_ranged_attack
-        style_bonus = self.active_style.combat_bonus.ranged
+        style_bonus = self.active_style.combat_bonus.ranged_attack
 
         if (void_modifiers := self._void_modifiers()) is not None:
             void_alm, _ = void_modifiers
@@ -520,7 +535,7 @@ class Player(Character):
     @property
     def effective_ranged_strength_level(self) -> Level:
         strength_level = self.invisible_ranged_strength
-        style_bonus = self.active_style.combat_bonus.ranged
+        style_bonus = self.active_style.combat_bonus.ranged_attack
 
         if (void_modifiers := self._void_modifiers()) is not None:
             _, void_slm = void_modifiers
@@ -531,7 +546,7 @@ class Player(Character):
     @property
     def effective_magic_attack_level(self) -> Level:
         accuracy_level = self.invisible_magic
-        style_bonus = self.active_style.combat_bonus.magic
+        style_bonus = self.active_style.combat_bonus.magic_attack
 
         if (void_modifiers := self._void_modifiers()) is not None:
             void_alm, _ = void_modifiers
@@ -662,12 +677,14 @@ class Player(Character):
 
     def _twisted_bow_modifier(self, other: Character) -> tuple[AttackRollModifier, DamageModifier] | None:
         if self.equipment.twisted_bow:
+            # TODO: Re-evaluate preservation of information
             comment = 'twisted bow'
-            accuracy_modifier_ceiling = 1.40    # 140%
-            damage_modifier_ceiling = 2.50      # 250%
+            accuracy_modifier_ceiling = AttackRollModifier(1.40, 'twisted bow accuracy ceiling')
+            damage_modifier_ceiling = DamageModifier(2.50, 'twisted bow damage ceiling')
             magic_ceiling = 350 if isinstance(other, CoxMonster) else 250
+            magic_ceiling = Level(magic_ceiling, 'twisted bow magic ceiling')
 
-            magic = min([max([other.base_levels.magic, other.aggressive_bonus.magic]), magic_ceiling])
+            magic = min([max([other.base_levels.magic, other.aggressive_bonus.magic_attack]), magic_ceiling])
 
             accuracy_modifier_percent = 140 + math.floor((10*3*magic/10 - 10)/100) - math.floor(
                 ((3*magic/10 - 100)**2/100))
@@ -878,10 +895,10 @@ class Player(Character):
             raise PlayerError(other)
 
         if spell is not None:
-            dt = Style.magic
+            dt = DT.magic
         elif isinstance(self.autocast, Spell) and self.active_style.is_spell_style:
             spell = self.autocast
-            dt = Style.magic
+            dt = DT.magic
         else:
             dt = self.active_style.damage_type
 
@@ -900,11 +917,15 @@ class Player(Character):
         elif dt in MagicDamageTypes:
             if spell is None:
                 if self.equipment.weapon == Weapon.from_bb('sanguinesti staff'):
-                    self.autocast = PoweredSpells.sanguinesti_staff
+                    self.autocast = PoweredSpells.sanguinesti_staff.value
                 elif self.equipment.weapon == Weapon.from_bb('trident of the swamp'):
-                    self.autocast = PoweredSpells.trident_of_the_swamp
+                    self.autocast = PoweredSpells.trident_of_the_swamp.value
                 elif self.equipment.weapon == Weapon.from_bb('trident of the seas'):
-                    self.autocast = PoweredSpells.trident_of_the_seas
+                    self.autocast = PoweredSpells.trident_of_the_seas.value
+                else:
+                    raise StyleError(dt, spell)
+                
+                spell = self.autocast
 
             if isinstance(spell, Spell):
                 if isinstance(spell, StandardSpell) or isinstance(spell, AncientSpell):
@@ -995,11 +1016,11 @@ class Player(Character):
         elif dt in RangedDamageTypes:
             effective_accuracy_level = self.effective_ranged_attack_level
             effective_strength_level = self.effective_ranged_strength_level
-            accuracy_bonus = ab.ranged
+            accuracy_bonus = ab.ranged_attack
             strength_bonus = ab.ranged_strength
         elif dt in MagicDamageTypes:
             effective_accuracy_level = self.effective_magic_attack_level
-            accuracy_bonus = ab.magic
+            accuracy_bonus = ab.magic_attack
             strength_bonus = ab.magic_strength
         else:
             raise StyleError(self.active_style)
@@ -1084,6 +1105,7 @@ class Player(Character):
             tome_dm,
             smoke_values,
         )
+        
 
         # basic damage parameters, true in the general case, overwritten otherwise
         att_roll = self.maximum_roll(effective_accuracy_level, accuracy_bonus, *attack_roll_modifiers)
@@ -1129,6 +1151,15 @@ class Player(Character):
 
                 if self.equipment.dorgeshuun_special_weapon:   # Bone Dagger: Backstab & Dorgeshuun Crossbow: Snipe
                     accuracy = 1 if other.last_attacked_by != self else accuracy
+
+                if self.equipment.seercull:
+                    # TODO: Fix the entire stack, right now I just throw errors
+                    if self.prayers_coll.ranged_attack is not None or self.prayers_coll.ranged_strength is not None:
+                        raise SpecialWeaponError(f'{wp} cannot have active prayers')
+                    elif eqp.slayer:
+                        raise SpecialWeaponError(f'{wp} cannot benefit from slayer helm effect')
+
+                    accuracy = 1
                 elif self.equipment.abyssal_bludgeon:
                     pp_missing = min([0, self.base_levels.prayer - self.levels.prayer])
                     dm = DamageModifier(1 + special_attack*(0.005 * pp_missing), 'Abyssal bludgeon: Penance')
@@ -1413,7 +1444,7 @@ class Player(Character):
         for effect in effects:
 
             if isinstance(effect.modifiers, CallableLevelsModifier):
-                mods = tuple(effect.modifiers)
+                mods = (effect.modifiers, )
             elif isinstance(effect.modifiers, tuple):
                 mods = effect.modifiers
             else:
@@ -1453,14 +1484,12 @@ class Player(Character):
 
 @define(**character_attrs_settings)
 class Monster(Character):
-    base_levels: MonsterLevels = field(validator=validators.instance_of(MonsterLevels), repr=False)
+    base_levels: MonsterLevels = field(factory=MonsterLevels.zeros, validator=validators.instance_of(MonsterLevels), repr=False)
     levels: MonsterLevels = field(init=False, validator=validators.instance_of(MonsterLevels), repr=False)
-    level_bounds: MonsterLevels = field(init=False, factory=MonsterLevels.zeros, repr=False)
-    aggressive_bonus: AggressiveStats = field(validator=validators.instance_of(AggressiveStats), repr=False)
-    defensive_bonus: DefensiveStats = field(validator=validators.instance_of(DefensiveStats), repr=False)
-    name: str = field(factory=str)
-    styles: StylesCollection | None = field(init=False, default=None, repr=False)
     active_style: NpcStyle | None = field(init=False, default=None, repr=False)
+    # monster only fields
+    aggressive_bonus: AggressiveStats = field(factory=AggressiveStats.no_bonus, validator=validators.instance_of(AggressiveStats), repr=False)
+    defensive_bonus: DefensiveStats = field(factory=DefensiveStats.no_bonus, validator=validators.instance_of(DefensiveStats), repr=False)
     location: MonsterLocations | None = field(default=None, repr=False)
     exp_modifier: float = field(default=1, repr=False)
     combat_level: int | None = field(default=None, repr=False)
@@ -1469,16 +1498,23 @@ class Monster(Character):
     def __attrs_post_init__(self):
         self.levels = copy(self.base_levels)
 
-        if self.styles is not None:
-            self.active_style = self.styles.default
+        if self.styles_coll is not None:
+            self.active_style = self.styles_coll.default
+
+    def __copy__(self):
+        unpacked = {field.name: getattr(self, field.name) for field in fields(Monster) if field.init is True}
+        unpacked_copy = {k: copy(v) for k, v in unpacked.items()}
+        
+        return self.__class__(**unpacked_copy)
 
     def reset_stats(self):
         self.levels = copy(self.base_levels)
 
     @property
     def effective_melee_attack_level(self) -> Level:
-        if self.active_style is not None:
-            style_bonus = self.active_style.combat_bonus.melee_attack
+        astyle = self.active_style
+        if astyle is not None and astyle.combat_bonus is not None:
+            style_bonus = astyle.combat_bonus.melee_attack
         else:
             style_bonus = 0
 
@@ -1486,43 +1522,47 @@ class Monster(Character):
 
     @property
     def effective_melee_strength_level(self) -> Level:
-        if self.active_style is not None:
-            style_bonus = self.active_style.combat_bonus.strength
+        astyle = self.active_style
+        if astyle is not None and astyle.combat_bonus is not None:
+            style_bonus = astyle.combat_bonus.melee_strength
         else:
             style_bonus = 0
         return self.effective_level(self.levels.strength, style_bonus)
 
     @property
     def effective_defence_level(self) -> Level:
-        if self.active_style is not None:
-            style_bonus = self.active_style.combat_bonus.defence
+        astyle = self.active_style
+        if astyle is not None and astyle.combat_bonus is not None:
+            style_bonus = astyle.combat_bonus.defence
         else:
             style_bonus = 0
         return self.effective_level(self.levels.defence, style_bonus)
 
     @property
     def effective_ranged_attack_level(self) -> Level:
-        if self.active_style is not None:
-            style_bonus = self.active_style.combat_bonus.ranged
+        astyle = self.active_style
+        if astyle is not None and astyle.combat_bonus is not None:
+            style_bonus = astyle.combat_bonus.ranged_attack
         else:
             style_bonus = 0
         return self.effective_level(self.levels.ranged, style_bonus)
 
     @property
     def effective_ranged_strength_level(self) -> Level:
-        if self.active_style is not None:
-            style_bonus = self.active_style.combat_bonus.ranged
+        astyle = self.active_style
+        if astyle is not None and astyle.combat_bonus is not None:
+            style_bonus = astyle.combat_bonus.ranged_strength
         else:
             style_bonus = 0
         return self.effective_level(self.levels.ranged, style_bonus)
 
     @property
     def effective_magic_attack_level(self) -> Level:
-        if self.active_style is not None:
-            style_bonus = self.active_style.combat_bonus.magic
+        astyle = self.active_style
+        if astyle is not None and astyle.combat_bonus is not None:
+            style_bonus = astyle.combat_bonus.magic_attack
         else:
             style_bonus = 0
-        return self.effective_level(self.levels.magic, style_bonus)
 
     @property
     def effective_magic_strength_level(self) -> Level:
@@ -1531,8 +1571,9 @@ class Monster(Character):
     @property
     def effective_magic_defence_level(self) -> Level:
         defensive_level = self.levels.magic
-        if self.active_style is not None:
-            style_bonus = self.active_style.combat_bonus.magic
+        astyle = self.active_style
+        if astyle is not None and astyle.combat_bonus is not None:
+            style_bonus = astyle.combat_bonus.magic_attack
         else:
             style_bonus = 0
 
@@ -1738,18 +1779,20 @@ class Monster(Character):
 class Dummy(Monster):
     base_levels = field(factory=MonsterLevels.dummy_levels, repr=False)
     levels = field(init=False, repr=False)
+    name: str = field(default='dummy')
     level_bounds = field(factory=MonsterLevels.zeros, repr=False)
-    last_attacked = field(init=False, repr=False, default=None)
-    last_attacked_by = field(init=False, repr=False, default=None)
+    styles_coll = None
+    active_style = None
+    last_attacked: Character | None = field(repr=False, default=None)
+    last_attacked_by: Character | None = field(repr=False, default=None)
     aggressive_bonus = field(factory=AggressiveStats.no_bonus, repr=False)
     defensive_bonus = field(factory=DefensiveStats.no_bonus, repr=False)
-    name: str = field(default='dummy')
+    
     styles = field(default=None, repr=False)
     active_style = field(default=None, repr=False)
-    location = field(default=None, repr=False)
+    location = field(default=MonsterLocations.wilderness, repr=False)
     exp_modifier = field(default=None, repr=False)
     combat_level = field(default=None, repr=False)
-    defence_floor = field(default=0, repr=False)
     special_attributes = field(default=tuple(t for t in MonsterTypes), repr=False)
 
 
@@ -1759,7 +1802,6 @@ class CoxMonster(Monster):
     location: MonsterLocations = field(default=MonsterLocations.cox, repr=False)
     exp_modifier: float = field(default=1, repr=False)
     combat_level: int = field(default=-1, repr=False)
-    defence_floor: int = field(default=0, repr=False)
     special_attributes: tuple[str, ...] = field(factory=tuple, repr=False)
     challenge_mode: bool = field(default=False)
     party_max_combat_level: int = field(default=126, repr=False)
@@ -1767,15 +1809,19 @@ class CoxMonster(Monster):
     party_average_mining_level: Level = field(default=Level(99), repr=False)
     points_per_hitpoint: float = field(default=4.15, repr=False, init=False)
 
+    def __copy__(self):
+        unpacked = {field.name: getattr(self, field.name) for field in fields(self.__class__) if field.init is True}
+        unpacked_copy = {k: copy(v) for k, v in unpacked.items()}
+        
+        return self.__class__(**unpacked_copy)
+
     def __str__(self):
         message = f'{self.name} ({self.party_size})'
         return message
 
     def __attrs_post_init__(self):
         self._convert_cox_combat_levels()   # modify self.base_levels in place
-        self.levels = copy(self.base_levels)
-        self.styles = StylesCollection('', (NpcStyle.default_style(), ))
-        self.active_style = NpcStyle.default_style()
+        super().__attrs_post_init__()
 
     # properties
 
@@ -1850,8 +1896,8 @@ class CoxMonster(Monster):
             stab=aggressive_melee_bonus,
             slash=aggressive_melee_bonus,
             crush=aggressive_melee_bonus,
-            magic=mon_df['magic att+'].values[0],
-            ranged=mon_df['ranged att+'].values[0],
+            magic_attack=mon_df['magic att+'].values[0],
+            ranged_attack=mon_df['ranged att+'].values[0],
             melee_strength=mon_df['melee str+'].values[0],
             ranged_strength=mon_df['ranged str+'].values[0],
             magic_strength=mon_df['magic str+'].values[0]
@@ -1879,7 +1925,7 @@ class CoxMonster(Monster):
         elif name == 'great olm (right/mage claw)':
             return OlmMageHand.from_de0(party_size, challenge_mode, **kwargs)
         elif name == 'guardian':
-            options = {'party_average_mining_level': PlayerLevels.max_skill_level}
+            options = {'party_average_mining_level': PlayerLevels.max_skill_level()}
             options.update(kwargs)
             return Guardian.from_de0(party_size, challenge_mode, options['party_average_mining_level'], **options)
         elif name == 'skeletal mystic':
@@ -2002,8 +2048,8 @@ class DeathlyRanger(CoxMonster):
             challenge_mode=challenge_mode,
             **kwargs
         )
-        ranger.styles = StylesCollection(ranger.name, (attack_style, ))
-        ranger.active_style = ranger.styles.styles[0]
+        ranger.styles_coll = StylesCollection(ranger.name, (attack_style, ))
+        ranger.active_style = ranger.styles_coll.styles[0]
         return ranger
 
     def count_per_room(self) -> int:
@@ -2044,8 +2090,8 @@ class DeathlyMage(CoxMonster):
             challenge_mode=challenge_mode,
             **kwargs
         )
-        mage.styles = StylesCollection(mage.name, (attack_style,))
-        mage.active_style = mage.styles.styles[0]
+        mage.styles_coll = StylesCollection(mage.name, (attack_style,))
+        mage.active_style = mage.styles_coll.styles[0]
         return mage
 
     def count_per_room(self) -> int:
@@ -2068,21 +2114,27 @@ class SkeletalMystic(CoxMonster):
         special_attributes = (MonsterTypes.xerician, MonsterTypes.undead)
 
         magic_style = NpcStyle(
-            PlayerStyle.magic,
+            Styles.npc_magic,
+            DT.magic,
+            Stances.npc,
             attack_speed=4,
             ignores_defence=False,
             ignores_prayer=True
         )
         melee_style = NpcStyle(
-            PlayerStyle.crush,
+            Styles.npc_melee,
+            DT.crush,
+            Stances.npc,
             attack_speed=4,
             ignores_defence=False,
             ignores_prayer=True
         )
 
+        styles_coll = StylesCollection(name, (magic_style, melee_style), magic_style)
         skeleton = cls(
             name=name,
-            levels=base_levels,
+            base_levels=base_levels,
+            styles_coll=styles_coll,
             aggressive_bonus=aggressive_bonus,
             defensive_bonus=defensive_bonus,
             location=MonsterLocations.cox,
@@ -2091,8 +2143,7 @@ class SkeletalMystic(CoxMonster):
             challenge_mode=challenge_mode,
             **kwargs
         )
-        skeleton.styles = StylesCollection(skeleton.name, (magic_style, melee_style))
-        skeleton.active_style = magic_style
+
         return skeleton
 
     def count_per_room(self, scale_at_load_time: int = None, **kwargs) -> int:
@@ -2140,7 +2191,7 @@ class LizardmanShaman(CoxMonster):
             challenge_mode=challenge_mode,
             **kwargs
         )
-        shaman.styles = StylesCollection(shaman.name, (ranged_style, melee_style))
+        shaman.styles_coll = StylesCollection(shaman.name, (ranged_style, melee_style))
         shaman.active_style = ranged_style
         return shaman
 
@@ -2168,7 +2219,7 @@ class Guardian(CoxMonster):
             return damage_allowed
 
     @classmethod
-    def from_de0(cls, party_size: int, challenge_mode: bool = False, party_average_mining_level: int = None, **kwargs):
+    def from_de0(cls, party_size: int, challenge_mode: bool = False, party_average_mining_level: float = None, **kwargs):
         name = 'guardian'
         base_levels, aggressive_bonus, defensive_bonus = cls.get_base_levels_and_stats(name)
         special_attributes = (MonsterTypes.xerician,)
@@ -2176,14 +2227,14 @@ class Guardian(CoxMonster):
         if party_average_mining_level:
             kwargs.update({'party_average_mining_level': party_average_mining_level})
         else:
-            party_average_mining_level = PlayerLevels.max_skill_level
+            party_average_mining_level = PlayerLevels.max_skill_level()
 
         reduction = party_average_mining_level
-        base_levels.hitpoints = base_levels.hitpoints - (99 - reduction)
+        base_levels.hitpoints -= 99 - reduction
 
         guardian = cls(
             name=name,
-            levels=base_levels,
+            base_levels=base_levels,
             aggressive_bonus=aggressive_bonus,
             defensive_bonus=defensive_bonus,
             location=MonsterLocations.cox,
@@ -2194,13 +2245,15 @@ class Guardian(CoxMonster):
         )
 
         melee_style = NpcStyle(
-            PlayerStyle.crush,
+            Styles.npc_melee,
+            DT.crush,
+            Stances.npc,
             attack_speed=4,
             ignores_defence=False,
             ignores_prayer=True
         )
 
-        guardian.styles = StylesCollection(guardian.name, (melee_style, ))
+        guardian.styles_coll = StylesCollection(guardian.name, (melee_style, ), melee_style)
         guardian.active_style = melee_style
         return guardian
 
@@ -2242,7 +2295,7 @@ class SmallMuttadile(CoxMonster):
             challenge_mode=challenge_mode,
             **kwargs
         )
-        smol_mutta.styles = StylesCollection(smol_mutta.name, (ranged_style, melee_style))
+        smol_mutta.styles_coll = StylesCollection(smol_mutta.name, (ranged_style, melee_style))
         smol_mutta.active_style = ranged_style
         return smol_mutta
 
@@ -2286,7 +2339,7 @@ class BigMuttadile(CoxMonster):
             challenge_mode=challenge_mode,
             **kwargs
         )
-        big_mutta.styles = StylesCollection(big_mutta.name, (ranged_style, magic_style, melee_style))
+        big_mutta.styles_coll = StylesCollection(big_mutta.name, (ranged_style, magic_style, melee_style))
         big_mutta.active_style = ranged_style
         return big_mutta
 
@@ -2405,7 +2458,7 @@ class OlmMeleeHand(Olm):
 
         return cls(
             name=name,
-            levels=base_levels,
+            base_levels=base_levels,
             aggressive_bonus=aggressive_bonus,
             defensive_bonus=defensive_bonus,
             location=MonsterLocations.cox,
@@ -2438,7 +2491,7 @@ class OlmMageHand(Olm):
 
         return cls(
             name=name,
-            levels=base_levels,
+            base_levels=base_levels,
             aggressive_bonus=aggressive_bonus,
             defensive_bonus=defensive_bonus,
             location=MonsterLocations.cox,
@@ -2566,7 +2619,7 @@ class OlmHead(Olm):
             challenge_mode=challenge_mode,
             **kwargs
         )
-        olm_head.styles = StylesCollection(olm_head.name, (ranged_style, magic_style))
+        olm_head.styles_coll = StylesCollection(olm_head.name, (ranged_style, magic_style))
         olm_head.active_style = ranged_style
         return olm_head
 

@@ -149,8 +149,8 @@ class PlayerLevels(Stats):
 
         return PlayerLevels(**skill_vals_dict)
 
-    @property
-    def max_skill_level(self) -> Level:
+    @staticmethod
+    def max_skill_level() -> Level:
         return Level(99, 'max skill level')
 
     def min_skill_level(self, skill: Skills) -> Level:

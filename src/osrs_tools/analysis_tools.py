@@ -1,17 +1,20 @@
+from tracemalloc import start
 import matplotlib.pyplot as plt
 from functools import wraps
-from itertools import product
+from itertools import combinations, product
 from tabulate import tabulate
 from typing import ParamSpec, TypeVar, Callable
 from collections import namedtuple
 from enum import Enum, unique
 import numpy as np
+import math
+import pandas as pd
 
 from osrs_tools.character import Character, Player
-from osrs_tools.stats import PlayerLevels, Boost
+from osrs_tools.stats import Overload, PlayerLevels, Boost
 from osrs_tools.style import PlayerStyle
-from osrs_tools.prayer import Prayer, PrayerCollection
-from osrs_tools.equipment import Equipment
+from osrs_tools.prayer import Piety, Prayer, PrayerCollection
+from osrs_tools.equipment import Equipment, Gear
 from osrs_tools.damage import Damage
 from osrs_tools.exceptions import OsrsException
 from copy import copy
@@ -33,7 +36,7 @@ class DataMode(Enum):
 	MAX = datamode_type('max hit', int, 'max_hit')
 	MIN = datamode_type('min hit', int, 'min_hit')
 	MEAN = datamode_type('mean hit', float, 'mean')
-	POSITIVE_DAMAGE = datamode_type('chance to deal positive damage', float, 'chance_to_deal_positive_damage')
+	POSITIVE_DAMAGE = datamode_type('chance to deal positive damage', float, 'probability_nonzero_damage')
 	TICKS_TO_KILL = datamode_type('ticks to kill', float, None)
 	SECONDS_TO_KILL = datamode_type('seconds to kill', float, None)
 	MINUTES_TO_KILL = datamode_type('minutes to kill', float, None)
@@ -63,12 +66,12 @@ class DataAxes(Enum):
 	active_style = 'active_style'
 
 
-def tabulate_enhanced(data, col_labels: list, row_labels: list, meta_header: str = None, **kwargs):
-	options = {
-		'floatfmt': '.1f',
-		'tablefmt': 'fancy',
-	}
-	options.update(kwargs)
+def tabulate_enhanced(data, col_labels: list, row_labels: list, meta_header: str = None, floatfmt: str = None, tablefmt: str = None, **kwargs):
+	# default values and error checking
+	if floatfmt is None:
+		floatfmt = '.1f'
+	if tablefmt is None:
+		tablefmt = 'fancy'
 
 	if isinstance(data, np.ndarray):
 		try:
@@ -83,6 +86,7 @@ def tabulate_enhanced(data, col_labels: list, row_labels: list, meta_header: str
 		assert m == len(row_labels)
 		assert n == len(col_labels) or n == len(col_labels) - 1
 
+	# table prep
 	table_data = []
 	for index, row in enumerate(data):
 		try:
@@ -93,10 +97,19 @@ def tabulate_enhanced(data, col_labels: list, row_labels: list, meta_header: str
 
 		table_data.append(labeled_row)
 
-	table = tabulate(table_data, headers=col_labels, floatfmt=options['floatfmt'], tablefmt=options['tablefmt'])
+	table = tabulate(table_data, headers=col_labels, floatfmt=floatfmt, tablefmt=tablefmt)
 
 	if meta_header is not None:
-		table = '\n'.join([meta_header, table])
+		line_length = len(table.split('\n')[0])
+		header_basis = line_length*'-'
+		# fmt the header
+		fmtd_text = 2*' ' + meta_header + 2*' '
+		text_width = len(fmtd_text)
+		start_idx = (line_length // 2) - (text_width // 2)
+		end_idx = start_idx + text_width
+		fmtd_header = header_basis[:start_idx] + fmtd_text + header_basis[end_idx:]
+
+		table = '\n'.join([fmtd_header, table])
 
 	return table
 
@@ -172,40 +185,102 @@ def table_2d(f: Callable) -> Callable:
 		Callable[P, R]: 
 	"""
 
-	@wraps(f)
-	def inner(*args, **kwargs):
+	def convert_to_df(data: np.ndarray, columns: list[str]) -> pd.DataFrame:
+		if not isinstance(data, np.ndarray):
+			raise TypeError(data)
 
-		transpose_key = 'transpose'
-		if transpose_key in kwargs.keys():
-			transpose = kwargs.pop(transpose_key)
-		else:
-			transpose = False
+		return pd.DataFrame(data, columns=columns, dtype=data.dtype)
+
+	def convert_to_ndarray(df: pd.DataFrame) -> np.ndarray:
+		if not isinstance(df, pd.DataFrame):
+			raise TypeError(df)
+
+		return np.asarray(df)
+
+	@wraps(f)
+	def inner(*args,
+        transpose: bool = False,
+        sort_cols: bool = False,
+        sort_rows: bool = False,
+        ascending: bool = False,
+		floatfmt: str = None,
+        tablefmt: str = None,
+        **kwargs
+    ):
+		# optionals
+		col_labels = None
+		row_labels = None
+		meta_header = None
+
+		if (cl_k := 'col_labels') in kwargs.keys():
+			col_labels = kwargs.pop(cl_k)
+		if (rl_k := 'row_labels') in kwargs.keys():
+			row_labels = kwargs.pop(rl_k)
+		if (mh_k := 'meta_header') in kwargs.keys():
+			meta_header = kwargs.pop(mh_k)
 
 		retval = _, axes_dict, data_ary = f(*args, **kwargs)
 
+		if not isinstance(data_ary, np.ndarray):
+			raise TypeError(data_ary)
+
 		try:
 			(row_label, row), (col_label, col) = axes_dict.items()
-		except ValueError as exc:
-			raise AnalysisError("axes aren't 2D") from exc
+		except ValueError:
+			try:
+				row_label, row = list(axes_dict.items())[0]
+
+				if (dm_key := 'data_mode') in kwargs.keys():
+					col_label = kwargs.pop(dm_key)
+				else:
+					col_label = ''
+
+				col = [col_label]
+			except ValueError as exc:
+				raise AnalysisError("axes aren't 2D") from exc
 
 		# swap rows and columns if specified
 		if transpose:
-			col_labels = [str(r) for r in row]
-			row_labels = [str(c) for c in col]
+			col_labels = [str(r) for r in row] if col_labels is None else col_labels
+			row_labels = [str(c) for c in col] if row_labels is None else row_labels
 			mov_label = row_label
 			row_label = col_label
 			col_label = mov_label
+			data_ary = data_ary.T
 		else:
-			col_labels = [str(c) for c in col]
-			row_labels = [str(r) for r in row]
+			col_labels = [str(c) for c in col] if col_labels is None else col_labels
+			row_labels = [str(r) for r in row] if row_labels is None else row_labels
 
-		meta_header = f'rows: {row_label.name}, cols: {col_label.name}'
-		
+		# data sorting
+		# do row then col to prioritize col view.
+		# TODO: Possible customize this? Or is this unnecessary since we are allowed to tranpose?
+		data_df = None
+
+		# sort by the first row
+		if sort_rows:
+			data_df = convert_to_df(data_ary, columns=col_labels)
+			data_df = data_df.sort_values(by=row_labels[0], axis=1, ascending=ascending)
+
+		# sort by the first col
+		if sort_cols:
+			if data_df is None:
+				data_df = convert_to_df(data_ary, columns=col_labels)
+
+			data_df = data_df.sort_values(by=col_labels[0], ascending=ascending)
+
+		if data_df is not None:
+			data_ary = convert_to_ndarray(data_df)
+
+		if meta_header is None:
+			meta_header = f'rows: {row_label.name}, cols: {col_label.name}'
+
 		table = tabulate_enhanced(
-			data=data_ary, 
+			data=data_ary,
 			col_labels=col_labels,
 			row_labels=row_labels,
 			meta_header=meta_header,
+			floatfmt=floatfmt,
+			tablefmt=tablefmt,
 			**kwargs
 		)
 
@@ -361,6 +436,77 @@ def bedevere_the_wise(
 	indices = tuple(product(*(range(n) for n in axes_dims)))
 	
 	return indices, axes_dict, ary_squeezed
+
+
+bedevere_2d = table_2d(bedevere_the_wise)
+
+def robin_the_brave(
+	player: Player,
+	target: Character,
+	switches: Equipment | tuple[Gear],
+	num_switches_allowed: int,
+	*,
+	prayers: Prayer | PrayerCollection = Piety,
+	boosts: Boost = Overload,
+	active_style: PlayerStyle = None,
+	data_mode: DataMode = DataMode.DPT,
+	**kwargs
+) -> tuple[dict[DataAxes, list], tuple[int], np.ndarray]:
+	"""Returns a 1-D data array comparing data_mode under every possible combination of gear in switches, limited to num_switches_allowed.
+
+	Args:
+		player (Player): Player performing the attack. Player should be initialized with as much gear as can be assumed. For example,
+		if you know you're always bringing a torva set, equip it to the player.
+		target (Character): Target of the attack.
+		switches (Equipment | tuple[Gear]): An equipment or tuple[Gear] with the the optional switches.
+		num_switches_allowed (int): The limit of Gear items in switches to use concurrently. The use case for this is in situations where 
+			for inventory limitations you're only able to fit in a few switches, like Olm or TOB.
+		prayers (Prayer | PrayerCollection, optional): Any prayers. Defaults to Piety.
+		boosts (Boost, optional): Any boosts. Defaults to Overload.
+		active_style (PlayerStyle, optional): Any style overrides. Defaults to None.
+		data_mode (DataMode, optional): The statistic in question. Defaults to DataMode.DPT.
+
+	Raises:
+		TypeError: If some of the internal logic goes wrong with wrapper classes.
+		AnalysisError: If you ask a question that doesn't make sense.
+
+	Returns:
+		axes_dict (dict[DataAxes, tuple]): A dictionary for looking up axes indices. 
+		indices (tuple[int]): An iterable list of all indices of the data array.
+		data_ary (np.ndarray): The data array.
+	"""
+	# error checking
+	if isinstance(switches, Equipment):
+		switches_tup = switches.equipped_gear
+	elif isinstance(switches, tuple):
+		assert all(isinstance(g, Gear) for g in switches)
+		switches_tup = switches
+	else:
+		raise TypeError(switches)
+
+	if num_switches_allowed >= len(switches_tup):
+		raise AnalysisError()
+	
+	# generate every combination of gear switches under the limitations
+	switch_combos = []
+	for combo in combinations(switches_tup, num_switches_allowed):
+		switch_dict = {g.slot.name: g for g in combo}
+		switch_combos.append(switch_dict)
+
+	equipments = [Equipment(**switch_dict) for switch_dict in switch_combos]
+
+	return bedevere_the_wise(
+		player,
+		target,
+		equipment=equipments,
+		prayers=prayers,
+		boosts=boosts,
+		active_style=active_style,
+		data_mode=data_mode,
+		**kwargs
+	)
+
+
 
 class AnalysisError(OsrsException):
 	"""Raised at malformed requests.

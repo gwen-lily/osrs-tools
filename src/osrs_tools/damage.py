@@ -138,7 +138,7 @@ class Damage:
             hits[:, idx] = hs.random_hit(k)
         
         if n == 1 and k == 1:
-            hits: int = hits[0, 0]
+            hits: int = int(hits[0, 0])
         else:
             hits: np.ndarray = hits.reshape((k*n, ))
         
@@ -172,7 +172,7 @@ class Damage:
         """
         attack_speed = 4
         hs = Hitsplat.thrall()
-        return cls(attack_speed, tuple(hs))
+        return cls(attack_speed, (hs, ))
 
 
 class DamageError(OsrsException):

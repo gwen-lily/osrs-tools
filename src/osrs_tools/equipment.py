@@ -7,7 +7,6 @@ from enum import Enum, unique
 from attrs import define, field, validators, astuple
 
 
-
 # TODO: submodule for style imports
 from osrs_tools.style import TwoHandedStyles, AxesStyles, BluntStyles, BludgeonStyles, BulwarkStyles
 from osrs_tools.style import ClawStyles, PickaxeStyles, PolearmStyles, ScytheStyles, SlashSwordStyles
@@ -66,7 +65,6 @@ class Slots(Enum):
 Items = items_api.load()
 
 
-
 def special_defence_roll_validator(instance, attribute, value):
     if value and value not in Style.all_damage_types:
         raise WeaponError(f'{attribute=} with {value=} not in {Style.all_damage_types}')
@@ -113,13 +111,14 @@ def lookup_gear_base_attributes_by_name(name: str, gear_df: pd.DataFrame = None)
 
     if slot_enum is None:
         raise TypeError(slot_src)
-    
+
     return name, slot_enum, aggressive_bonus, defensive_bonus, prayer_bonus, level_requirements
 
 
 def lookup_weapon_attributes_by_name(name: str, gear_df: pd.DataFrame = None):
     item_df = rr.lookup_gear(name, gear_df)
     default_attack_range = 0
+    comment = 'bitter'
 
     if len(item_df) > 1:
         matching_names = tuple(item_df['name'].values)
@@ -132,22 +131,25 @@ def lookup_weapon_attributes_by_name(name: str, gear_df: pd.DataFrame = None):
     two_handed = item_df['two handed'].values[0]
     weapon_styles = StylesCollection.from_weapon_type(item_df['weapon type'].values[0])
 
-    special_accuracy_modifier = 1 + item_df['special accuracy'].values[0]
-    special_damage_modifier_1 = 1 + item_df['special damage 1'].values[0]
-    special_damage_modifier_2 = 1 + item_df['special damage 2'].values[0]
-    special_defence_roll = item_df['special defence roll'].values[0]
-
+    special_accuracy_modifiers = []
+    special_damage_modifiers = []
     sdr_enum = None
-    for dt in DT:
-        if dt.name == special_defence_roll:
-            sdr_enum = dt
-            break
 
-    return attack_speed, attack_range, two_handed, weapon_styles, special_accuracy_modifier, \
-        special_damage_modifier_1, special_damage_modifier_2, sdr_enum
+    if (raw_sarm := item_df['special accuracy'].values[0]) != 0:
+        special_accuracy_modifiers.append(AttackRollModifier(1 + raw_sarm, comment))
+    if (raw_sdm1 := item_df['special damage 1'].values[0]) != 0:
+        special_damage_modifiers.append(DamageModifier(1 + raw_sdm1, comment))
+    if (raw_sdm2 := item_df['special damage 2'].values[0]) != 0:
+        special_damage_modifiers.append(DamageModifier(1 + raw_sdm2, comment))
+    if (raw_sdr := item_df['special defence roll'].values[0]) != '':
+        for dt in DT:
+            if dt.name == raw_sdr:
+                sdr_enum = dt
+                break
+
+    return attack_speed, attack_range, two_handed, weapon_styles, special_accuracy_modifiers, special_damage_modifiers, sdr_enum
 
 
-# noinspection PyArgumentList
 @define(order=True, frozen=True)
 class Gear:
     name: str
@@ -188,48 +190,62 @@ class Gear:
         else:
             raise GearNotFoundError(f'{kwargs=}')
 
+        if not item.equipable_by_player:
+            raise EquipableError('attempt to create false gear')
+
         eqp = item.equipment
-        slot = eqp.slot
-        slot = 'ammunition' if slot == 'ammo' else slot
+        name = item.name.lower()
+        slot = None
 
-        try:
-            assert isinstance(eqp, ItemEquipment)
-            assert item.equipable
-            assert item.equipable_by_player
-            assert not item.equipable_weapon
-        except AssertionError as exc:
-            raise GearError(f'{exc=}') from exc
+        # slot validation & weapon / 2h validation
+        for sl in Slots:
+            # specific cases > general
+            if eqp.slot == 'ammo':
+                slot = Slots.ammunition
+            elif eqp.slot == '2h' or eqp.slot == Slots.weapon.name:
+                raise WeaponError('Instance of weapon in Gear class.')
+            elif eqp.slot == sl.name:
+                slot = sl
+        
+        if slot is None:
+            raise GearError(f'{eqp.slot}')
 
-        magic_strength = 0.01 * eqp.magic_damage
-
-        if eqp.requirements:
-            reqs = eqp.requirements
-        else:
-            reqs = {}
-
-        return cls(
-            name=item.name.lower(),
-            slot=slot,
-            aggressive_bonus=AggressiveStats(
-                stab=eqp.attack_stab,
-                slash=eqp.attack_slash,
-                crush=eqp.attack_crush,
-                magic_attack=eqp.attack_magic,
-                ranged_attack=eqp.attack_ranged,
-                melee_strength=eqp.melee_strength,
-                ranged_strength=eqp.ranged_strength,
-                magic_strength=magic_strength
-            ),
-            defensive_bonus=DefensiveStats(
-                stab=eqp.defence_stab,
-                slash=eqp.defence_slash,
-                crush=eqp.defence_crush,
-                magic=eqp.defence_magic,
-                ranged=eqp.defence_ranged
-            ),
-            prayer_bonus=eqp.prayer,
-            level_requirements=PlayerLevels(**reqs),
+        ab = AggressiveStats(
+            stab=eqp.attack_stab,
+            slash=eqp.attack_slash,
+            crush=eqp.attack_crush,
+            magic_attack=eqp.attack_magic,
+            ranged_attack=eqp.attack_ranged,
+            melee_strength=eqp.melee_strength,
+            ranged_strength=eqp.ranged_strength,
+            magic_strength=eqp.magic_damage / 100,
         )
+        db = DefensiveStats(
+            stab=eqp.defence_stab,
+            slash=eqp.defence_slash,
+            crush=eqp.defence_crush,
+            magic=eqp.defence_magic,
+            ranged=eqp.defence_ranged
+        )
+        pb = eqp.prayer
+        
+        if eqp.requirements is not None:
+            combat_key = 'combat'
+            if combat_key in eqp.requirements:
+                eqp.requirements.pop(combat_key)
+            
+            reqs = PlayerLevels(**{k: Level(v) for k, v in eqp.requirements.items()})
+        else:
+            reqs = PlayerLevels.no_requirements()
+
+        return cls(name, slot, ab, db, pb, reqs)
+
+
+
+
+
+
+
 
     def empty_slot(cls, slot: str):
         return
@@ -280,7 +296,7 @@ class Weapon(Gear):
     def from_bb(cls, name: str):
         name, slot, aggressive_bonus, defensive_bonus, prayer_bonus, level_requirements = \
             lookup_gear_base_attributes_by_name(name)
-        attack_speed, attack_range, two_handed, weapon_styles, _, _, _, _ = lookup_weapon_attributes_by_name(name)
+        attack_speed, attack_range, two_handed, weapon_styles, _, _, _ = lookup_weapon_attributes_by_name(name)
 
         if not slot is Slots.weapon:
             raise WeaponError(slot)
@@ -308,15 +324,8 @@ class SpecialWeapon(Weapon):
     def from_bb(cls, name: str):
         name, slot, aggressive_bonus, defensive_bonus, prayer_bonus, level_requirements = \
             lookup_gear_base_attributes_by_name(name)
-        attack_speed, attack_range, two_handed, weapon_styles, special_accuracy_modifier, special_damage_modifier_1, \
-            special_damage_modifier_2, special_defence_roll = lookup_weapon_attributes_by_name(name)
-
-        special_attack_roll_modifiers = [AttackRollModifier(special_accuracy_modifier, 'bitter')]
-        special_damage_modifiers = []
-        if special_damage_modifier_1 != 1:
-            special_damage_modifiers.append(special_damage_modifier_1)
-        if special_damage_modifier_2 != 1:
-            special_damage_modifiers.append(special_damage_modifier_2)
+        attack_speed, attack_range, two_handed, weapon_styles, spec_arm_mods, spec_dmg_mods, sdr = \
+            lookup_weapon_attributes_by_name(name)
 
         if not slot is Slots.weapon:
             raise WeaponError(slot)
@@ -331,15 +340,14 @@ class SpecialWeapon(Weapon):
             styles_coll=weapon_styles,
             attack_speed=attack_speed,
             two_handed=two_handed,
-            special_attack_roll_modifiers=special_attack_roll_modifiers,
-            special_damage_modifiers=special_damage_modifiers,
-            special_defence_roll=special_defence_roll,
+            special_attack_roll_modifiers=spec_arm_mods,
+            special_damage_modifiers=spec_dmg_mods,
+            special_defence_roll=sdr,
         )
 
     @classmethod
     def empty_slot(cls, slot: str = None):
         raise WeaponError(f'Attempt to create empty special weapon')
-
 
 
 def Equipment_weapon_validator(instance: Equipment, attribute: str, value: Weapon):
@@ -349,7 +357,6 @@ def Equipment_weapon_validator(instance: Equipment, attribute: str, value: Weapo
 
         if value.two_handed and instance.shield is not None:
             raise TwoHandedError(f'{value.name} equipped with {instance.shield.name}')
-
 
 
 def Equipment_shield_validator(instance: Equipment, attribute: str, value: Gear):
@@ -375,9 +382,6 @@ class Equipment:
     feet: Gear | None = None
     ring: Gear | None = None
 
-    @property
-    def equipped_gear(self) -> tuple[Gear | Weapon | SpecialWeapon]:
-        return tuple(g for g in astuple(self, recurse=False) if isinstance(g, Gear))
 
     # Basic properties and methods for manipulating Equipment objects ######################################################
     @property
@@ -403,6 +407,10 @@ class Equipment:
             return combined_level_reqs
         else:
             return PlayerLevels.no_requirements()
+
+    @property
+    def equipped_gear(self) -> tuple[Gear | Weapon | SpecialWeapon]:
+        return tuple(g for g in astuple(self, recurse=False) if isinstance(g, Gear))
 
     def equip(self, *gear: Gear | Weapon | SpecialWeapon, style: PlayerStyle = None, **kwargs) -> PlayerStyle | None:
         weapon_style = style if style is not None else None
@@ -442,7 +450,7 @@ class Equipment:
                 self.weapon = Weapon.empty_slot()
             else:
                 self.__setattr__(slot.name, None)
-        
+
         return return_style
 
     def wearing(self, *args, **kwargs) -> bool:
@@ -454,7 +462,7 @@ class Equipment:
         if m > 0:
             if any(self.__getattribute__(g.slot.name) != g for g in args):
                 return False
-        
+
         if n > 0:
             if any(self.__getattribute__(k) != v for k, v in kwargs.items()):
                 return False
@@ -490,7 +498,7 @@ class Equipment:
                     continue
         else:
             raise NotImplementedError
-        
+
         return self
 
     def __str__(self):
@@ -500,8 +508,11 @@ class Equipment:
     def __repr__(self):
         return self.__str__()
 
+    def __copy__(self):
+        return Equipment.from_unordered(*self.equipped_gear)
 
     # class methods ########################################################################################################
+
     @classmethod
     def from_unordered(cls, *gear: Gear | Weapon | SpecialWeapon):
         gear_dict = {g.slot.name: g for g in gear if isinstance(g, Gear)}
@@ -544,14 +555,12 @@ class Equipment:
             elif slot is Slots.weapon:
                 if self.weapon == Weapon.empty_slot():
                     return False
-            
+
             else:
                 if self.__getattribute__(slot.name) is None:
                     return False
-        
+
         return True
-
-
 
     @property
     def normal_void_set(self) -> bool:
@@ -834,7 +843,7 @@ class Equipment:
             Gear.from_bb('salve amulet (ei)')
         )
         return self.neck in qualifying_items
-    
+
     @property
     def slayer(self) -> bool:
         """Property representing whether the black mask / slayer helm effect is active.
@@ -893,6 +902,10 @@ class Equipment:
     def dragon_dagger(self) -> bool:
         qualifying_weapons = (SpecialWeapon.from_bb('dragon dagger'), )
         return self.weapon in qualifying_weapons
+
+    @property
+    def seercull(self) -> bool:
+        return self.wearing(weapon=SpecialWeapon.from_bb('seercull'))
 
     # Ammunition / Bolts ###################################################################################################
 
@@ -1179,7 +1192,7 @@ class Equipment:
         )
 
     def equip_scythe(self, berserker: bool = False, style: PlayerStyle = None) -> PlayerStyle:
-        
+
         if style is not None:
             weapon_style = style
         else:
@@ -1364,6 +1377,11 @@ class Equipment:
             Weapon.from_bb('bow of faerdhinen'),
             style=style
         )
+
+    def equip_seercull(self, style: PlayerStyle = None) -> PlayerStyle:
+        seercull = SpecialWeapon.from_bb('seercull')
+        style = style if style else BowStyles.get_by_stance(Stances.accurate)
+        return self.equip(seercull, style=style)
 
     # magic gear helpers ###################################################################################################
     def equip_ancestral_set(self):

@@ -92,6 +92,10 @@ class Styles(Enum):
     standard_spell = 'standard spell'
     defensive_spell = 'defensive spell'
 
+    npc_melee = 'monster melee'
+    npc_ranged = 'monster ranged'
+    npc_magic = 'monster magic'
+
 # Use case: if _ in XStances:
 MeleeStances = (Stances.accurate, Stances.aggressive, Stances.defensive, Stances.controlled)
 RangedStances = (Stances.accurate, Stances.rapid, Stances.longrange)
@@ -172,9 +176,16 @@ class TrackedValue:
     value: int | float
     comment: str | None = None
 
+
     def __post_init__(self):
+        if not isinstance(self.value, int):
+            self.value = int(self.value)
+
         if self.comment is None:
             self.comment = str(self.value)
+
+    def __floordiv__(self, other) -> int:
+        return math.floor(self.value // other)
 
     def __lt__(self, other) -> bool:
         if isinstance(other, self.__class__):
@@ -240,12 +251,24 @@ class Level(TrackedValue):
         elif isinstance(other, int):
             new_value = self.value - other
             new_comment = f'({self.comment!s} - {other!s})'
+        elif isinstance(other, float):
+            new_value = math.floor(self.value - other)
+            new_comment = f'⌊{self.comment!s} - {other!s}⌋'
         else:
             raise NotImplementedError
 
         return Level(new_value, new_comment)
 
-    def __mul__(self, other: LevelModifier) -> Level:
+    def __rsub__(self, other: int):
+        if isinstance(other, int):
+            new_value = int(other) - int(self)
+            new_comment = f'({other!s} - {self.comment!s})'
+        else:
+            raise NotImplementedError
+
+        return Level(new_value, new_comment)
+
+    def __mul__(self, other: LevelModifier | int) -> Level:
         if isinstance(other, LevelModifier):
             new_value = math.floor(int(self) * float(other))
             new_comment = f'⌊{self.comment!s} · {other.comment!s}⌋'
@@ -256,6 +279,10 @@ class Level(TrackedValue):
             raise NotImplementedError
 
         return Level(new_value, new_comment)
+
+    def __rmul__(self, other: int) -> int:
+        if isinstance(other, int):
+            return int(self * other)
 
     def __div__(self, other: int) -> int:
         if isinstance(other, int):
@@ -315,6 +342,9 @@ class Roll(TrackedValue):
         elif isinstance(other, int):
             new_value = self.value - other
             new_comment = f'({self.comment!s} - {other!s})'
+        elif isinstance(other, float):
+            new_value = math.floor(self.value - other)
+            new_comment = f'⌊{self.comment!s} - {other!s}⌋'
         else:
             raise NotImplementedError
 
@@ -409,6 +439,13 @@ class Modifier(TrackedValue):
     """
     value: float
     comment: str | None = None
+
+    def __post_init__(self):
+        if not isinstance(self.value, float):
+            self.value = float(self.value)
+
+        if self.comment is None:
+            self.comment = str(self.value)
 
     def __float__(self) -> float:
         return self.value
