@@ -507,6 +507,10 @@ class Boost(NamedTuple):
     name: str
     modifiers: CallableLevelsModifier | tuple[CallableLevelsModifier]
 
+    def __str__(self):
+        message = f'{self.__class__.__name__}({self.name})'
+        return message
+
 
 class CallableLevelsModifierBuilder:
 

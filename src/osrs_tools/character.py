@@ -99,7 +99,7 @@ class Character(ABC):
     @property
     def alive(self) -> bool:
         # TODO: this probably works because of PlayerLevel.__int__??
-        return self.levels.hitpoints > Level(0)
+        return int(self.levels.hitpoints) > 0
 
     @property
     @abstractmethod
@@ -240,7 +240,8 @@ class Character(ABC):
 
     def apply_vulnerability(self, success: bool = True, tome_of_water: bool = True):
         if success:
-            multiplier = 0.85 if tome_of_water else 0.90
+            comment = 'vulnerability'
+            multiplier = LevelModifier(0.85, comment) if tome_of_water else LevelModifier(0.90, comment)
             self.levels.defence = self.levels.defence * multiplier    # TODO: Confirm converter w/ceil
 
         return self.levels.defence
@@ -365,6 +366,12 @@ class Player(Character):
         
         return self.__class__(**unpacked_copy)
 
+    # class methods
+    @classmethod
+    def from_rsn(cls, rsn: str):
+        base_levels = PlayerLevels.from_rsn(rsn)
+        return cls(base_levels=base_levels, name=rsn)
+
     # properties
     @property
     def aggressive_bonus(self) -> AggressiveStats:
@@ -383,6 +390,9 @@ class Player(Character):
         elif (smoke := self._smoke_modifier()) is not None:
             _, gear_damage_bonus = smoke
             ab.magic_strength += gear_damage_bonus
+        elif self.active_style in ChinchompaStyles.styles:
+            if self.equipment.ammunition is not None:
+                ab.ranged_strength -= self.equipment.ammunition.aggressive_bonus.ranged_strength
         
         return ab
 
@@ -1440,13 +1450,24 @@ class Player(Character):
         self.special_energy_counter = 0
 
     def boost(self, *effects: Boost):
-        # TODO: Fixeroni
+        # TODO: Fixeroni big time
         for effect in effects:
 
             if isinstance(effect.modifiers, CallableLevelsModifier):
                 mods = (effect.modifiers, )
             elif isinstance(effect.modifiers, tuple):
-                mods = effect.modifiers
+                if all(isinstance(o, CallableLevelsModifier) for o in effect.modifiers):
+                    mods = effect.modifiers
+                elif all(isinstance(o, Boost) for o in effect.modifiers):
+                    mods = []
+                    for b in effect.modifiers:
+                        if isinstance(b.modifiers, CallableLevelsModifier):
+                            mods.append(b.modifiers)
+                        elif isinstance(b.modifiers, tuple):
+                            mods.extend(b.modifiers)
+                    
+                else:
+                    raise TypeError(effect.modifiers)
             else:
                 raise TypeError(effect.modifiers)
 
@@ -1946,7 +1967,7 @@ class CoxMonster(Monster):
 
             return cls(
                 name=name,
-                levels=base_levels,
+                base_levels=base_levels,
                 aggressive_bonus=aggressive_bonus,
                 defensive_bonus=defensive_bonus,
                 location=MonsterLocations.cox,
@@ -2009,7 +2030,7 @@ class IceDemon(CoxMonster):
 
         return cls(
             name=name,
-            levels=base_levels,
+            base_levels=base_levels,
             aggressive_bonus=aggressive_bonus,
             defensive_bonus=defensive_bonus,
             location=MonsterLocations.cox,
@@ -2031,7 +2052,9 @@ class DeathlyRanger(CoxMonster):
         special_attributes = (MonsterTypes.xerician, )
 
         attack_style = NpcStyle(
-            PlayerStyle.ranged,
+            Styles.npc_ranged,
+            DT.ranged,
+            Stances.npc,
             attack_speed=4,
             ignores_defence=False,
             ignores_prayer=True
@@ -2039,7 +2062,8 @@ class DeathlyRanger(CoxMonster):
 
         ranger = cls(
             name=name,
-            levels=base_levels,
+            base_levels=base_levels,
+            styles_coll=StylesCollection(name, (attack_style, ), attack_style),
             aggressive_bonus=aggressive_bonus,
             defensive_bonus=defensive_bonus,
             location=MonsterLocations.cox,
@@ -2048,8 +2072,7 @@ class DeathlyRanger(CoxMonster):
             challenge_mode=challenge_mode,
             **kwargs
         )
-        ranger.styles_coll = StylesCollection(ranger.name, (attack_style, ))
-        ranger.active_style = ranger.styles_coll.styles[0]
+
         return ranger
 
     def count_per_room(self) -> int:
@@ -2057,7 +2080,7 @@ class DeathlyRanger(CoxMonster):
         source: @JagexAsh
         https://twitter.com/JagexAsh/status/1386459382834139136
         """
-        count = np.floor(1 + self.party_size/5)
+        count = math.floor(1 + self.party_size/5)
         count = min([count, 4])
         return count
 
@@ -2073,7 +2096,9 @@ class DeathlyMage(CoxMonster):
         special_attributes = (MonsterTypes.xerician, )
 
         attack_style = NpcStyle(
-            PlayerStyle.magic,
+            Styles.npc_magic,
+            DT.magic,
+            Stances.npc,
             attack_speed=4,
             ignores_defence=False,
             ignores_prayer=True
@@ -2081,7 +2106,8 @@ class DeathlyMage(CoxMonster):
 
         mage = cls(
             name=name,
-            levels=base_levels,
+            base_levels=base_levels,
+            styles_coll=StylesCollection(name, (attack_style,), attack_style),
             aggressive_bonus=aggressive_bonus,
             defensive_bonus=defensive_bonus,
             location=MonsterLocations.cox,
@@ -2090,8 +2116,7 @@ class DeathlyMage(CoxMonster):
             challenge_mode=challenge_mode,
             **kwargs
         )
-        mage.styles_coll = StylesCollection(mage.name, (attack_style,))
-        mage.active_style = mage.styles_coll.styles[0]
+
         return mage
 
     def count_per_room(self) -> int:
@@ -2099,7 +2124,7 @@ class DeathlyMage(CoxMonster):
         source: @JagexAsh
         https://twitter.com/JagexAsh/status/1386459382834139136
         """
-        count = np.floor(1 + self.party_size/5)
+        count = math.floor(1 + self.party_size/5)
         count = min([count, 4])
         return count
 
@@ -2168,13 +2193,17 @@ class LizardmanShaman(CoxMonster):
         special_attributes = (MonsterTypes.xerician, )
 
         ranged_style = NpcStyle(
-            PlayerStyle.ranged,
+            Styles.npc_ranged,
+            DT.ranged,
+            Stances.npc,
             attack_speed=4,
             ignores_defence=False,
             ignores_prayer=False
         )
         melee_style = NpcStyle(
-            PlayerStyle.crush,
+            Styles.npc_melee,
+            DT.crush,
+            Stances.npc,
             attack_speed=4,
             ignores_defence=False,
             ignores_prayer=False
@@ -2182,7 +2211,7 @@ class LizardmanShaman(CoxMonster):
 
         shaman = cls(
             name=name,
-            levels=base_levels,
+            base_levels=base_levels,
             aggressive_bonus=aggressive_bonus,
             defensive_bonus=defensive_bonus,
             location=MonsterLocations.cox,
@@ -2191,7 +2220,7 @@ class LizardmanShaman(CoxMonster):
             challenge_mode=challenge_mode,
             **kwargs
         )
-        shaman.styles_coll = StylesCollection(shaman.name, (ranged_style, melee_style))
+        shaman.styles_coll = StylesCollection(shaman.name, (ranged_style, melee_style), ranged_style)
         shaman.active_style = ranged_style
         return shaman
 
@@ -2202,8 +2231,8 @@ class LizardmanShaman(CoxMonster):
         """
         scale_at_load_time = self.party_size if scale_at_load_time is None else scale_at_load_time
 
-        count = np.floor(2 + scale_at_load_time/5)
-        count = min([count, 12])
+        count = math.floor(2 + scale_at_load_time/5)
+        count = min([count, 5])
         return count
 
 
@@ -2286,7 +2315,7 @@ class SmallMuttadile(CoxMonster):
 
         smol_mutta = cls(
             name=name,
-            levels=base_levels,
+            base_levels=base_levels,
             aggressive_bonus=aggressive_bonus,
             defensive_bonus=defensive_bonus,
             location=MonsterLocations.cox,
@@ -2330,7 +2359,7 @@ class BigMuttadile(CoxMonster):
 
         big_mutta = cls(
             name=name,
-            levels=base_levels,
+            base_levels=base_levels,
             aggressive_bonus=aggressive_bonus,
             defensive_bonus=defensive_bonus,
             location=MonsterLocations.cox,
@@ -2363,7 +2392,7 @@ class Tekton(CoxMonster):
 
         return cls(
             name=name,
-            levels=base_levels,
+            base_levels=base_levels,
             aggressive_bonus=aggressive_bonus,
             defensive_bonus=defensive_bonus,
             location=MonsterLocations.cox,
@@ -2385,7 +2414,7 @@ class TektonEnraged(Tekton):
 
         return cls(
             name=name,
-            levels=base_levels,
+            base_levels=base_levels,
             aggressive_bonus=aggressive_bonus,
             defensive_bonus=defensive_bonus,
             location=MonsterLocations.cox,
@@ -2447,7 +2476,7 @@ class Olm(CoxMonster, ABC):
 class OlmMeleeHand(Olm):
 
     def count_per_room(self) -> int:
-        return self.phases()
+        return self.phases
 
     @classmethod
     def from_de0(cls, party_size: int, challenge_mode: bool = False, **kwargs):
@@ -2480,7 +2509,7 @@ class OlmMeleeHand(Olm):
 class OlmMageHand(Olm):
 
     def count_per_room(self) -> int:
-        return self.phases()
+        return self.phases
 
     @classmethod
     def from_de0(cls, party_size: int, challenge_mode: bool = False, **kwargs):
@@ -2595,13 +2624,17 @@ class OlmHead(Olm):
         special_attributes = (MonsterTypes.xerician, MonsterTypes.draconic)
 
         ranged_style = NpcStyle(
-            PlayerStyle.ranged,
+            Styles.npc_ranged,
+            DT.ranged,
+            Stances.npc,
             attack_speed=4,
             ignores_defence=False,
             ignores_prayer=True
         )
         magic_style = NpcStyle(
-            PlayerStyle.magic,
+            Styles.npc_magic,
+            DT.magic,
+            Stances.npc,
             attack_speed=4,
             ignores_defence=False,
             ignores_prayer=True
@@ -2609,7 +2642,7 @@ class OlmHead(Olm):
 
         olm_head = cls(
             name=name,
-            levels=base_levels,
+            base_levels=base_levels,
             aggressive_bonus=aggressive_bonus,
             defensive_bonus=defensive_bonus,
             location=MonsterLocations.cox,
@@ -2619,7 +2652,7 @@ class OlmHead(Olm):
             challenge_mode=challenge_mode,
             **kwargs
         )
-        olm_head.styles_coll = StylesCollection(olm_head.name, (ranged_style, magic_style))
+        olm_head.styles_coll = StylesCollection(olm_head.name, (ranged_style, magic_style), magic_style)
         olm_head.active_style = ranged_style
         return olm_head
 

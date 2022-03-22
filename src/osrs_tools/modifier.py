@@ -284,8 +284,10 @@ class Level(TrackedValue):
         if isinstance(other, int):
             return int(self * other)
 
-    def __div__(self, other: int) -> int:
-        if isinstance(other, int):
+    def __truediv__(self, other: int | float | Level) -> int | float:
+        if isinstance(other, Level):
+            return int(self) / int(other)
+        elif isinstance(other, int) or isinstance(other, float):
             return int(self) / other
         else:
             raise NotImplementedError

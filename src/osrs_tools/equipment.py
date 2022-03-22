@@ -1,4 +1,5 @@
 from __future__ import annotations
+from ctypes import ArgumentError
 from osrsbox import items_api
 from osrsbox.items_api.item_properties import ItemEquipment, ItemProperties, ItemWeapon
 import functools
@@ -381,6 +382,7 @@ class Equipment:
     hands: Gear | None = None
     feet: Gear | None = None
     ring: Gear | None = None
+    set_name: str | None = None
 
 
     # Basic properties and methods for manipulating Equipment objects ######################################################
@@ -502,7 +504,11 @@ class Equipment:
         return self
 
     def __str__(self):
-        message = f'{self.__class__.__name__}({", ".join([g.name for g in self.equipped_gear])})'
+        if self.set_name is None:
+            message = f'{self.__class__.__name__}({", ".join([g.name for g in self.equipped_gear])})'
+        else:
+            message = f'{self.__class__.__name__}({self.set_name})'
+
         return message
 
     def __repr__(self):
@@ -1320,17 +1326,26 @@ class Equipment:
         )
 
     def equip_black_chins(self, buckler: bool = True, style: PlayerStyle = None) -> PlayerStyle:
-        # TODO: Look into ammunition problems with chinchompa calculations
+        """legacy function, see @equip_chins
+        """
+        return self.equip_chins(buckler=buckler, black=True, style=style)
+
+    def equip_chins(self, buckler: bool = True, black: bool = False, red: bool = False, grey: bool = False, style: PlayerStyle = None) -> PlayerStyle:
+        chin_name = None
+        if black:
+            chin_name = 'black chinchompa'
+        elif red:
+            chin_name = 'red chinchompa'
+        elif grey:
+            chin_name = 'grey chinchompa'
+        else:
+            raise WeaponError(f'no chins bruh')
+        
+        chins = Weapon.from_bb(chin_name)
         gear = (Gear.from_bb('twisted buckler'), ) if buckler else tuple()
         style = style if style else ChinchompaStyles.default
 
-        self.unequip(Slots.ammunition)
-
-        return self.equip(
-            Weapon.from_bb('black chinchompa'),
-            *gear,
-            style=style
-        )
+        return self.equip(chins, *gear, style=style)
 
     def equip_zaryte_crossbow(self, buckler: bool = True, rubies: bool = False, diamonds: bool = False,
                               style: PlayerStyle = None) -> PlayerStyle:

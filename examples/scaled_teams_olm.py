@@ -1,5 +1,5 @@
 from osrs_tools.character import *
-from osrs_tools.analysis_tools import ComparisonMode, DataMode, tabulate_wrapper, generic_comparison_better
+from osrs_tools.analysis_tools import ComparisonMode, DataMode, tabulate_enhanced, bedevere_the_wise
 
 from itertools import product
 import math
@@ -10,9 +10,9 @@ def shaun_vs_normie(**kwargs):
     shaun_rsn = '31 pray btw'
     shaun_levels = PlayerLevels.from_rsn(shaun_rsn)
     shaun_prayers = PrayerCollection(Prayer.mystic_lore())
-    old_shaun = Player(name=f'{shaun_rsn} (trident)', levels=shaun_levels, prayers=shaun_prayers)
-    shaun = Player(name=f'{shaun_rsn} (sang)', levels=shaun_levels, prayers=shaun_prayers)
-    normie = Player(name='normie', levels=PlayerLevels.maxed_player(), prayers=PrayerCollection(Prayer.augury()))
+    old_shaun = Player(name=f'{shaun_rsn} (trident)', base_levels=shaun_levels, prayers_coll=shaun_prayers)
+    shaun = Player(name=f'{shaun_rsn} (sang)', base_levels=shaun_levels, prayers_coll=shaun_prayers)
+    normie = Player(name='normie', base_levels=PlayerLevels.maxed_player(), prayers_coll=PrayerCollection(Prayer.augury()))
     lads = (old_shaun, shaun, normie)
 
     # equipment
@@ -51,7 +51,7 @@ def shaun_vs_normie(**kwargs):
     scale_data = np.arange(1, 101)
     olms = tuple(OlmMageHand.from_de0(ps) for ps in scale_data)
     
-    indices, axes, data_ary = generic_comparison_better(lads, target=olms, comparison_mode=ComparisonMode.CARTESIAN, data_mode=DataMode.DPS)
+    indices, axes, data_ary = bedevere_the_wise(lads, target=olms, comparison_mode=ComparisonMode.CARTESIAN, data_mode=DataMode.DPS)
 
     row_labels = axes[0]
     col_labels = axes[-1]
@@ -119,7 +119,7 @@ class SwitchPrayers(PrayerRoutine):
         elif last_auto.damage_type in Style.melee_damage_types:
             pc.pray(Prayer.protect_from_melee())
         
-        player.prayers = pc
+        player.prayers_coll = pc
 
 
 class CampPrayer(PrayerRoutine):
@@ -131,8 +131,8 @@ class CampPrayer(PrayerRoutine):
             player (Player): A Player.
             prayer_collection (PrayerCollection): A complete PrayerCollection, including protect prayer & boosts.
         """
-        if player.prayers.prayers != prayer_collection.prayers:
-            player.prayers = prayer_collection
+        if player.prayers_coll.prayers != prayer_collection.prayers:
+            player.prayers_coll = prayer_collection
 
 
 def prayer_routine_comparison(scale: int, trials: int):
@@ -143,32 +143,32 @@ def prayer_routine_comparison(scale: int, trials: int):
     prot_ranged = Prayer.protect_from_missiles()
     prot_magic = Prayer.protect_from_magic()
 
-    olm_ranged = olm.styles.get_style(Style.ranged)
-    olm_magic = olm.styles.get_style(Style.magic)
+    olm_ranged = olm.styles_coll.get_style(Style.ranged)
+    olm_magic = olm.styles_coll.get_style(Style.magic)
 
 
     def switch_to_last(player: Player, last_auto: NpcStyle, boost_prayer: Prayer):
-        if last_auto == olm.styles.get_style(Style.ranged):
-            player.prayers.reset_prayers()
+        if last_auto == olm.styles_coll.get_style(Style.ranged):
+            player.prayers_coll.reset_prayers()
             player.pray(boost_prayer, prot_ranged)
-        elif last_auto == olm.styles.get_style(Style.magic):
-            player.prayers.reset_prayers()
-            player.prayers.pray(boost_prayer, prot_magic)
+        elif last_auto == olm.styles_coll.get_style(Style.magic):
+            player.prayers_coll.reset_prayers()
+            player.prayers_coll.pray(boost_prayer, prot_magic)
         else:
             raise NotImplementedError(f'{last_auto}')
 
     def camp_prot_magic(player: Player, last_auto: NpcStyle, boost_prayer: Prayer):
-        if prot_magic in player.prayers:
+        if prot_magic in player.prayers_coll:
             pass
         else:
-            player.prayers.reset_prayers()
+            player.prayers_coll.reset_prayers()
             player.pray(boost_prayer, prot_magic)
 
     def camp_prot_ranged(player: Player, last_auto: NpcStyle, boost_prayer: Prayer):
-        if prot_ranged in player.prayers:
+        if prot_ranged in player.prayers_coll:
             pass
         else:
-            player.prayers.reset_prayers()
+            player.prayers_coll.reset_prayers()
             player.pray(boost_prayer, prot_ranged)
 
     # lads
@@ -204,7 +204,7 @@ def prayer_routine_comparison(scale: int, trials: int):
     for routine_idx, (melee_routine, magic_routine) in enumerate(zip(melee_prayer_routines, magic_prayer_routines, strict=True)):
         # initial values, any leading influence should disappear with sufficiently large trial size
         for lad in lads:
-            lad.prayers.reset_prayers()
+            lad.prayers_coll.reset_prayers()
         
         melee_lad.pray(prot_magic, piety)
         blood_fury_lad.pray(prot_magic, piety)
@@ -256,7 +256,7 @@ def prayer_routine_comparison(scale: int, trials: int):
     row_labels = [p.name for p in lads]
     meta_header = 'Prayer routine mean damage expected'
 
-    print(tabulate_wrapper(table_data, col_labels, row_labels, meta_header))
+    print(tabulate_enhanced(table_data, col_labels, row_labels, meta_header))
     # print(f'{melee_lad_mean_damage_switch}, {melee_lad_mean_damage_camp}, {magic_lad_mean_damage_switch}, {magic_lad_mean_damage_camp}')
 
     return np.asarray(table_data), col_labels, row_labels, meta_header
