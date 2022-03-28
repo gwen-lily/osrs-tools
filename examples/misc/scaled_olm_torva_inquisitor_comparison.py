@@ -80,6 +80,9 @@ def limited_switches_dwh_comparison(n: int = 5):
         _, table = robin_2d(lad, olm, eqp, n, data_mode=DataMode.DWH_SUCCESS, special_attack=True, floatfmt='.3f', meta_header=meta_header, sort_cols=True, ascending=False)
         print(table)
 
+        with open('out.txt', 'w') as f:
+            f.writelines(table)
+
 
 def limited_switches_guardian_comparison(n: int = 5):
     eqp = Equipment()

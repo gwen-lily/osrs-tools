@@ -15,7 +15,7 @@ def room_estimates(scale: int, hammers: int = 0, thralls: bool = False, **kwargs
 
 	lad = Player(name='lad')
 	lad.boost(Overload.overload())
-	lad.prayers.pray(Prayer.rigour(), Prayer.protect_from_magic())
+	lad.prayers_coll.pray(Prayer.rigour(), Prayer.protect_from_magic())
 	lad.equipment.equip_arma_set(zaryte=True)
 	lad.equipment.equip_basic_ranged_gear(anguish=False)
 	lad.equipment.equip_salve()
@@ -29,7 +29,7 @@ def room_estimates(scale: int, hammers: int = 0, thralls: bool = False, **kwargs
 	dam = lad.damage_distribution(mystic)
 	dpt = dam.per_tick + 0.625*thralls
 
-	ticks_per_mystic = mystic.levels.hitpoints / dpt
+	ticks_per_mystic = mystic.base_levels.hitpoints / dpt
 	ticks_total = ticks_per_mystic * mystics_count
 	minutes_total = ticks_total / 100
 
@@ -39,9 +39,9 @@ def room_estimates(scale: int, hammers: int = 0, thralls: bool = False, **kwargs
 	pp_used_by_thralls = ticks_total / ticks_per_summon * pp_user_per_summon
 	pp_used = pp_used_by_prayer + pp_used_by_thralls
 
-	lad.active_levels.prayer = 0
+	lad.levels.prayer = 0
 	lad.boost(Boost.super_restore())
-	pp_gained_per_restore = lad.active_levels.prayer * 4
+	pp_gained_per_restore = lad.levels.prayer * 4
 	super_restore_used = np.ceil(pp_used / pp_gained_per_restore)
 
 	table_data = [ticks_per_mystic, minutes_total, super_restore_used]
@@ -63,7 +63,7 @@ def dwh_setup(**kwargs):
 	levels = [PlayerLevels(attack=99, strength=i) for i in strength_levels]
 
 	boosts = [Boost.super_attack_potion()]
-	lad.prayers.pray(Prayer.piety())
+	lad.prayers_coll.pray(Prayer.piety())
 
 	lad.equipment.equip_basic_melee_gear()  # lots of overwrite
 	lad.active_style = lad.equipment.equip_dwh(tyrannical=True)
@@ -83,7 +83,7 @@ def dwh_setup(**kwargs):
 
 	mystics = [SkeletalMystic.from_de0(ps) for ps in options['scales']]
 
-	indices, axes, data_ary = analysis_tools.generic_comparison_better(
+	indices, axes, data_ary = analysis_tools.bedevere_the_wise(
 		lad,
 		levels=levels,
 		boosts=boosts,
@@ -101,7 +101,7 @@ def dwh_setup(**kwargs):
 	gear_by_strength_at_1_scale = slice_3d[:, :, -1].T
 	column_headers: list[str | int] = [DataMode.DWH_SUCCESS.name] + [lev.strength for lev in levels]
 
-	print(analysis_tools.tabulate_wrapper(
+	print(analysis_tools.tabulate_enhanced(
 		gear_by_strength_at_1_scale,
 		column_headers,
 		equipments,

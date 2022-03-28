@@ -18,7 +18,7 @@ def aggro_check(**kwargs):
 
 	lad = Player(name='hybrid tank')
 	lad.boost(Overload.overload())
-	lad.prayers.pray(Prayer.augury())
+	lad.prayers_coll.pray(Prayer.augury())
 
 	lad.active_style = lad.equipment.equip(
 		Gear.from_osrsbox('bearhead'),
@@ -41,7 +41,7 @@ def aggro_check(**kwargs):
 		for scale in options['scales']:
 			monsters.append(mc.from_de0(scale))
 
-	indices, axes, data_ary = analysis_tools.generic_comparison_better(
+	indices, axes, data_ary = analysis_tools.bedevere_the_wise(
 		lad,
 		target=monsters,
 		comparison_mode=ComparisonMode.PARALLEL,
@@ -79,7 +79,7 @@ def hybrid_tank(**kwargs):
 			suffering
 		)
 		lad.boost(Overload.overload())
-		lad.prayers.pray(Prayer.augury())
+		lad.prayers_coll.pray(Prayer.augury())
 
 	void_tank.equipment.equip_void_set()
 
@@ -101,7 +101,7 @@ def chin_estimate(**kwargs):
 	lad.equipment.equip_arma_set(zaryte=True)
 	lad.active_style = lad.equipment.equip_black_chins(buckler=True)
 	lad.boost(Overload.overload())
-	lad.prayers.pray(Prayer.rigour())
+	lad.prayers_coll.pray(Prayer.rigour())
 
 	equipments = [
 		Equipment(weapon=greys),
@@ -112,7 +112,7 @@ def chin_estimate(**kwargs):
 	monster_classes = [DeathlyMage, DeathlyRanger]
 	monsters = [mc.from_de0(ps) for ps in scales for mc in monster_classes]
 
-	indices, axes, data_ary = analysis_tools.generic_comparison_better(
+	indices, axes, data_ary = analysis_tools.bedevere_the_wise(
 		lad,
 		equipment=equipments,
 		target=monsters,
@@ -123,7 +123,7 @@ def chin_estimate(**kwargs):
 
 	col_labels = axes[6][:]
 	row_labels = axes[4][:]
-	print(analysis_tools.tabulate_wrapper(slice, col_labels, row_labels, **options))
+	print(analysis_tools.tabulate_enhanced(slice, col_labels, row_labels, **options))
 
 
 def shaman_estimate(**kwargs):
@@ -144,7 +144,7 @@ def shaman_estimate(**kwargs):
 	lad.equipment.equip_slayer_helm()
 	lad.active_style = lad.equipment.equip_black_chins(buckler=True)
 	lad.boost(Overload.overload())
-	lad.prayers.pray(Prayer.rigour())
+	lad.prayers_coll.pray(Prayer.rigour())
 
 	equipments = [
 		Equipment(weapon=greys),
@@ -155,7 +155,7 @@ def shaman_estimate(**kwargs):
 	monster_classes = [LizardmanShaman]
 	monsters = [mc.from_de0(ps) for ps in scales for mc in monster_classes]
 
-	indices, axes, data_ary = analysis_tools.generic_comparison_better(
+	indices, axes, data_ary = analysis_tools.bedevere_the_wise(
 		lad,
 		equipment=equipments,
 		target=monsters,
@@ -166,7 +166,7 @@ def shaman_estimate(**kwargs):
 
 	col_labels = axes[6][:]
 	row_labels = axes[4][:]
-	print(analysis_tools.tabulate_wrapper(slice, col_labels, row_labels, **options))
+	print(analysis_tools.tabulate_enhanced(slice, col_labels, row_labels, **options))
 
 
 def mystic_estimates(**kwargs):
@@ -183,12 +183,12 @@ def mystic_estimates(**kwargs):
 	lad.equipment.equip_arma_set(zaryte=True)
 	lad.active_style = lad.equipment.equip_black_chins(buckler=True)
 	lad.boost(Overload.overload())
-	lad.prayers.pray(Prayer.rigour())
+	lad.prayers_coll.pray(Prayer.rigour())
 
 	monster_classes = [SkeletalMystic]
 	monsters = [mc.from_de0(ps) for ps in scales for mc in monster_classes]
 
-	indices, axes, data_ary = analysis_tools.generic_comparison_better(
+	indices, axes, data_ary = analysis_tools.bedevere_the_wise(
 		lad,
 		target=monsters,
 		comparison_mode=ComparisonMode.CARTESIAN,
@@ -198,7 +198,7 @@ def mystic_estimates(**kwargs):
 
 	col_labels = axes[6][:]
 	row_labels = axes[0][:]
-	print(analysis_tools.tabulate_wrapper(slice, col_labels, row_labels, **options))
+	print(analysis_tools.tabulate_enhanced(slice, col_labels, row_labels, **options))
 
 
 

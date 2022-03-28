@@ -1,15 +1,23 @@
 import itertools
 from dataclasses import dataclass
 
-from osrs_tools.modifier import DT, Stances, Styles, MagicDamageTypes, MeleeDamageTypes, RangedDamageTypes, SpellStylesNames
-from osrs_tools.stats import StyleStats
 from osrs_tools.exceptions import OsrsException
+from osrs_tools.modifier import (
+    DT,
+    MagicDamageTypes,
+    MeleeDamageTypes,
+    RangedDamageTypes,
+    SpellStylesNames,
+    Stances,
+    Styles,
+)
+from osrs_tools.stats import StyleStats
 
 
 @dataclass(eq=True)
 class Style:
-    """A Style object with information about combat bonuses and modifiers.
-    """
+    """A Style object with information about combat bonuses and modifiers."""
+
     name: Styles
     damage_type: DT
     stance: Stances
@@ -20,7 +28,6 @@ class Style:
 
 @dataclass(eq=True)
 class PlayerStyle(Style):
-
     def __post_init__(self):
         attack_speed_modifier = 0
         attack_range_modifier = 0
@@ -101,9 +108,9 @@ class StylesCollection:
         if (n := len(matches)) == 1:
             return matches[0]
         elif n == 0:
-            raise StyleError(f'No styles with {dt}')
+            raise StyleError(f"No styles with {dt}")
         else:
-            raise StyleError(f'More than one style with {dt}')
+            raise StyleError(f"More than one style with {dt}")
 
     def get_by_stance(self, stance: Stances) -> Style:
         matches = [s for s in self.styles if s.stance is stance]
@@ -111,9 +118,9 @@ class StylesCollection:
         if (n := len(matches)) == 1:
             return matches[0]
         elif n == 0:
-            raise StyleError(f'No style with {stance}')
+            raise StyleError(f"No style with {stance}")
         else:
-            raise StyleError(f'More than one style with {stance}')
+            raise StyleError(f"More than one style with {stance}")
 
     @classmethod
     def from_weapon_type(cls, weapon_type: str):
@@ -123,8 +130,9 @@ class StylesCollection:
 
         raise StyleError(weapon_type)
 
+
 TwoHandedStyles = StylesCollection(
-    'two-handed swords',
+    "two-handed swords",
     (
         PlayerStyle(Styles.chop, DT.slash, Stances.accurate),
         PlayerStyle(Styles.slash, DT.slash, Stances.aggressive),
@@ -135,7 +143,7 @@ TwoHandedStyles = StylesCollection(
 )
 
 AxesStyles = StylesCollection(
-    'axes',
+    "axes",
     (
         PlayerStyle(Styles.chop, DT.slash, Stances.accurate),
         PlayerStyle(Styles.hack, DT.slash, Stances.aggressive),
@@ -146,7 +154,7 @@ AxesStyles = StylesCollection(
 )
 
 BluntStyles = StylesCollection(
-    'blunt weapons',
+    "blunt weapons",
     (
         PlayerStyle(Styles.pound, DT.crush, Stances.accurate),
         PlayerStyle(Styles.pummel, DT.crush, Stances.aggressive),
@@ -156,15 +164,13 @@ BluntStyles = StylesCollection(
 )
 
 BludgeonStyles = StylesCollection(
-    'bludgeons',
-    (
-        PlayerStyle(Styles.pummel, DT.crush, Stances.aggressive),
-    ),
+    "bludgeons",
+    (PlayerStyle(Styles.pummel, DT.crush, Stances.aggressive),),
     PlayerStyle(Styles.pummel, DT.crush, Stances.aggressive),
 )
 
 BulwarkStyles = StylesCollection(
-    'bulwarks',
+    "bulwarks",
     (
         PlayerStyle(Styles.pummel, DT.crush, Stances.accurate),
         PlayerStyle(Styles.block, DT.crush, Stances.defensive),
@@ -173,7 +179,7 @@ BulwarkStyles = StylesCollection(
 )
 
 ClawStyles = StylesCollection(
-    'claws',
+    "claws",
     (
         PlayerStyle(Styles.chop, DT.slash, Stances.accurate),
         PlayerStyle(Styles.slash, DT.slash, Stances.aggressive),
@@ -184,7 +190,7 @@ ClawStyles = StylesCollection(
 )
 
 PickaxeStyles = StylesCollection(
-    'pickaxes',
+    "pickaxes",
     (
         PlayerStyle(Styles.spike, DT.stab, Stances.accurate),
         PlayerStyle(Styles.impale, DT.stab, Stances.aggressive),
@@ -195,7 +201,7 @@ PickaxeStyles = StylesCollection(
 )
 
 PolearmStyles = StylesCollection(
-    'polearms',
+    "polearms",
     (
         PlayerStyle(Styles.jab, DT.stab, Stances.controlled),
         PlayerStyle(Styles.swipe, DT.slash, Stances.aggressive),
@@ -205,7 +211,7 @@ PolearmStyles = StylesCollection(
 )
 
 ScytheStyles = StylesCollection(
-    'scythes',
+    "scythes",
     (
         PlayerStyle(Styles.reap, DT.slash, Stances.accurate),
         PlayerStyle(Styles.chop, DT.slash, Stances.aggressive),
@@ -216,7 +222,7 @@ ScytheStyles = StylesCollection(
 )
 
 SlashSwordStyles = StylesCollection(
-    'slash swords',
+    "slash swords",
     (
         PlayerStyle(Styles.chop, DT.slash, Stances.accurate),
         PlayerStyle(Styles.slash, DT.slash, Stances.aggressive),
@@ -227,7 +233,7 @@ SlashSwordStyles = StylesCollection(
 )
 
 SpearStyles = StylesCollection(
-    'spears',
+    "spears",
     (
         PlayerStyle(Styles.lunge, DT.stab, Stances.controlled),
         PlayerStyle(Styles.swipe, DT.slash, Stances.controlled),
@@ -238,7 +244,7 @@ SpearStyles = StylesCollection(
 )
 
 SpikedWeaponsStyles = StylesCollection(
-    'spiked weapons',
+    "spiked weapons",
     (
         PlayerStyle(Styles.pound, DT.crush, Stances.accurate),
         PlayerStyle(Styles.pummel, DT.crush, Stances.aggressive),
@@ -249,7 +255,7 @@ SpikedWeaponsStyles = StylesCollection(
 )
 
 StabSwordStyles = StylesCollection(
-    'stab swords',
+    "stab swords",
     (
         PlayerStyle(Styles.stab, DT.stab, Stances.accurate),
         PlayerStyle(Styles.lunge, DT.stab, Stances.aggressive),
@@ -260,7 +266,7 @@ StabSwordStyles = StylesCollection(
 )
 
 UnarmedStyles = StylesCollection(
-    'unarmed weapons',
+    "unarmed weapons",
     (
         PlayerStyle(Styles.punch, DT.crush, Stances.accurate),
         PlayerStyle(Styles.kick, DT.crush, Stances.aggressive),
@@ -270,7 +276,7 @@ UnarmedStyles = StylesCollection(
 )
 
 WhipStyles = StylesCollection(
-    'whips',
+    "whips",
     (
         PlayerStyle(Styles.flick, DT.slash, Stances.accurate),
         PlayerStyle(Styles.lash, DT.slash, Stances.controlled),
@@ -280,7 +286,7 @@ WhipStyles = StylesCollection(
 )
 
 BowStyles = StylesCollection(
-    'bow',
+    "bow",
     (
         PlayerStyle(Styles.accurate, DT.ranged, Stances.accurate),
         PlayerStyle(Styles.rapid, DT.ranged, Stances.rapid),
@@ -290,7 +296,7 @@ BowStyles = StylesCollection(
 )
 
 ChinchompaStyles = StylesCollection(
-    'chinchompas',
+    "chinchompas",
     (
         PlayerStyle(Styles.short_fuse, DT.ranged, Stances.accurate),
         PlayerStyle(Styles.medium_fuse, DT.ranged, Stances.rapid),
@@ -300,7 +306,7 @@ ChinchompaStyles = StylesCollection(
 )
 
 CrossbowStyles = StylesCollection(
-    'crossbow',
+    "crossbow",
     (
         PlayerStyle(Styles.accurate, DT.ranged, Stances.accurate),
         PlayerStyle(Styles.rapid, DT.ranged, Stances.rapid),
@@ -310,7 +316,7 @@ CrossbowStyles = StylesCollection(
 )
 
 ThrownStyles = StylesCollection(
-    'thrown',
+    "thrown",
     (
         PlayerStyle(Styles.accurate, DT.ranged, Stances.accurate),
         PlayerStyle(Styles.rapid, DT.ranged, Stances.rapid),
@@ -320,7 +326,7 @@ ThrownStyles = StylesCollection(
 )
 
 BladedStaffStyles = StylesCollection(
-    'bladed staves',
+    "bladed staves",
     (
         PlayerStyle(Styles.jab, DT.stab, Stances.accurate),
         PlayerStyle(Styles.swipe, DT.slash, Stances.aggressive),
@@ -332,7 +338,7 @@ BladedStaffStyles = StylesCollection(
 )
 
 PoweredStaffStyles = StylesCollection(
-    'powered staves',
+    "powered staves",
     (
         PlayerStyle(Styles.accurate, DT.magic, Stances.accurate),
         PlayerStyle(Styles.longrange, DT.magic, Stances.longrange),
@@ -341,7 +347,7 @@ PoweredStaffStyles = StylesCollection(
 )
 
 StaffStyles = StylesCollection(
-    'staves',
+    "staves",
     (
         PlayerStyle(Styles.bash, DT.crush, Stances.accurate),
         PlayerStyle(Styles.pound, DT.crush, Stances.aggressive),

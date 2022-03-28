@@ -1,12 +1,7 @@
-.idea
-.idea/*
-.venv
-.venv/*
-venv
-venv/*
-__pycache__
-__pycache__/*
-.vscode
+.idea*
+.venv*
+__pycache__*
+.vscode*
 
 *.pyc
 *.xml
@@ -15,6 +10,8 @@ __pycache__/*
 *.pyc
 *.xml
 *.txt
+*.png
+
 resources/wiki_items_working_list.csv
 resources/bitterkoekje_items_bedevere_modified_specials_sorted_filtered.csv
 resources/bitterkoekje_items_bedevere_modified_specials_only.csv

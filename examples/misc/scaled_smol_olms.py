@@ -1,6 +1,9 @@
+from random import random
+from turtle import pu
 from osrs_tools.character import *
 from osrs_tools import analysis_tools
-from osrs_tools.analysis_tools import DataMode, bedevere_the_wise, table_2d, bedevere_2d
+from osrs_tools.analysis_tools import DataMode, bedevere_the_wise, table_2d, bedevere_2d, tabulate_enhanced
+from osrs_tools.damage import TICKS_PER_HOUR, TICKS_PER_MINUTE
 
 from osrs_tools.equipment import Slots
 
@@ -8,7 +11,6 @@ from itertools import product
 import math
 import pandas as pd
 from tabulate import tabulate
-
 
 avernic_defender = Gear.from_bb('avernic defender')
 elysian_spirit_shield = Gear.from_bb('elysian spirit shield')
@@ -31,54 +33,12 @@ book_of_the_dead = Gear(
 torva_full_helm = Gear.from_bb('torva full helm')
 bgloves = Gear.from_bb('barrows gloves')
 fgloves = Gear.from_bb('ferocious gloves')
+arcane_spirit_shield = Gear.from_bb('arcane spirit shield')
+berserker_ring = Gear.from_bb('berserker (i)')
 
 
 
-
-def magic_shield_comparison(**kwargs):
-
-	options = {
-		'floatfmt': '.1f',
-	}
-	options.update(kwargs)
-
-	lad = Player(name='lad')
-	lad.boost(Overload)
-	lad.prayers_coll.pray(Augury)
-
-	lad.equipment.equip_basic_magic_gear(arcane=False, brimstone=False)
-	lad.active_style = lad.equipment.equip(ring_of_endurance, Weapon.from_bb('sanguinesti staff'))
-
-	equipment = [
-		Equipment(shield=Gear.from_bb('arcane spirit shield')),
-		Equipment(shield=book_of_the_dead)
-	]
-
-	olms = [OlmMageHand.from_de0(ps) for ps in range(15, 32, 8)]
-
-	indices, axes, data_ary = analysis_tools.bedevere_the_wise(
-		players=lad,
-		equipment=equipment,
-		target=olms,
-		data_mode=DataMode.DPS,
-	)
-
-	row_axis = 4
-	col_axis = 6
-
-	data = data_ary[0, 0, 0, 0, :, 0, :]
-	table_data = []
-
-	for index, row in enumerate(data):
-		row_with_label = [axes[row_axis][index]] + list(row)
-		table_data.append(row_with_label)
-
-	headers = [f'Olm Mage Hand ({ps:.0f})' for ps in range(15, 32, 8)]
-	table = tabulate(table_data, headers=headers, floatfmt=options['floatfmt'])
-	print(table)
-
-
-def olm_ticks_estimate(scale: int, **kwargs):
+def solo_olm_ticks_and_points_estimate(scale: int, **kwargs):
 
 	options = {
 		'floatfmt': '.1f',
@@ -146,6 +106,261 @@ def olm_ticks_estimate(scale: int, **kwargs):
 	total_ticks = magic_ticks + melee_ticks + ranged_ticks
 	total_points = magic_hand_points + melee_hand_points + ranged_points
 	return total_ticks, total_points
+
+
+def duo_olm_ticks_and_points_estimate(scale: int, trials: int = 50, **kwargs):
+	options = {
+		'floatfmt': '.1f',
+	}
+	options.update(kwargs)
+
+	# One Lad / Two Lad / Red Lad / Blue Lad  ##########################################################################
+	# yuusuke: 	thralls
+	# kuwabara: potshare + humidify
+	# puusuke: 	the thrall
+	lads = (yuusuke, kuwabara) = tuple(Player(name=n) for n in ('yuusuke', 'kuwabara'))
+	puusuke = Damage.thrall()
+
+	# MAGE HAND ########################################################################################################
+	magic_hand = OlmMageHand.from_de0(scale)
+
+	yuusuke.equipment.equip(book_of_the_dead)
+	kuwabara.equipment.equip(arcane_spirit_shield)
+
+	for lad in lads:
+		lad.equipment.equip_basic_magic_gear(arcane=False)
+		lad.active_style = lad.equipment.equip_sang(arcane=False)
+		assert lad.equipment.full_set
+
+		lad.boost(Overload)
+		lad.pray(Augury)
+
+	yu_mage_dpt = yuusuke.damage_distribution(magic_hand).per_tick
+	ku_mage_dpt = kuwabara.damage_distribution(magic_hand).per_tick
+	pu_mage_dpt = puusuke.per_tick
+	mage_dpt = sum([yu_mage_dpt, ku_mage_dpt, pu_mage_dpt])
+
+	mage_tpp = magic_hand.base_levels.hitpoints / mage_dpt
+
+	mage_total_ticks = magic_hand.count_per_room() * mage_tpp
+	mage_total_points = magic_hand.points_per_room()
+
+	# MELEE HAND #######################################################################################################
+	melee_hand = OlmMeleeHand.from_de0(scale)
+	
+	ticks_per_spec = 250
+	pre_melee_specs = int(np.round(2 + mage_tpp/ticks_per_spec))
+	hammer_target = 3
+
+	trials_ary = np.arange(trials)
+	data_ary = np.empty(shape=trials_ary.shape, dtype=int)
+
+	def switch_lads_to_bgs():
+		for lad in lads:
+			lad.active_style = lad.equipment.equip_bgs()
+			lad.equipment.equip(berserker_ring)
+
+	def switch_lads_to_lance():
+		for lad in lads:
+			lad.active_style = lad.equipment.equip_lance(berserker=True)
+	
+	for trial in trials_ary:
+		melee_hand.reset_stats()
+		hammers_landed = 0
+		simulated_ticks = -1
+		
+		# prep the lads for hammer shenanigans
+		for lad in lads:
+			lad.equipment.equip_basic_melee_gear(berserker=False)
+			lad.equipment.equip_torva_set()
+			lad.active_style = lad.equipment.equip_dwh(avernic=True)
+
+			lad.reset_stats()
+			lad.reset_prayers()
+			
+			lad.pray(Piety)
+			lad.boost(Overload)
+		
+		# drop hammers until target, then bgs
+		for _ in range(pre_melee_specs):
+			
+			if yuusuke.equipment.dwh:
+				p_yu = yuusuke.damage_distribution(melee_hand, special_attack=True).probability_nonzero_damage
+				
+				if random() < p_yu:
+					melee_hand.apply_dwh()
+					hammers_landed += 1
+
+					if hammers_landed == hammer_target:
+						switch_lads_to_bgs()
+			else:
+				dam = yuusuke.damage_distribution(melee_hand, special_attack=True).random_hit()
+				melee_hand.apply_bgs(dam)
+				melee_hand.damage(yuusuke, dam)
+
+			if kuwabara.equipment.dwh:
+				p_ku = kuwabara.damage_distribution(melee_hand, special_attack=True).probability_nonzero_damage
+
+				if random() < p_ku:
+					melee_hand.apply_dwh()
+					hammers_landed += 1
+
+					if hammers_landed == hammer_target:
+						switch_lads_to_bgs()
+			else:
+				dam = kuwabara.damage_distribution(melee_hand, special_attack=True).random_hit()
+				melee_hand.apply_bgs(dam)
+				melee_hand.damage(kuwabara, dam)
+		
+		# prep the lads for damage and remaining bgs # TODO: Add additional dwh capability (not expected)
+		switch_lads_to_lance()
+
+		yu_cached_dam = None
+		ku_cached_dam = None
+		last_olm_def = melee_hand.levels.defence
+
+		while int(melee_hand.levels.defence) > 0:
+			simulated_ticks += 1
+			
+			# continue speccing until 0 defence
+			if (simulated_ticks % ticks_per_spec) == 0:
+				switch_lads_to_bgs()
+
+				for lad in lads:
+					dam = lad.damage_distribution(melee_hand, special_attack=True).random_hit()
+					melee_hand.apply_bgs(dam)
+					melee_hand.damage(lad, dam)
+
+				switch_lads_to_lance()
+
+			# if defence changed, re-calculate reference damage distributions
+			if yu_cached_dam is None or melee_hand.levels.defence != last_olm_def:
+				yu_cached_dam = yuusuke.damage_distribution(melee_hand)
+			
+			if ku_cached_dam is None or melee_hand.levels.defence != last_olm_def:
+				ku_cached_dam = kuwabara.damage_distribution(melee_hand)
+			
+			# apply damage, all three lads
+			if (simulated_ticks % yuusuke.attack_speed()) == 0:
+				yu_dv = yu_cached_dam.random_hit()
+				ku_dv = ku_cached_dam.random_hit()
+
+				melee_hand.damage(yuusuke, yu_dv)
+				melee_hand.damage(kuwabara, ku_dv)
+			
+			if (simulated_ticks % puusuke.attack_speed) == 0:
+				pu_dv = puusuke.random_hit()
+				melee_hand.damage(yuusuke, pu_dv)
+
+			last_olm_def = melee_hand.levels.defence
+
+		# simple calculation for the remainder
+		switch_lads_to_lance()
+
+		yu_melee_dpt = yuusuke.damage_distribution(melee_hand).per_tick
+		ku_melee_dpt = kuwabara.damage_distribution(melee_hand).per_tick
+		pu_melee_dpt = puusuke.per_tick
+		melee_dpt = sum([yu_melee_dpt, ku_melee_dpt, pu_melee_dpt])
+
+		remaining_tpp = melee_hand.levels.hitpoints / melee_dpt
+		melee_tpp = simulated_ticks + remaining_tpp
+		data_ary[trial] = melee_tpp
+	
+	melee_mean_tpp = math.floor(data_ary.mean())
+
+	melee_total_ticks = melee_hand.count_per_room() * melee_mean_tpp
+	melee_total_points = melee_hand.points_per_room()
+
+	# HEAD PHASE #######################################################################################################
+	for lad in lads:
+		lad.equipment.equip_basic_ranged_gear()
+		lad.equipment.equip_arma_set(zaryte=True)
+		lad.active_style = lad.equipment.equip_twisted_bow()
+		assert lad.equipment.full_set
+
+		lad.reset_stats()
+		lad.boost(Overload)
+
+		lad.reset_prayers()
+		lad.pray(Rigour)
+
+	olm_head = OlmHead.from_de0(scale)
+	
+	yu_ranged_dpt = yuusuke.damage_distribution(olm_head).per_tick
+	ku_ranged_dpt = kuwabara.damage_distribution(olm_head).per_tick
+	pu_ranged_dpt = puusuke.per_tick
+	ranged_dpt = sum([yu_ranged_dpt, ku_ranged_dpt, pu_ranged_dpt])
+
+	ranged_tpp = melee_hand.base_levels.hitpoints / ranged_dpt
+
+	ranged_total_ticks = olm_head.count_per_room() * ranged_tpp
+	ranged_total_points = olm_head.points_per_room()
+
+	# CLEANUP ##########################################################################################################
+	total_olm_ticks = mage_total_ticks + melee_total_ticks + ranged_total_ticks
+	total_olm_points = mage_total_points + melee_total_points + ranged_total_points
+
+	# time
+	olm_mins = total_olm_ticks / TICKS_PER_MINUTE
+	mage_mpp = mage_tpp / TICKS_PER_MINUTE
+	melee_mean_mpp = melee_mean_tpp / TICKS_PER_MINUTE
+	ranged_mpp = ranged_tpp / TICKS_PER_MINUTE
+
+	# 1 stam * (4 doses / 1 stam) * (2 minutes / 1 dose) * (100 ticks / 1 minute)
+	minimum_stams_needed = math.ceil(total_olm_ticks / (1 * 4 * 2 * 100))
+
+	# table data #
+	table_data = [olm_mins, mage_mpp, melee_mean_mpp, ranged_mpp, minimum_stams_needed]
+	col_labels = ['olm time (min)', 'mage phase (min)', 'melee phase (min)', 'head phase (min)', 'min. stams needed']
+
+	return table_data, col_labels
+
+
+
+# nonsense
+
+
+def magic_shield_comparison(**kwargs):
+
+	options = {
+		'floatfmt': '.1f',
+	}
+	options.update(kwargs)
+
+	lad = Player(name='lad')
+	lad.boost(Overload)
+	lad.prayers_coll.pray(Augury)
+
+	lad.equipment.equip_basic_magic_gear(arcane=False, brimstone=False)
+	lad.active_style = lad.equipment.equip(ring_of_endurance, Weapon.from_bb('sanguinesti staff'))
+
+	equipment = [
+		Equipment(shield=Gear.from_bb('arcane spirit shield')),
+		Equipment(shield=book_of_the_dead)
+	]
+
+	olms = [OlmMageHand.from_de0(ps) for ps in range(15, 32, 8)]
+
+	indices, axes, data_ary = analysis_tools.bedevere_the_wise(
+		players=lad,
+		equipment=equipment,
+		target=olms,
+		data_mode=DataMode.DPS,
+	)
+
+	row_axis = 4
+	col_axis = 6
+
+	data = data_ary[0, 0, 0, 0, :, 0, :]
+	table_data = []
+
+	for index, row in enumerate(data):
+		row_with_label = [axes[row_axis][index]] + list(row)
+		table_data.append(row_with_label)
+
+	headers = [f'Olm Mage Hand ({ps:.0f})' for ps in range(15, 32, 8)]
+	table = tabulate(table_data, headers=headers, floatfmt=options['floatfmt'])
+	print(table)
 
 
 def olm_damage_estimate(**kwargs):
@@ -263,7 +478,7 @@ def melee_hand_mean_defence(scale: int, total_specs: int, hammers_first: int, **
 			if dwh_landed < hammers_first:
 				p = dwh_p_ary[olm.levels.defence]
 
-				if np.random.random() < p:
+				if random() < p:
 					dwh_landed += 1
 					olm.apply_dwh()
 			else:
@@ -332,11 +547,19 @@ def olm_max_hits(**kwargs):
 
 
 if __name__ == '__main__':
+	scales_range = range(15, 40, 4)
 
+	outer_table_data = []
 
-	melee_max_hits()
-	# olm_damage_estimate()
-	# magic_shield_comparison(floatfmt='.2f')
-	# olm_ticks_estimate(scales=(31, ))
-	# olm_max_hits()
-	# olm_damage_estimate(scales=(31, ))
+	for my_scale in scales_range:
+		table_data, col_labels = duo_olm_ticks_and_points_estimate(my_scale, trials=1)
+		outer_table_data.append(table_data)
+
+	col_labels.insert(0, 'scale')
+	row_labels = [str(s) for s in scales_range]
+	meta_header = 'duo olm estimates'
+
+	table = tabulate_enhanced(outer_table_data, col_labels=col_labels, row_labels=row_labels, meta_header=meta_header, floatfmt='.1f')
+	print(table)
+
+	
