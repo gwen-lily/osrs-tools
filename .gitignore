@@ -17,3 +17,4 @@ resources/bitterkoekje_items_bedevere_modified_specials_sorted_filtered.csv
 resources/bitterkoekje_items_bedevere_modified_specials_only.csv
 resources/.~lock*
 *.egg-info
+src/osrs_tools/gear_from_osrsbox.py
