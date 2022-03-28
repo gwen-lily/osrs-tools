@@ -1,21 +1,31 @@
 from __future__ import annotations
-from dataclasses import dataclass, field, fields, astuple
+
+from copy import copy
+from dataclasses import astuple, dataclass, field, fields
 from functools import total_ordering
 from typing import NamedTuple
-from copy import copy
 
-from osrs_tools.modifier import CallableLevelsModifierType, Level, CallableLevelsModifier, LevelModifier, MonsterCombatSkills, Skills, StyleBonus
-from osrs_tools.exceptions import OsrsException
 import osrs_tools.resource_reader as rr
+from osrs_tools.exceptions import OsrsException
+from osrs_tools.modifier import (
+    CallableLevelsModifier,
+    CallableLevelsModifierType,
+    Level,
+    LevelModifier,
+    MonsterCombatSkills,
+    Skills,
+    StyleBonus,
+)
 
 
 @dataclass
 class Stats:
-    """Base stats class.
-    """
+    """Base stats class."""
+
     def __copy__(self):
         unpacked = tuple(getattr(self, field.name) for field in fields(self))
         return self.__class__(*(copy(x) for x in unpacked))
+
 
 # TODO: Validate @dataclass / @total_ordering decorater order importance
 
@@ -47,7 +57,6 @@ class PlayerLevels(Stats):
     construction: Level | None = None
     hunter: Level | None = None
 
-
     def __add__(self, other: PlayerLevels | CallableLevelsModifier) -> PlayerLevels:
         if isinstance(other, PlayerLevels):
             new_vals = []
@@ -61,9 +70,9 @@ class PlayerLevels(Stats):
                     new_vals.append(other_val)
                 else:
                     new_vals.append(self_val + other_val)
-            
+
             return PlayerLevels(*new_vals)
-            
+
         elif isinstance(other, CallableLevelsModifier):
             modified = copy(self)
             for skill in other.skills:
@@ -74,7 +83,7 @@ class PlayerLevels(Stats):
                     modified.__setattr__(skill.name, new_val)
 
             return modified
-            
+
         else:
             raise NotImplementedError
 
@@ -88,10 +97,10 @@ class PlayerLevels(Stats):
                 if self_val is not None and other_val is None:
                     new_vals.append(self_val)
                 elif self_val is None and other_val is not None:
-                    raise StatsError(f'Subtraction between None and {other_val}')
+                    raise StatsError(f"Subtraction between None and {other_val}")
                 else:
                     new_vals.append(self_val - other_val)
-            
+
             return PlayerLevels(*new_vals)
         else:
             raise NotImplementedError
@@ -103,9 +112,9 @@ class PlayerLevels(Stats):
                 other_val = self.__getattribute__(skill.name)
 
                 if self_val is not None and other_val is not None:
-                    if not self_val < other_val:                
+                    if not self_val < other_val:
                         return False
-            
+
             return True
         else:
             raise NotImplementedError
@@ -151,11 +160,11 @@ class PlayerLevels(Stats):
 
     @staticmethod
     def max_skill_level() -> Level:
-        return Level(99, 'max skill level')
+        return Level(99, "max skill level")
 
     def min_skill_level(self, skill: Skills) -> Level:
-        comment = 'min skill level'
-        if skill is Skills.hitpoints:
+        comment = "min skill level"
+        if skill is Skills.HITPOINTS:
             value = 10
         else:
             value = 1
@@ -164,7 +173,7 @@ class PlayerLevels(Stats):
 
     @classmethod
     def maxed_player(cls):
-        maxed_levels = (Level(99, 'max skill level') for _ in range(23))
+        maxed_levels = (Level(99, "max skill level") for _ in range(23))
         return cls(*maxed_levels)
 
     @classmethod
@@ -181,7 +190,10 @@ class PlayerLevels(Stats):
     @classmethod
     def from_rsn(cls, rsn: str):
         hs = rr.lookup_player_highscores(rsn)
-        levels = [Level(hs.__getattribute__(skill.name).level, f'{rsn}: {skill.name}') for skill in Skills]
+        levels = [
+            Level(hs.__getattribute__(skill.name).level, f"{rsn}: {skill.name}")
+            for skill in Skills
+        ]
         return cls(*levels)
 
 
@@ -194,7 +206,6 @@ class MonsterLevels(Stats):
     ranged: Level | None = None
     magic: Level | None = None
     hitpoints: Level | None = None
-
 
     def __add__(self, other: MonsterLevels) -> MonsterLevels:
         if isinstance(other, MonsterLevels):
@@ -209,9 +220,9 @@ class MonsterLevels(Stats):
                     new_vals.append(other_val)
                 else:
                     new_vals.append(self_val + other_val)
-            
+
             return MonsterLevels(*new_vals)
-                        
+
         else:
             raise NotImplementedError
 
@@ -225,12 +236,12 @@ class MonsterLevels(Stats):
                 if self_val is not None and other_val is None:
                     new_vals.append(self_val)
                 elif self_val is None and other_val is not None:
-                    raise StatsError(f'Subtraction between None and {other_val}')
+                    raise StatsError(f"Subtraction between None and {other_val}")
                 else:
                     new_vals.append(self_val - other_val)
-            
+
             return MonsterLevels(*new_vals)
-                        
+
         else:
             raise NotImplementedError
 
@@ -241,9 +252,9 @@ class MonsterLevels(Stats):
                 other_val = self.__getattribute__(skill.name)
 
                 if self_val is not None and other_val is not None:
-                    if not self_val < other_val:                
+                    if not self_val < other_val:
                         return False
-            
+
             return True
         else:
             raise NotImplementedError
@@ -272,35 +283,29 @@ class MonsterLevels(Stats):
     def from_bb(cls, name: str):
         mon_df = rr.lookup_normal_monster_by_name(name)
         return cls(
-            mon_df[Skills.attack.name].values[0],
-            mon_df[Skills.strength.name].values[0],
+            mon_df[Skills.ATTACK.name].values[0],
+            mon_df[Skills.STRENGTH.name].values[0],
             mon_df[Skills.defence.name].values[0],
-            mon_df[Skills.ranged.name].values[0],
-            mon_df[Skills.magic.name].values[0],
-            mon_df[Skills.hitpoints.name].values[0],
+            mon_df[Skills.RANGED.name].values[0],
+            mon_df[Skills.MAGIC.name].values[0],
+            mon_df[Skills.HITPOINTS.name].values[0],
         )
 
     @classmethod
     def dummy_levels(cls, hitpoints: Level | int = None):
         hp = hitpoints if hitpoints is not None else 1000
 
-        return cls(
-            Level(1),
-            Level(1),
-            Level(0),
-            Level(1),
-            Level(1),
-            Level(int(hp))
-        )
+        return cls(Level(1), Level(1), Level(0), Level(1), Level(1), Level(int(hp)))
 
     @classmethod
     def zeros(cls):
         return cls(*(Level(0) for _ in MonsterCombatSkills))
 
+
 @dataclass
 class StyleStats(Stats):
-    """Integer container class for validation, security, and logging.
-    """
+    """Integer container class for validation, security, and logging."""
+
     melee_attack: StyleBonus | None = field(default=None)
     melee_strength: StyleBonus | None = field(default=None)
     defence: StyleBonus | None = field(default=None)
@@ -311,56 +316,56 @@ class StyleStats(Stats):
     @classmethod
     def melee_shared_bonus(cls):
         value = 1
-        comment = 'shared style'
+        comment = "shared style"
         return cls(
             melee_attack=StyleBonus(value, comment),
             melee_strength=StyleBonus(value, comment),
-            defence=StyleBonus(value, comment)
+            defence=StyleBonus(value, comment),
         )
 
     @classmethod
     def melee_accurate_bonuses(cls):
         value = 3
-        comment = 'accurate style'
+        comment = "accurate style"
         return cls(melee_attack=StyleBonus(value, comment))
 
     @classmethod
     def melee_strength_bonuses(cls):
         value = 3
-        comment = 'aggressive style'
+        comment = "aggressive style"
         return cls(melee_strength=StyleBonus(value, comment))
 
     @classmethod
     def defensive_bonuses(cls):
         value = 3
-        comment = 'defensive style'
+        comment = "defensive style"
         return cls(defence=StyleBonus(value, comment))
 
     @classmethod
     def ranged_bonus(cls):
         value = 3
-        comment = 'ranged (accurate) style'
+        comment = "ranged (accurate) style"
         return cls(
             ranged_attack=StyleBonus(value, comment),
-            ranged_strength=StyleBonus(value, comment)
+            ranged_strength=StyleBonus(value, comment),
         )
 
     @classmethod
     def magic_bonus(cls):
         value = 3
-        comment = 'magic (accurate) style'
+        comment = "magic (accurate) style"
         return cls(magic_attack=StyleBonus(value, comment))
 
     @classmethod
     def npc_bonus(cls):
         value = 1
-        comment = 'npc style'
+        comment = "npc style"
         return cls(
             melee_attack=StyleBonus(value, comment),
             melee_strength=StyleBonus(value, comment),
             defence=StyleBonus(value, comment),
             ranged_attack=StyleBonus(value, comment),
-            magic_attack=StyleBonus(value, comment)
+            magic_attack=StyleBonus(value, comment),
         )
 
     @classmethod
@@ -376,6 +381,7 @@ class AggressiveStats(Stats):
     melee strength, ranged strength, and magic strength (not to be confused with magic damage).
     This class stores magic strength (float modifier) as opposed to percentile magic damage (percentage)
     """
+
     stab: int = 0
     slash: int = 0
     crush: int = 0
@@ -393,14 +399,14 @@ class AggressiveStats(Stats):
                 raise NotImplementedError
         elif isinstance(other, AggressiveStats):
             new_vals = {}
-            
+
             for f in fields(self):
                 self_val = getattr(self, f.name)
                 other_val = getattr(other, f.name)
                 new_vals[f.name] = self_val + other_val
         else:
             raise NotImplementedError
-        
+
         return AggressiveStats(**new_vals)
 
     def __radd__(self, other: int) -> AggressiveStats:
@@ -416,26 +422,26 @@ class AggressiveStats(Stats):
     def no_bonus(cls):
         return cls()
 
-    @classmethod    # TODO: Look into bitterkoekje's general attack stat and see where it matters
+    @classmethod  # TODO: Look into bitterkoekje's general attack stat and see where it matters
     def from_bb(cls, name: str):
         mon_df = rr.lookup_normal_monster_by_name(name)
 
-        if (general_attack_bonus := mon_df['attack bonus'].values[0]) > 0:
-            stab_attack, slash_attack, crush_attack = 3*(general_attack_bonus,)
+        if (general_attack_bonus := mon_df["attack bonus"].values[0]) > 0:
+            stab_attack, slash_attack, crush_attack = 3 * (general_attack_bonus,)
         else:
-            stab_attack = mon_df['stab attack'].values[0]
-            slash_attack = mon_df['slash attack'].values[0]
-            crush_attack = mon_df['crush attack'].values[0]
+            stab_attack = mon_df["stab attack"].values[0]
+            slash_attack = mon_df["slash attack"].values[0]
+            crush_attack = mon_df["crush attack"].values[0]
 
         return cls(
             stab_attack,
             slash_attack,
             crush_attack,
-            mon_df['magic attack'].values[0],
-            mon_df['ranged attack'].values[0],
-            mon_df['melee strength'].values[0],
-            mon_df['ranged strength'].values[0],
-            mon_df['magic strength'].values[0],
+            mon_df["magic attack"].values[0],
+            mon_df["ranged attack"].values[0],
+            mon_df["melee strength"].values[0],
+            mon_df["ranged strength"].values[0],
+            mon_df["magic strength"].values[0],
         )
 
     @classmethod
@@ -449,6 +455,7 @@ class DefensiveStats(Stats):
 
     Included attributes are defence bonus values: stab, slash, crush, magic, & ranged.
     """
+
     stab: int = 0
     slash: int = 0
     crush: int = 0
@@ -463,14 +470,14 @@ class DefensiveStats(Stats):
                 raise NotImplementedError
         elif isinstance(other, DefensiveStats):
             new_vals = {}
-            
+
             for f in fields(self):
                 self_val = getattr(self, f.name)
                 other_val = getattr(other, f.name)
                 new_vals[f.name] = self_val + other_val
         else:
             raise NotImplementedError
-        
+
         return DefensiveStats(**new_vals)
 
     def __radd__(self, other: int) -> DefensiveStats:
@@ -491,11 +498,11 @@ class DefensiveStats(Stats):
         mon_df = rr.lookup_normal_monster_by_name(name)
 
         return cls(
-            mon_df['stab defence'].values[0],
-            mon_df['slash defence'].values[0],
-            mon_df['crush defence'].values[0],
-            mon_df['magic defence'].values[0],
-            mon_df['ranged defence'].values[0],
+            mon_df["stab defence"].values[0],
+            mon_df["slash defence"].values[0],
+            mon_df["crush defence"].values[0],
+            mon_df["magic defence"].values[0],
+            mon_df["ranged defence"].values[0],
         )
 
     @classmethod
@@ -508,21 +515,22 @@ class Boost(NamedTuple):
     modifiers: CallableLevelsModifier | tuple[CallableLevelsModifier]
 
     def __str__(self):
-        message = f'{self.__class__.__name__}({self.name})'
+        message = f"{self.__class__.__name__}({self.name})"
         return message
 
 
 class CallableLevelsModifierBuilder:
-
     @staticmethod
-    def create_simple_callable(base: int, ratio: float, negative: bool = None, comment: str = None) -> CallableLevelsModifierType:
+    def create_simple_callable(
+        base: int, ratio: float, negative: bool = None, comment: str = None
+    ) -> CallableLevelsModifierType:
         f"""
         Generator function for easily writing Boost class methods.
 
         OSRS boosts tend to have the form: boost(level) = base_boost + math.floor(ratio_boost*level).
         This method simplifies definition to one line of the form: [f': (int, float, bool | None)] -> [f: (int,) -> int].
-        
-        :param base: Note that's "base boost", not to be confused with the "bass boost" you might find on your speaker. 
+
+        :param base: Note that's "base boost", not to be confused with the "bass boost" you might find on your speaker.
         :param ratio: Get ratio'd nerd.
         :param negative: No positive vibes allowed. Listen to gy!be.
         :return: f: (int,) -> int
@@ -545,7 +553,7 @@ class CallableLevelsModifierBuilder:
         base: int,
         ratio: float,
         negative: bool = False,
-        comment: str | None = None
+        comment: str | None = None,
     ) -> list[CallableLevelsModifier]:
         """Construct callable modifiers that only depend on the skill being modified.
 
@@ -573,154 +581,140 @@ class CallableLevelsModifierBuilder:
 
         for skill in skills_tup:
             callable = self.create_simple_callable(base, ratio, negative, comment)
-            modifiers.append(CallableLevelsModifier((skill, ), callable, comment))
+            modifiers.append(CallableLevelsModifier((skill,), callable, comment))
 
         return modifiers
 
 
 clmb = CallableLevelsModifierBuilder()
-super_combat_callable = clmb.create_simple_callable(5, 0.15, comment='super combat potion')
-ranged_callable = clmb.create_simple_callable(4, 0.10, comment='ranging potion')
-magic_callable = clmb.create_simple_callable(4, 0, comment='magic potion')
-combat_potion_callable = clmb.create_simple_callable(3, 0.10, comment='combat potion')
+super_combat_callable = clmb.create_simple_callable(
+    5, 0.15, comment="super combat potion"
+)
+ranged_callable = clmb.create_simple_callable(4, 0.10, comment="ranging potion")
+magic_callable = clmb.create_simple_callable(4, 0, comment="magic potion")
+combat_potion_callable = clmb.create_simple_callable(3, 0.10, comment="combat potion")
 
-prayer_callable_no_wrench = clmb.create_simple_callable(7, 0.25, comment='prayer potion')
-prayer_callable_wrench = clmb.create_simple_callable(7, 0.27, comment='prayer potion (wrench)')
+prayer_callable_no_wrench = clmb.create_simple_callable(
+    7, 0.25, comment="prayer potion"
+)
+prayer_callable_wrench = clmb.create_simple_callable(
+    7, 0.27, comment="prayer potion (wrench)"
+)
 
-super_restore_callable_no_wrench = clmb.create_simple_callable(8, 0.25, comment='super restore')
-super_restore_callable_wrench = clmb.create_simple_callable(8, 0.27, comment='super restore (wrench)')
-sanfew_serum_callable_no_wrench = clmb.create_simple_callable(4, 0.30, comment='sanfew serum')
-sanfew_serum_callable_wrench = clmb.create_simple_callable(4, 0.32, comment='sanfew serum (wrench)')
+super_restore_callable_no_wrench = clmb.create_simple_callable(
+    8, 0.25, comment="super restore"
+)
+super_restore_callable_wrench = clmb.create_simple_callable(
+    8, 0.27, comment="super restore (wrench)"
+)
+sanfew_serum_callable_no_wrench = clmb.create_simple_callable(
+    4, 0.30, comment="sanfew serum"
+)
+sanfew_serum_callable_wrench = clmb.create_simple_callable(
+    4, 0.32, comment="sanfew serum (wrench)"
+)
 
-saradomin_brew_debuff_skills = (Skills.attack, Skills.strength, Skills.ranged, Skills.magic)
-saradomin_brew_debuff_callable = clmb.create_simple_callable(2, 0.10, True, comment='sara brew (debuff)')
-saradomin_brew_defence_callable = clmb.create_simple_callable(2, 0.20, comment='sara brew')
-saradomin_brew_hitpoints_callable = clmb.create_simple_callable(2, 0.15, comment='sara brew')
+saradomin_brew_debuff_skills = (
+    Skills.ATTACK,
+    Skills.STRENGTH,
+    Skills.RANGED,
+    Skills.MAGIC,
+)
+saradomin_brew_debuff_callable = clmb.create_simple_callable(
+    2, 0.10, True, comment="sara brew (debuff)"
+)
+saradomin_brew_defence_callable = clmb.create_simple_callable(
+    2, 0.20, comment="sara brew"
+)
+saradomin_brew_hitpoints_callable = clmb.create_simple_callable(
+    2, 0.15, comment="sara brew"
+)
 
-ancient_brew_debuff_skills = (Skills.attack, Skills.strength, Skills.defence)
-ancient_brew_debuffs = clmb.create_simple_callable_modifiers(ancient_brew_debuff_skills, 2, 0.10, True, 'ancient brew (debuff)')
+ancient_brew_debuff_skills = (Skills.ATTACK, Skills.STRENGTH, Skills.defence)
+ancient_brew_debuffs = clmb.create_simple_callable_modifiers(
+    ancient_brew_debuff_skills, 2, 0.10, True, "ancient brew (debuff)"
+)
 
-overload_buffs_skills = (Skills.attack, Skills.strength, Skills.defence, Skills.ranged, Skills.magic)
-overload_buffs = clmb.create_simple_callable_modifiers(overload_buffs_skills, 6, 0.16, comment='overload (+)')
-overload_hitpoints_callable = clmb.create_simple_callable(50, 0, True, 'overload damage')
+overload_buffs_skills = (
+    Skills.ATTACK,
+    Skills.STRENGTH,
+    Skills.defence,
+    Skills.RANGED,
+    Skills.MAGIC,
+)
+overload_buffs = clmb.create_simple_callable_modifiers(
+    overload_buffs_skills, 6, 0.16, comment="overload (+)"
+)
+overload_hitpoints_callable = clmb.create_simple_callable(
+    50, 0, True, "overload damage"
+)
 
 SuperAttackPotion = Boost(
-    'super attack potion',
-    CallableLevelsModifier(
-        (Skills.attack, ),
-        super_combat_callable,
-        'super attack'
-    )
+    "super attack potion",
+    CallableLevelsModifier((Skills.ATTACK,), super_combat_callable, "super attack"),
 )
 
 SuperStrengthPotion = Boost(
-    'super strength potion',
-    CallableLevelsModifier(
-        (Skills.strength, ),
-        super_combat_callable,
-        'super strength'
-    )
+    "super strength potion",
+    CallableLevelsModifier((Skills.STRENGTH,), super_combat_callable, "super strength"),
 )
 
 SuperDefencePotion = Boost(
-    'super defence potion',
-    CallableLevelsModifier(
-        (Skills.defence, ),
-        super_combat_callable,
-        'super defence'
-    )
+    "super defence potion",
+    CallableLevelsModifier((Skills.defence,), super_combat_callable, "super defence"),
 )
 
 SuperCombatPotion = Boost(
-    'super combat potion',
-    (SuperAttackPotion, SuperStrengthPotion, SuperDefencePotion)
+    "super combat potion", (SuperAttackPotion, SuperStrengthPotion, SuperDefencePotion)
 )
 
 RangingPotion = Boost(
-    'ranging potion',
-    CallableLevelsModifier(
-        (Skills.ranged, ),
-        ranged_callable,
-        'ranging'
-    )
+    "ranging potion",
+    CallableLevelsModifier((Skills.RANGED,), ranged_callable, "ranging"),
 )
 
-BastionPotion = Boost(
-    'bastion potion',
-    (RangingPotion, SuperDefencePotion)
-)
+BastionPotion = Boost("bastion potion", (RangingPotion, SuperDefencePotion))
 
 MagicPotion = Boost(
-    'magic potion',
-    CallableLevelsModifier(
-        (Skills.magic, ),
-        magic_callable,
-        'magic'
-    )
+    "magic potion", CallableLevelsModifier((Skills.MAGIC,), magic_callable, "magic")
 )
 
-BattlemagePotion = Boost(
-    'battlemage potion',
-    (SuperDefencePotion, MagicPotion)
-)
+BattlemagePotion = Boost("battlemage potion", (SuperDefencePotion, MagicPotion))
 
 ImbuedHeart = Boost(
-    'imbued heart',
+    "imbued heart",
     CallableLevelsModifier(
-        (Skills.magic, ),
-        clmb.create_simple_callable(1, 0.10),
-        "imbued heart"
-    )
+        (Skills.MAGIC,), clmb.create_simple_callable(1, 0.10), "imbued heart"
+    ),
 )
 
 AttackPotion = Boost(
-    'attack potion',
-    CallableLevelsModifier(
-        (Skills.attack, ),
-        combat_potion_callable,
-        'attack'
-    )
+    "attack potion",
+    CallableLevelsModifier((Skills.ATTACK,), combat_potion_callable, "attack"),
 )
 
 StrengthPotion = Boost(
-    'strength potion',
-    CallableLevelsModifier(
-        (Skills.strength, ),
-        combat_potion_callable,
-        'strength'
-    )
+    "strength potion",
+    CallableLevelsModifier((Skills.STRENGTH,), combat_potion_callable, "strength"),
 )
 
 DefencePotion = Boost(
-    'defence potion',
-    CallableLevelsModifier(
-        (Skills.defence, ),
-        combat_potion_callable,
-        'defence'
-    )
+    "defence potion",
+    CallableLevelsModifier((Skills.defence,), combat_potion_callable, "defence"),
 )
 
-CombatPotion = Boost(
-    'combat potion',
-    (AttackPotion, StrengthPotion)
-)
+CombatPotion = Boost("combat potion", (AttackPotion, StrengthPotion))
 
 PrayerPotion = Boost(
-    'prayer potion',
+    "prayer potion",
     CallableLevelsModifier(
-        (Skills.prayer, ),
-        prayer_callable_no_wrench,
-        'prayer (no wrench)'
-    )
+        (Skills.PRAYER,), prayer_callable_no_wrench, "prayer (no wrench)"
+    ),
 )
 
 PrayerPotionWrench = Boost(
-    'prayer potion (holy wrench)',
-    CallableLevelsModifier(
-        (Skills.prayer, ),
-        prayer_callable_wrench,
-        'prayer (wrench)'
-    )
+    "prayer potion (holy wrench)",
+    CallableLevelsModifier((Skills.PRAYER,), prayer_callable_wrench, "prayer (wrench)"),
 )
 
 super_restore_clms = []
@@ -729,137 +723,112 @@ sanfew_clms = []
 sanfew_clms_wrench = []
 
 for skill in Skills:
-    if skill is Skills.prayer:
+    if skill is Skills.PRAYER:
         super_restore_clms.append(
             CallableLevelsModifier(
-                (skill, ),
-                super_restore_callable_no_wrench,
-                'super restore (no wrench)'
+                (skill,), super_restore_callable_no_wrench, "super restore (no wrench)"
             )
         )
         super_restore_clms_wrench.append(
             CallableLevelsModifier(
-                (skill, ),
-                super_restore_callable_wrench,
-                'super restore (wrench)'
+                (skill,), super_restore_callable_wrench, "super restore (wrench)"
             )
         )
         sanfew_clms.append(
             CallableLevelsModifier(
-                (skill, ),
-                sanfew_serum_callable_no_wrench,
-                'sanfew serum (no wrench)'
+                (skill,), sanfew_serum_callable_no_wrench, "sanfew serum (no wrench)"
             )
         )
         sanfew_clms_wrench.append(
             CallableLevelsModifier(
-                (skill, ),
-                sanfew_serum_callable_wrench,
-                'sanfew serum (wrench)'
+                (skill,), sanfew_serum_callable_wrench, "sanfew serum (wrench)"
             )
         )
     else:
         sr_callable = super_restore_callable_no_wrench
         ss_callable = sanfew_serum_callable_no_wrench
 
-        sr_lm = CallableLevelsModifier(
-            (skill, ),
-            sr_callable,
-            'super restore'
-        )
-        ss_lm = CallableLevelsModifier(
-            (skill, ),
-            ss_callable,
-            'sanfew serum'
-        )
+        sr_lm = CallableLevelsModifier((skill,), sr_callable, "super restore")
+        ss_lm = CallableLevelsModifier((skill,), ss_callable, "sanfew serum")
 
         super_restore_clms.append(sr_lm)
         super_restore_clms_wrench.append(sr_lm)
         sanfew_clms.append(ss_lm)
         sanfew_clms_wrench.append(ss_lm)
 
-SuperRestore = Boost('super restore', tuple(super_restore_clms))
-SuperRestoreWrench = Boost('super restore (holy wrench)', tuple(super_restore_clms_wrench))
-SanfewSerum = Boost('sanfew serum', sanfew_clms)
-SanfewSerumWrench = Boost('sanfew serum (holy wrench)', sanfew_clms_wrench)
+SuperRestore = Boost("super restore", tuple(super_restore_clms))
+SuperRestoreWrench = Boost(
+    "super restore (holy wrench)", tuple(super_restore_clms_wrench)
+)
+SanfewSerum = Boost("sanfew serum", sanfew_clms)
+SanfewSerumWrench = Boost("sanfew serum (holy wrench)", sanfew_clms_wrench)
 
 saradomin_brew_clms = []
 
 for skill in saradomin_brew_debuff_skills:
     saradomin_brew_debuff_levels_modifier = CallableLevelsModifier(
-        (skill, ),
-        saradomin_brew_debuff_callable,
-        'saradomin brew (debuff)'
+        (skill,), saradomin_brew_debuff_callable, "saradomin brew (debuff)"
     )
     saradomin_brew_clms.append(saradomin_brew_debuff_levels_modifier)
 
-saradomin_brew_clms.append(CallableLevelsModifier(
-    (Skills.defence, ),
-    saradomin_brew_debuff_callable,
-    'saradomin brew (buff)'
-))
+saradomin_brew_clms.append(
+    CallableLevelsModifier(
+        (Skills.defence,), saradomin_brew_debuff_callable, "saradomin brew (buff)"
+    )
+)
 
-saradomin_brew_clms.append(CallableLevelsModifier(
-    (Skills.hitpoints, ),
-    saradomin_brew_hitpoints_callable,
-    'saradomin brew (buff)'
-))
+saradomin_brew_clms.append(
+    CallableLevelsModifier(
+        (Skills.HITPOINTS,), saradomin_brew_hitpoints_callable, "saradomin brew (buff)"
+    )
+)
 
-SaradominBrew = Boost('saradomin brew', tuple(saradomin_brew_clms))
+SaradominBrew = Boost("saradomin brew", tuple(saradomin_brew_clms))
 
 zamorak_brew_clms = [
     CallableLevelsModifier(
-        (Skills.attack, ),
-        clmb.create_simple_callable(2, 0.20),
-        'zamorak brew (buff)'
+        (Skills.ATTACK,), clmb.create_simple_callable(2, 0.20), "zamorak brew (buff)"
     ),
     CallableLevelsModifier(
-        (Skills.strength, ),
-        clmb.create_simple_callable(2, 0.12),
-        'zamorak brew (buff)'
+        (Skills.STRENGTH,), clmb.create_simple_callable(2, 0.12), "zamorak brew (buff)"
     ),
     CallableLevelsModifier(
-        (Skills.defence, ),
+        (Skills.defence,),
         clmb.create_simple_callable(2, 0.10, True),
-        'zamorak brew (debuff)'
+        "zamorak brew (debuff)",
     ),
     CallableLevelsModifier(
-        (Skills.hitpoints, ),
+        (Skills.HITPOINTS,),
         clmb.create_simple_callable(0, 0.12, True),
-        'zamorak brew (debuff)'
+        "zamorak brew (debuff)",
     ),
     CallableLevelsModifier(
-        (Skills.prayer, ),
-        clmb.create_simple_callable(0, 0.10),
-        'zamorak brew (buff)'
-    )
+        (Skills.PRAYER,), clmb.create_simple_callable(0, 0.10), "zamorak brew (buff)"
+    ),
 ]
 
-ZamorakBrew = Boost('zamorak brew', tuple(zamorak_brew_clms))
+ZamorakBrew = Boost("zamorak brew", tuple(zamorak_brew_clms))
 
-ancient_brew_clms = [*ancient_brew_debuffs,
-                     CallableLevelsModifier(
-                         (Skills.prayer, ),
-                         clmb.create_simple_callable(2, 0.10),
-                         'ancient brew (buff)'
-                     ),
-                     CallableLevelsModifier(
-                         (Skills.magic, ),
-                         clmb.create_simple_callable(2, 0.05),
-                         'ancient brew (buff)'
-                     )
-                     ]
+ancient_brew_clms = [
+    *ancient_brew_debuffs,
+    CallableLevelsModifier(
+        (Skills.PRAYER,), clmb.create_simple_callable(2, 0.10), "ancient brew (buff)"
+    ),
+    CallableLevelsModifier(
+        (Skills.MAGIC,), clmb.create_simple_callable(2, 0.05), "ancient brew (buff)"
+    ),
+]
 
-AncientBrew = Boost('ancient brew', tuple(ancient_brew_clms))
+AncientBrew = Boost("ancient brew", tuple(ancient_brew_clms))
 
-overload_clms = [*overload_buffs,
-                 CallableLevelsModifier(
-                     (Skills.hitpoints, ),
-                     overload_hitpoints_callable,
-                     'overload (hp)')
-                 ]
+overload_clms = [
+    *overload_buffs,
+    CallableLevelsModifier(
+        (Skills.HITPOINTS,), overload_hitpoints_callable, "overload (hp)"
+    ),
+]
 
-Overload = Boost('overload (+)', tuple(overload_clms))
+Overload = Boost("overload (+)", tuple(overload_clms))
 
 
 class StatsError(OsrsException):

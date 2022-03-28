@@ -9,175 +9,188 @@ from typing import Callable
 
 import numpy as np
 
-# enums 'n' such ###########################################################
+###############################################################################
+# enums 'n' such
+###############################################################################
+
+# damage, stances, & styles ###################################################
 
 
 @unique
 class DT(Enum):
     """Damage Type (DT) enumerator.
-
     Args:
         Enum (DT): Enumerator object.
     """
 
     # melee style class vars
-    stab = "stab"
-    slash = "slash"
-    crush = "crush"
+    STAB = "stab"
+    SLASH = "slash"
+    CRUSH = "crush"
     # ranged style class vars
-    ranged = "ranged"
+    RANGED = "ranged"
     # magic style class vars
-    magic = "magic"
+    MAGIC = "magic"
     # typeless class vars
-    typeless = "typeless"
+    TYPELESS = "typeless"
 
 
 # I treat these uniformly as tuples, do as you see fit.
 # I know not whether there are different classes of some of these
 # Hey reader, check out the band Godspeed You! Black Emperor, they're gr!eat
-MeleeDamageTypes = (DT.stab, DT.slash, DT.crush)
-RangedDamageTypes = (DT.ranged,)
-MagicDamageTypes = (DT.magic,)
-TypelessDamageTypes = (DT.typeless,)
+MeleeDamageTypes = (DT.STAB, DT.SLASH, DT.CRUSH)
+RangedDamageTypes = (DT.RANGED,)
+MagicDamageTypes = (DT.MAGIC,)
+TypelessDamageTypes = (DT.TYPELESS,)
 
 
 @unique
 class Stances(Enum):
     # type ambiguous class vars
-    accurate = "accurate"
-    longrange = "longrange"
-    defensive = "defensive"
-    no_style = "no style"
+    ACCURATE = "accurate"
+    LONGRANGE = "longrange"
+    DEFENSIVE = "defensive"
+    NO_STYLE = "no style"
     # melee style class vars
-    aggressive = "aggressive"
-    controlled = "controlled"
+    AGGRESSIVE = "aggressive"
+    CONTROLLED = "controlled"
     # ranged style class vars
-    rapid = "rapid"
+    RAPID = "rapid"
     # magic style class vars
-    standard = "standard"
+    STANDARD = "standard"
     # npc stance
-    npc = "npc"
+    NPC = "npc"
 
 
 @unique
 class Styles(Enum):
     # style names, flavor text as far as I can tell
 
-    slash = "slash"
-    stab = "stab"
-    accurate = "accurate"
-    rapid = "rapid"
-    longrange = "longrange"
-    chop = "chop"
-    smash = "smash"
-    block = "block"
-    hack = "hack"
-    lunge = "lunge"
-    swipe = "swipe"
-    pound = "pound"
-    pummel = "pummel"
-    spike = "spike"
-    impale = "impale"
-    jab = "jab"
-    fend = "fend"
-    bash = "bash"
-    reap = "reap"
-    punch = "punch"
-    kick = "kick"
-    flick = "flick"
-    lash = "lash"
-    deflect = "deflect"
-    short_fuse = "short fuse"
-    medium_fuse = "medium fuse"
-    long_fuse = "long fuse"
-    spell = "spell"
-    focus = "focus"
-    standard_spell = "standard spell"
-    defensive_spell = "defensive spell"
+    SLASH = "slash"
+    STAB = "stab"
+    ACCURATE = "accurate"
+    RAPID = "rapid"
+    LONGRANGE = "longrange"
+    CHOP = "chop"
+    SMASH = "smash"
+    BLOCK = "block"
+    HACK = "hack"
+    LUNGE = "lunge"
+    SWIPE = "swipe"
+    POUND = "pound"
+    PUMMEL = "pummel"
+    SPIKE = "spike"
+    IMPALE = "impale"
+    JAB = "jab"
+    FEND = "fend"
+    BASH = "bash"
+    REAP = "reap"
+    PUNCH = "punch"
+    KICK = "kick"
+    FLICK = "flick"
+    LASH = "lash"
+    DEFLECT = "deflect"
+    SHORT_FUSE = "short fuse"
+    MEDIUM_FUSE = "medium fuse"
+    LONG_FUSE = "long fuse"
+    SPELL = "spell"
+    FOCUS = "focus"
+    STANDARD_SPELL = "standard spell"
+    DEFENSIVE_SPELL = "defensive spell"
 
-    npc_melee = "monster melee"
-    npc_ranged = "monster ranged"
-    npc_magic = "monster magic"
+    NPC_MELEE = "monster melee"
+    NPC_RANGED = "monster ranged"
+    NPC_MAGIC = "monster magic"
 
 
-# Use case: if _ in XStances:
 MeleeStances = (
-    Stances.accurate,
-    Stances.aggressive,
-    Stances.defensive,
-    Stances.controlled,
+    Stances.ACCURATE,
+    Stances.AGGRESSIVE,
+    Stances.DEFENSIVE,
+    Stances.CONTROLLED,
 )
-RangedStances = (Stances.accurate, Stances.rapid, Stances.longrange)
-MagicStances = (Stances.accurate, Stances.longrange, Stances.no_style, Stances.no_style)
-SpellStylesNames = (Styles.standard_spell, Styles.defensive_spell)
-ChinchompaStylesNames = (Styles.short_fuse, Styles.medium_fuse, Styles.long_fuse)
+RangedStances = (Stances.ACCURATE, Stances.RAPID, Stances.LONGRANGE)
+MagicStances = (Stances.ACCURATE, Stances.LONGRANGE, Stances.NO_STYLE, Stances.NO_STYLE)
+SpellStylesNames = (Styles.STANDARD_SPELL, Styles.DEFENSIVE_SPELL)
+ChinchompaStylesNames = (Styles.SHORT_FUSE, Styles.MEDIUM_FUSE, Styles.LONG_FUSE)
+
+
+# skills & monsters ###########################################################
 
 
 @unique
 class Skills(Enum):
-    attack = "attack"
-    strength = "strength"
+    ATTACK = "attack"
+    STRENGTH = "strength"
     defence = "defence"
-    ranged = "ranged"
-    prayer = "prayer"
-    magic = "magic"
-    runecraft = "runecraft"
-    hitpoints = "hitpoints"
-    crafting = "crafting"
-    mining = "mining"
-    smithing = "smithing"
-    fishing = "fishing"
-    cooking = "cooking"
-    firemaking = "firemaking"
-    woodcutting = "woodcutting"
-    agility = "agility"
-    herblore = "herblore"
-    thieving = "thieving"
-    fletching = "fletching"
-    slayer = "slayer"
-    farming = "farming"
-    construction = "construction"
-    hunter = "hunter"
+    RANGED = "ranged"
+    PRAYER = "prayer"
+    MAGIC = "magic"
+    RUNECRAFT = "runecraft"
+    HITPOINTS = "hitpoints"
+    CRAFTING = "crafting"
+    MINING = "mining"
+    SMITHING = "smithing"
+    FISHING = "fishing"
+    COOKING = "cooking"
+    FIREMAKING = "firemaking"
+    WOODCUTTING = "woodcutting"
+    AGILITY = "agility"
+    HERBLORE = "herblore"
+    THIEVING = "thieving"
+    FLETCHING = "fletching"
+    SLAYER = "slayer"
+    FARMING = "farming"
+    CONSTRUCTION = "construction"
+    HUNTER = "hunter"
 
 
 MonsterCombatSkills = (
-    Skills.attack,
-    Skills.strength,
+    Skills.ATTACK,
+    Skills.STRENGTH,
     Skills.defence,
-    Skills.ranged,
-    Skills.magic,
-    Skills.hitpoints,
+    Skills.RANGED,
+    Skills.MAGIC,
+    Skills.HITPOINTS,
 )
 
 
 @unique
 class MonsterTypes(Enum):
-    demon = "demon"
-    draconic = "draconic"
-    fiery = "fiery"
-    golem = "golem"
-    kalphite = "kalphite"
-    leafy = "leafy"
-    penance = "penance"
-    shade = "shade"
-    spectral = "spectral"
-    undead = "undead"
-    vampyre = "vampyre"
-    vampyre_tier_1 = "vampyre - tier 1"
-    vampyre_tier_2 = "vampyre - tier 2"
-    vampyre_tier_3 = "vampyre - tier 3"
-    xerician = "xerician"
-    wilderness = "wilderness"
+    DEMON = "demon"
+    DRACONIC = "draconic"
+    FIERY = "fiery"
+    GOLEM = "golem"
+    KALPHITE = "kalphite"
+    LEAFY = "leafy"
+    PENANCE = "penance"
+    SHADE = "shade"
+    SPECTRAL = "spectral"
+    UNDEAD = "undead"
+    VAMPYRE_TIER_1 = "vampyre - tier 1"
+    VAMPYRE_TIER_2 = "vampyre - tier 2"
+    VAMPYRE_TIER_3 = "vampyre - tier 3"
+    XERICIAN = "xerician"
+    WILDERNESS = "wilderness"
+
+
+VampyreMonsterTypes = (
+    MonsterTypes.VAMPYRE_TIER_1,
+    MonsterTypes.VAMPYRE_TIER_2,
+    MonsterTypes.VAMPYRE_TIER_3,
+)
 
 
 @unique
 class MonsterLocations(Enum):
-    wilderness = "wilderness"
-    tob = "tob"
-    cox = "cox"
+    WILDERNESS = "wilderness"
+    TOB = "tob"
+    COX = "cox"
 
 
-# tracked values ###########################################################
+###############################################################################
+# tracked values
+###############################################################################
 
 
 @total_ordering
@@ -209,13 +222,8 @@ class TrackedValue:
             return self.value == other
 
     def __copy__(self):
-        new_value = copy(self.value)
-        new_comment = copy(self.comment)
-        return self.__class__(new_value, new_comment)
-
-    def __copy__(self):
-        unpacked = tuple(getattr(self, field.name) for field in fields(self))
-        return self.__class__(*(copy(x) for x in unpacked))
+        unpacked = tuple(copy(getattr(self, field.name)) for field in fields(self))
+        return self.__class__(*unpacked)
 
 
 # subclasses
@@ -283,7 +291,9 @@ class Level(TrackedValue):
         if isinstance(other, LevelModifier):
             new_value = math.floor(int(self) * float(other))
             new_comment = f"⌊{self.comment!s} · {other.comment!s}⌋"
-        elif isinstance(other, int) or isinstance(other, np.int64):
+        elif isinstance(
+            other, int
+        ):  # TODO: Figure this out ->  or isinstance(other, np.int64):
             new_value = int(self) * int(other)
             new_comment = f"({self.comment!s} · {other!s})"
         else:
@@ -399,7 +409,7 @@ class Roll(TrackedValue):
 
     def __div__(self, other: int) -> int:
         if isinstance(other, int):
-            return int(self) / other
+            return int(self) // other
         else:
             raise NotImplementedError
 
@@ -447,7 +457,7 @@ class DamageValue(TrackedValue):
 
     def __div__(self, other: int) -> int:
         if isinstance(other, int):
-            return int(self) / other
+            return int(self) // other
         else:
             raise NotImplementedError
 
@@ -510,7 +520,7 @@ class CallableLevelsModifier:
 
 
 def create_modifier_pair(
-    value: float = None, comment: str = None
+    value: float | None = None, comment: str | None = None
 ) -> tuple[AttackRollModifier, DamageModifier]:
     value = float(value) if value is not None else float(1)
     comment = str(comment) if comment is not None else None

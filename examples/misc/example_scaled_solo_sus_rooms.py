@@ -46,10 +46,10 @@ def mutta_tank_mean_hit(**kwargs):
 
     # baby_dinh = baby.damage_distribution(dinhs_tank)
 
-    momma.active_style = momma.styles_coll.get_by_dt(DT.crush)
+    momma.active_style = momma.styles_coll.get_by_dt(DT.CRUSH)
     momma_dinh_melee = momma.damage_distribution(dinhs_tank)
 
-    momma.active_style = momma.styles_coll.get_by_dt(DT.ranged)
+    momma.active_style = momma.styles_coll.get_by_dt(DT.RANGED)
     momma_dinh_ranged = momma.damage_distribution(dinhs_tank)
     momma_ely_ranged = momma.damage_distribution(ely_tank)
 

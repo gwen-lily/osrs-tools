@@ -296,10 +296,10 @@ class Character(ABC):
 
         stat_enum_bound_tuples = (
             (Skills.defence, lb.__getattribute__(Skills.defence.name)),
-            (Skills.strength, lb.__getattribute__(Skills.strength.name)),
-            (Skills.attack, lb.__getattribute__(Skills.attack.name)),
-            (Skills.magic, lb.__getattribute__(Skills.magic.name)),
-            (Skills.ranged, lb.__getattribute__(Skills.ranged.name)),
+            (Skills.STRENGTH, lb.__getattribute__(Skills.STRENGTH.name)),
+            (Skills.ATTACK, lb.__getattribute__(Skills.ATTACK.name)),
+            (Skills.MAGIC, lb.__getattribute__(Skills.MAGIC.name)),
+            (Skills.RANGED, lb.__getattribute__(Skills.RANGED.name)),
         )
 
         for stat, stat_floor in stat_enum_bound_tuples:
@@ -316,12 +316,12 @@ class Character(ABC):
                 reduction_mod = 0.05
             elif isinstance(self, Monster):
                 reduction_mod = (
-                    0.10 if MonsterTypes.demon in self.special_attributes else 0.05
+                    0.10 if MonsterTypes.DEMON in self.special_attributes else 0.05
                 )
             else:
                 raise NotImplementedError
 
-            for skill in (Skills.attack, Skills.strength, Skills.defence):
+            for skill in (Skills.ATTACK, Skills.STRENGTH, Skills.defence):
                 self.base_levels.__setattr__(
                     skill, reduction_mod * self.base_levels.__getattribute__(skill)
                 )
@@ -782,7 +782,7 @@ class Player(Character):
         if (
             self.equipment.salve
             and isinstance(other, Monster)
-            and MonsterTypes.undead in other.special_attributes
+            and MonsterTypes.UNDEAD in other.special_attributes
         ):
             comment = "salve"
             if self.equipment.wearing(neck=Gear.from_bb("salve amulet (i)")):
@@ -814,7 +814,7 @@ class Player(Character):
         if (
             self.equipment.arclight
             and isinstance(other, Monster)
-            and MonsterTypes.demon in other.special_attributes
+            and MonsterTypes.DEMON in other.special_attributes
         ):
             modifier = 1.7
             comment = "arclight"
@@ -826,7 +826,7 @@ class Player(Character):
         if (
             self.equipment.dragonbane_weapon
             and isinstance(other, Monster)
-            and MonsterTypes.draconic in other.special_attributes
+            and MonsterTypes.DRACONIC in other.special_attributes
         ):
             comment = "draconic"
             if self.equipment.wearing(weapon=Weapon.from_bb("dragon hunter lance")):
@@ -846,7 +846,7 @@ class Player(Character):
         if (
             self.equipment.wilderness_weapon
             and isinstance(other, Monster)
-            and other.location is MonsterLocations.wilderness
+            and other.location is MonsterLocations.WILDERNESS
         ):
             comment = "wilderness"
             if self.equipment.wearing(weapon=Weapon.from_bb("craw's bow")):
@@ -924,7 +924,7 @@ class Player(Character):
         if (
             self.equipment.leafy_weapon
             and isinstance(other, Monster)
-            and MonsterTypes.leafy in other.special_attributes
+            and MonsterTypes.LEAFY in other.special_attributes
         ):
             modifier = 1.175
             comment = "leafy"
@@ -934,7 +934,7 @@ class Player(Character):
         if (
             self.equipment.keris
             and isinstance(other, Monster)
-            and MonsterTypes.kalphite in other.special_attributes
+            and MonsterTypes.KALPHITE in other.special_attributes
         ):
             modifier = 4 / 3
             comment = "keris"
@@ -976,7 +976,7 @@ class Player(Character):
             )
 
     def _inquisitor_modifier(self) -> tuple[AttackRollModifier, DamageModifier] | None:
-        if self.active_style.damage_type == DT.crush:
+        if self.active_style.damage_type == DT.CRUSH:
             comment = "inquisitor"
             piece_bonus = 0.005
             set_bonus = 0.01
@@ -1095,7 +1095,7 @@ class Player(Character):
         """
         if (
             self.equipment.dinhs_bulwark
-            and self.active_style == BulwarkStyles.get_by_style(Styles.pummel)
+            and self.active_style == BulwarkStyles.get_by_style(Styles.PUMMEL)
         ):
             db = self.equipment.defensive_bonus
             bonus = (
@@ -1144,10 +1144,10 @@ class Player(Character):
             raise PlayerError(other)
 
         if spell is not None:
-            dt = DT.magic
+            dt = DT.MAGIC
         elif isinstance(self.autocast, Spell) and self.active_style.is_spell_style:
             spell = self.autocast
-            dt = DT.magic
+            dt = DT.MAGIC
         else:
             dt = self.active_style.damage_type
 
@@ -1260,7 +1260,7 @@ class Player(Character):
 
         if spell is not None:
             spell = spell
-            dt = DT.magic
+            dt = DT.MAGIC
         elif isinstance(self.autocast, Spell) and self.active_style.is_spell_style:
             spell = self.autocast
             dt = self.active_style.damage_type
@@ -2146,30 +2146,30 @@ class Monster(Character):
         special_attributes = []
 
         if raw_type_value == "demon":
-            special_attributes.append(MonsterTypes.demon)
+            special_attributes.append(MonsterTypes.DEMON)
         elif raw_type_value == "dragon":
-            special_attributes.append(MonsterTypes.draconic)
+            special_attributes.append(MonsterTypes.DRACONIC)
         elif raw_type_value == "fire":
-            special_attributes.append(MonsterTypes.fiery)
+            special_attributes.append(MonsterTypes.FIERY)
         elif raw_type_value == "kalphite":
-            special_attributes.append(MonsterTypes.kalphite)
+            special_attributes.append(MonsterTypes.KALPHITE)
         elif raw_type_value == "kurask":
-            special_attributes.append(MonsterTypes.leafy)
+            special_attributes.append(MonsterTypes.LEAFY)
         elif raw_type_value == "vorkath":
-            special_attributes.extend([MonsterTypes.draconic, MonsterTypes.undead])
+            special_attributes.extend([MonsterTypes.DRACONIC, MonsterTypes.UNDEAD])
         elif raw_type_value == "undead":
-            special_attributes.append(MonsterTypes.undead)
+            special_attributes.append(MonsterTypes.UNDEAD)
         elif raw_type_value == "vampyre - tier 1":
             special_attributes.extend(
-                [MonsterTypes.vampyre, MonsterTypes.vampyre_tier_1]
+                [MonsterTypes.VAMPYRE, MonsterTypes.VAMPYRE_TIER_1]
             )
         elif raw_type_value == "vampyre - tier 2":
             special_attributes.extend(
-                [MonsterTypes.vampyre, MonsterTypes.vampyre_tier_2]
+                [MonsterTypes.VAMPYRE, MonsterTypes.VAMPYRE_TIER_2]
             )
         elif raw_type_value == "vampyre - tier 3":
             special_attributes.extend(
-                [MonsterTypes.vampyre, MonsterTypes.vampyre_tier_3]
+                [MonsterTypes.VAMPYRE, MonsterTypes.VAMPYRE_TIER_3]
             )
         elif raw_type_value == "guardian":
             raise MonsterError(f"{name=} must be an instance of {Guardian}")
@@ -2220,7 +2220,7 @@ class Dummy(Monster):
 
     styles = field(default=None, repr=False)
     active_style = field(default=None, repr=False)
-    location = field(default=MonsterLocations.wilderness, repr=False)
+    location = field(default=MonsterLocations.WILDERNESS, repr=False)
     exp_modifier = field(default=None, repr=False)
     combat_level = field(default=None, repr=False)
     special_attributes = field(default=tuple(t for t in MonsterTypes), repr=False)
@@ -2229,7 +2229,7 @@ class Dummy(Monster):
 @define(**character_attrs_settings)
 class CoxMonster(Monster):
     party_size: int = field(default=1)
-    location: MonsterLocations = field(default=MonsterLocations.cox, repr=False)
+    location: MonsterLocations = field(default=MonsterLocations.COX, repr=False)
     exp_modifier: float = field(default=1, repr=False)
     combat_level: int = field(default=-1, repr=False)
     special_attributes: tuple[MonsterTypes] = field(factory=tuple, repr=False)
@@ -2396,8 +2396,8 @@ class CoxMonster(Monster):
             ) = cls.get_base_levels_and_stats(name)
 
             cox_monster_attributes = list(special_attributes)
-            if MonsterTypes.xerician not in cox_monster_attributes:
-                cox_monster_attributes.append(MonsterTypes.xerician)
+            if MonsterTypes.XERICIAN not in cox_monster_attributes:
+                cox_monster_attributes.append(MonsterTypes.XERICIAN)
             cox_monster_attributes = tuple(cox_monster_attributes)
 
             return cls(
@@ -2405,7 +2405,7 @@ class CoxMonster(Monster):
                 base_levels=base_levels,
                 aggressive_bonus=aggressive_bonus,
                 defensive_bonus=defensive_bonus,
-                location=MonsterLocations.cox,
+                location=MonsterLocations.COX,
                 special_attributes=cox_monster_attributes,
                 party_size=party_size,
                 challenge_mode=challenge_mode,
@@ -2504,14 +2504,14 @@ class IceDemon(CoxMonster):
         base_levels, aggressive_bonus, defensive_bonus = cls.get_base_levels_and_stats(
             name
         )
-        special_attributes = (MonsterTypes.xerician, MonsterTypes.demon)
+        special_attributes = (MonsterTypes.XERICIAN, MonsterTypes.DEMON)
 
         return cls(
             name=name,
             base_levels=base_levels,
             aggressive_bonus=aggressive_bonus,
             defensive_bonus=defensive_bonus,
-            location=MonsterLocations.cox,
+            location=MonsterLocations.COX,
             special_attributes=special_attributes,
             party_size=party_size,
             challenge_mode=challenge_mode,
@@ -2528,12 +2528,12 @@ class DeathlyRanger(CoxMonster):
         base_levels, aggressive_bonus, defensive_bonus = cls.get_base_levels_and_stats(
             name
         )
-        special_attributes = (MonsterTypes.xerician,)
+        special_attributes = (MonsterTypes.XERICIAN,)
 
         attack_style = NpcStyle(
-            Styles.npc_ranged,
-            DT.ranged,
-            Stances.npc,
+            Styles.NPC_RANGED,
+            DT.RANGED,
+            Stances.NPC,
             attack_speed=4,
             ignores_defence=False,
             ignores_prayer=True,
@@ -2545,7 +2545,7 @@ class DeathlyRanger(CoxMonster):
             styles_coll=StylesCollection(name, (attack_style,), attack_style),
             aggressive_bonus=aggressive_bonus,
             defensive_bonus=defensive_bonus,
-            location=MonsterLocations.cox,
+            location=MonsterLocations.COX,
             special_attributes=special_attributes,
             party_size=party_size,
             challenge_mode=challenge_mode,
@@ -2573,12 +2573,12 @@ class DeathlyMage(CoxMonster):
         base_levels, aggressive_bonus, defensive_bonus = cls.get_base_levels_and_stats(
             name
         )
-        special_attributes = (MonsterTypes.xerician,)
+        special_attributes = (MonsterTypes.XERICIAN,)
 
         attack_style = NpcStyle(
-            Styles.npc_magic,
-            DT.magic,
-            Stances.npc,
+            Styles.NPC_MAGIC,
+            DT.MAGIC,
+            Stances.NPC,
             attack_speed=4,
             ignores_defence=False,
             ignores_prayer=True,
@@ -2590,7 +2590,7 @@ class DeathlyMage(CoxMonster):
             styles_coll=StylesCollection(name, (attack_style,), attack_style),
             aggressive_bonus=aggressive_bonus,
             defensive_bonus=defensive_bonus,
-            location=MonsterLocations.cox,
+            location=MonsterLocations.COX,
             special_attributes=special_attributes,
             party_size=party_size,
             challenge_mode=challenge_mode,
@@ -2617,20 +2617,20 @@ class SkeletalMystic(CoxMonster):
         base_levels, aggressive_bonus, defensive_bonus = cls.get_base_levels_and_stats(
             name
         )
-        special_attributes = (MonsterTypes.xerician, MonsterTypes.undead)
+        special_attributes = (MonsterTypes.XERICIAN, MonsterTypes.UNDEAD)
 
         magic_style = NpcStyle(
-            Styles.npc_magic,
-            DT.magic,
-            Stances.npc,
+            Styles.NPC_MAGIC,
+            DT.MAGIC,
+            Stances.NPC,
             attack_speed=4,
             ignores_defence=False,
             ignores_prayer=True,
         )
         melee_style = NpcStyle(
-            Styles.npc_melee,
-            DT.crush,
-            Stances.npc,
+            Styles.NPC_MELEE,
+            DT.CRUSH,
+            Stances.NPC,
             attack_speed=4,
             ignores_defence=False,
             ignores_prayer=True,
@@ -2643,7 +2643,7 @@ class SkeletalMystic(CoxMonster):
             styles_coll=styles_coll,
             aggressive_bonus=aggressive_bonus,
             defensive_bonus=defensive_bonus,
-            location=MonsterLocations.cox,
+            location=MonsterLocations.COX,
             special_attributes=special_attributes,
             party_size=party_size,
             challenge_mode=challenge_mode,
@@ -2674,20 +2674,20 @@ class LizardmanShaman(CoxMonster):
         base_levels, aggressive_bonus, defensive_bonus = cls.get_base_levels_and_stats(
             name
         )
-        special_attributes = (MonsterTypes.xerician,)
+        special_attributes = (MonsterTypes.XERICIAN,)
 
         ranged_style = NpcStyle(
-            Styles.npc_ranged,
-            DT.ranged,
-            Stances.npc,
+            Styles.NPC_RANGED,
+            DT.RANGED,
+            Stances.NPC,
             attack_speed=4,
             ignores_defence=False,
             ignores_prayer=False,
         )
         melee_style = NpcStyle(
-            Styles.npc_melee,
-            DT.crush,
-            Stances.npc,
+            Styles.NPC_MELEE,
+            DT.CRUSH,
+            Stances.NPC,
             attack_speed=4,
             ignores_defence=False,
             ignores_prayer=False,
@@ -2698,7 +2698,7 @@ class LizardmanShaman(CoxMonster):
             base_levels=base_levels,
             aggressive_bonus=aggressive_bonus,
             defensive_bonus=defensive_bonus,
-            location=MonsterLocations.cox,
+            location=MonsterLocations.COX,
             special_attributes=special_attributes,
             party_size=party_size,
             challenge_mode=challenge_mode,
@@ -2746,7 +2746,7 @@ class Guardian(CoxMonster):
         base_levels, aggressive_bonus, defensive_bonus = cls.get_base_levels_and_stats(
             name
         )
-        special_attributes = (MonsterTypes.xerician,)
+        special_attributes = (MonsterTypes.XERICIAN,)
 
         if party_average_mining_level:
             kwargs.update({"party_average_mining_level": party_average_mining_level})
@@ -2761,7 +2761,7 @@ class Guardian(CoxMonster):
             base_levels=base_levels,
             aggressive_bonus=aggressive_bonus,
             defensive_bonus=defensive_bonus,
-            location=MonsterLocations.cox,
+            location=MonsterLocations.COX,
             special_attributes=special_attributes,
             party_size=party_size,
             challenge_mode=challenge_mode,
@@ -2769,9 +2769,9 @@ class Guardian(CoxMonster):
         )
 
         melee_style = NpcStyle(
-            Styles.npc_melee,
-            DT.crush,
-            Stances.npc,
+            Styles.NPC_MELEE,
+            DT.CRUSH,
+            Stances.NPC,
             attack_speed=4,
             ignores_defence=False,
             ignores_prayer=True,
@@ -2796,7 +2796,7 @@ class SmallMuttadile(CoxMonster):
         base_levels, aggressive_bonus, defensive_bonus = cls.get_base_levels_and_stats(
             name
         )
-        special_attributes = (MonsterTypes.xerician,)
+        special_attributes = (MonsterTypes.XERICIAN,)
 
         ranged_style = NpcStyle(
             Style.ranged, attack_speed=4, ignores_defence=False, ignores_prayer=True
@@ -2810,7 +2810,7 @@ class SmallMuttadile(CoxMonster):
             base_levels=base_levels,
             aggressive_bonus=aggressive_bonus,
             defensive_bonus=defensive_bonus,
-            location=MonsterLocations.cox,
+            location=MonsterLocations.COX,
             special_attributes=special_attributes,
             party_size=party_size,
             challenge_mode=challenge_mode,
@@ -2850,7 +2850,7 @@ class BigMuttadile(CoxMonster):
         base_levels, aggressive_bonus, defensive_bonus = cls.get_base_levels_and_stats(
             name
         )
-        special_attributes = (MonsterTypes.xerician,)
+        special_attributes = (MonsterTypes.XERICIAN,)
 
         ranged_style = NpcStyle(
             Style.ranged, attack_speed=4, ignores_defence=False, ignores_prayer=True
@@ -2867,7 +2867,7 @@ class BigMuttadile(CoxMonster):
             base_levels=base_levels,
             aggressive_bonus=aggressive_bonus,
             defensive_bonus=defensive_bonus,
-            location=MonsterLocations.cox,
+            location=MonsterLocations.COX,
             special_attributes=special_attributes,
             party_size=party_size,
             challenge_mode=challenge_mode,
@@ -2916,14 +2916,14 @@ class Tekton(CoxMonster):
         base_levels, aggressive_bonus, defensive_bonus = cls.get_base_levels_and_stats(
             name
         )
-        special_attributes = (MonsterTypes.xerician,)
+        special_attributes = (MonsterTypes.XERICIAN,)
 
         return cls(
             name=name,
             base_levels=base_levels,
             aggressive_bonus=aggressive_bonus,
             defensive_bonus=defensive_bonus,
-            location=MonsterLocations.cox,
+            location=MonsterLocations.COX,
             special_attributes=special_attributes,
             party_size=party_size,
             challenge_mode=challenge_mode,
@@ -2939,14 +2939,14 @@ class TektonEnraged(Tekton):
         base_levels, aggressive_bonus, defensive_bonus = cls.get_base_levels_and_stats(
             name
         )
-        special_attributes = (MonsterTypes.xerician,)
+        special_attributes = (MonsterTypes.XERICIAN,)
 
         return cls(
             name=name,
             base_levels=base_levels,
             aggressive_bonus=aggressive_bonus,
             defensive_bonus=defensive_bonus,
-            location=MonsterLocations.cox,
+            location=MonsterLocations.COX,
             special_attributes=special_attributes,
             party_size=party_size,
             challenge_mode=challenge_mode,
@@ -2962,14 +2962,14 @@ class AbyssalPortal(CoxMonster):
         base_levels, aggressive_bonus, defensive_bonus = cls.get_base_levels_and_stats(
             name
         )
-        special_attributes = (MonsterTypes.xerician, MonsterTypes.demon)
+        special_attributes = (MonsterTypes.XERICIAN, MonsterTypes.DEMON)
 
         return cls(
             name=name,
             base_levels=base_levels,
             aggressive_bonus=aggressive_bonus,
             defensive_bonus=defensive_bonus,
-            location=MonsterLocations.cox,
+            location=MonsterLocations.COX,
             special_attributes=special_attributes,
             party_size=party_size,
             challenge_mode=challenge_mode,
@@ -3031,14 +3031,14 @@ class OlmMeleeHand(Olm):
         base_levels, aggressive_bonus, defensive_bonus = cls.get_base_levels_and_stats(
             name
         )
-        special_attributes = (MonsterTypes.xerician, MonsterTypes.draconic)
+        special_attributes = (MonsterTypes.XERICIAN, MonsterTypes.DRACONIC)
 
         return cls(
             name=name,
             base_levels=base_levels,
             aggressive_bonus=aggressive_bonus,
             defensive_bonus=defensive_bonus,
-            location=MonsterLocations.cox,
+            location=MonsterLocations.COX,
             combat_level=combat_level,
             special_attributes=special_attributes,
             party_size=party_size,
@@ -3065,14 +3065,14 @@ class OlmMageHand(Olm):
         base_levels, aggressive_bonus, defensive_bonus = cls.get_base_levels_and_stats(
             name
         )
-        special_attributes = (MonsterTypes.xerician, MonsterTypes.draconic)
+        special_attributes = (MonsterTypes.XERICIAN, MonsterTypes.DRACONIC)
 
         return cls(
             name=name,
             base_levels=base_levels,
             aggressive_bonus=aggressive_bonus,
             defensive_bonus=defensive_bonus,
-            location=MonsterLocations.cox,
+            location=MonsterLocations.COX,
             combat_level=combat_level,
             special_attributes=special_attributes,
             party_size=party_size,
@@ -3174,20 +3174,20 @@ class OlmHead(Olm):
         base_levels, aggressive_bonus, defensive_bonus = cls.get_base_levels_and_stats(
             name
         )
-        special_attributes = (MonsterTypes.xerician, MonsterTypes.draconic)
+        special_attributes = (MonsterTypes.XERICIAN, MonsterTypes.DRACONIC)
 
         ranged_style = NpcStyle(
-            Styles.npc_ranged,
-            DT.ranged,
-            Stances.npc,
+            Styles.NPC_RANGED,
+            DT.RANGED,
+            Stances.NPC,
             attack_speed=4,
             ignores_defence=False,
             ignores_prayer=True,
         )
         magic_style = NpcStyle(
-            Styles.npc_magic,
-            DT.magic,
-            Stances.npc,
+            Styles.NPC_MAGIC,
+            DT.MAGIC,
+            Stances.NPC,
             attack_speed=4,
             ignores_defence=False,
             ignores_prayer=True,
@@ -3198,7 +3198,7 @@ class OlmHead(Olm):
             base_levels=base_levels,
             aggressive_bonus=aggressive_bonus,
             defensive_bonus=defensive_bonus,
-            location=MonsterLocations.cox,
+            location=MonsterLocations.COX,
             combat_level=combat_level,
             special_attributes=special_attributes,
             party_size=party_size,

@@ -1357,7 +1357,7 @@ class Equipment:
         if style is not None:
             weapon_style = style
         elif self.inquisitor_set:
-            weapon_style = TwoHandedStyles.get_by_style(Styles.smash)
+            weapon_style = TwoHandedStyles.get_by_style(Styles.SMASH)
         else:
             weapon_style = TwoHandedStyles.default
 
@@ -1376,7 +1376,7 @@ class Equipment:
             weapon_style = style
         else:
             if self.inquisitor_set:
-                weapon_style = ScytheStyles.get_by_style(Styles.jab)
+                weapon_style = ScytheStyles.get_by_style(Styles.JAB)
             else:
                 weapon_style = ScytheStyles.default
 
@@ -1394,7 +1394,7 @@ class Equipment:
         if style is not None:
             weapon_style = style
         elif self.inquisitor_set:
-            weapon_style = SpearStyles.get_by_style(Styles.pound)
+            weapon_style = SpearStyles.get_by_style(Styles.POUND)
         else:
             weapon_style = SpearStyles.default
 
@@ -1592,7 +1592,7 @@ class Equipment:
         if style is not None:
             weapon_style = style
         else:
-            weapon_style = CrossbowStyles.get_by_style(Styles.accurate)
+            weapon_style = CrossbowStyles.get_by_style(Styles.ACCURATE)
 
         assert isinstance(weapon_style, PlayerStyle)
 
@@ -1621,7 +1621,7 @@ class Equipment:
 
     def equip_seercull(self, style: PlayerStyle = None) -> PlayerStyle:  # type: ignore
         seercull = SpecialWeapon.from_bb("seercull")
-        weapon_style = style if style else BowStyles.get_by_stance(Stances.accurate)
+        weapon_style = style if style else BowStyles.get_by_stance(Stances.ACCURATE)
         assert isinstance(weapon_style, PlayerStyle)
 
         return_val = self.equip(seercull, style=weapon_style)
@@ -1639,7 +1639,7 @@ class Equipment:
     def equip_sang(self, arcane: bool = True, style: PlayerStyle = None) -> PlayerStyle:  # type: ignore
         gear = [Gear.from_bb("arcane spirit shield")] if arcane else []
         weapon_style = (
-            style if style else PoweredStaffStyles.get_by_stance(Stances.accurate)
+            style if style else PoweredStaffStyles.get_by_stance(Stances.ACCURATE)
         )
         assert isinstance(weapon_style, PlayerStyle)
 

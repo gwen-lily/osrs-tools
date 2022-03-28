@@ -468,7 +468,7 @@ def rope_estimates(
 
     elif mode is RopeModes.CHIN_BOTH:
         lad.active_style = lad.equipment.equip_black_chins(
-            style=ChinchompaStyles.get_by_style(Styles.long_fuse)
+            style=ChinchompaStyles.get_by_style(Styles.LONG_FUSE)
         )
         dpt_mage = lad.damage_distribution(mage).per_tick
         dpt_ranger = lad.damage_distribution(ranger).per_tick

@@ -33,36 +33,36 @@ class PlayerStyle(Style):
         attack_range_modifier = 0
 
         if self.damage_type in MeleeDamageTypes:
-            if self.stance is Stances.accurate:
+            if self.stance is Stances.ACCURATE:
                 self.combat_bonus = StyleStats.melee_accurate_bonuses()
-            elif self.stance is Stances.aggressive:
+            elif self.stance is Stances.AGGRESSIVE:
                 self.combat_bonus = StyleStats.melee_strength_bonuses()
-            elif self.stance is Stances.defensive:
+            elif self.stance is Stances.DEFENSIVE:
                 self.combat_bonus = StyleStats.defensive_bonuses()
-            elif self.stance is Stances.controlled:
+            elif self.stance is Stances.CONTROLLED:
                 self.combat_bonus = StyleStats.melee_shared_bonus()
             else:
                 raise NotImplementedError
 
         elif self.damage_type in RangedDamageTypes:
-            if self.stance is Stances.accurate:
+            if self.stance is Stances.ACCURATE:
                 self.combat_bonus = StyleStats.ranged_bonus()
-            elif self.stance is Stances.rapid:
+            elif self.stance is Stances.RAPID:
                 self.combat_bonus = StyleStats.no_style_bonus()
                 attack_speed_modifier -= 1
-            elif self.stance is Stances.longrange:
+            elif self.stance is Stances.LONGRANGE:
                 self.combat_bonus = StyleStats.defensive_bonuses()
                 attack_range_modifier += 2
             else:
                 raise NotImplementedError
 
         elif self.damage_type in MagicDamageTypes:
-            if self.stance is Stances.accurate:
+            if self.stance is Stances.ACCURATE:
                 self.combat_bonus = StyleStats.magic_bonus()
-            elif self.stance is Stances.longrange:
+            elif self.stance is Stances.LONGRANGE:
                 self.combat_bonus = StyleStats(defence=1)
                 attack_range_modifier += 2
-            elif self.stance is Stances.no_style:
+            elif self.stance is Stances.NO_STYLE:
                 self.combat_bonus = StyleStats.no_style_bonus()
             else:
                 raise NotImplementedError
@@ -76,7 +76,7 @@ class PlayerStyle(Style):
 
     @classmethod
     def default_style(cls):
-        return cls(Styles.punch, DT.crush, Stances.accurate)
+        return cls(Styles.PUNCH, DT.CRUSH, Stances.ACCURATE)
 
 
 @dataclass(eq=True)
@@ -134,228 +134,228 @@ class StylesCollection:
 TwoHandedStyles = StylesCollection(
     "two-handed swords",
     (
-        PlayerStyle(Styles.chop, DT.slash, Stances.accurate),
-        PlayerStyle(Styles.slash, DT.slash, Stances.aggressive),
-        PlayerStyle(Styles.smash, DT.crush, Stances.aggressive),
-        PlayerStyle(Styles.block, DT.slash, Stances.defensive),
+        PlayerStyle(Styles.CHOP, DT.SLASH, Stances.ACCURATE),
+        PlayerStyle(Styles.SLASH, DT.SLASH, Stances.AGGRESSIVE),
+        PlayerStyle(Styles.SMASH, DT.CRUSH, Stances.AGGRESSIVE),
+        PlayerStyle(Styles.BLOCK, DT.SLASH, Stances.DEFENSIVE),
     ),
-    PlayerStyle(Styles.slash, DT.slash, Stances.aggressive),
+    PlayerStyle(Styles.SLASH, DT.SLASH, Stances.AGGRESSIVE),
 )
 
 AxesStyles = StylesCollection(
     "axes",
     (
-        PlayerStyle(Styles.chop, DT.slash, Stances.accurate),
-        PlayerStyle(Styles.hack, DT.slash, Stances.aggressive),
-        PlayerStyle(Styles.smash, DT.crush, Stances.aggressive),
-        PlayerStyle(Styles.block, DT.slash, Stances.defensive),
+        PlayerStyle(Styles.CHOP, DT.SLASH, Stances.ACCURATE),
+        PlayerStyle(Styles.HACK, DT.SLASH, Stances.AGGRESSIVE),
+        PlayerStyle(Styles.SMASH, DT.CRUSH, Stances.AGGRESSIVE),
+        PlayerStyle(Styles.BLOCK, DT.SLASH, Stances.DEFENSIVE),
     ),
-    PlayerStyle(Styles.hack, DT.slash, Stances.aggressive),
+    PlayerStyle(Styles.HACK, DT.SLASH, Stances.AGGRESSIVE),
 )
 
 BluntStyles = StylesCollection(
     "blunt weapons",
     (
-        PlayerStyle(Styles.pound, DT.crush, Stances.accurate),
-        PlayerStyle(Styles.pummel, DT.crush, Stances.aggressive),
-        PlayerStyle(Styles.block, DT.crush, Stances.aggressive),
+        PlayerStyle(Styles.POUND, DT.CRUSH, Stances.ACCURATE),
+        PlayerStyle(Styles.PUMMEL, DT.CRUSH, Stances.AGGRESSIVE),
+        PlayerStyle(Styles.BLOCK, DT.CRUSH, Stances.AGGRESSIVE),
     ),
-    PlayerStyle(Styles.pound, DT.crush, Stances.accurate),
+    PlayerStyle(Styles.POUND, DT.CRUSH, Stances.ACCURATE),
 )
 
 BludgeonStyles = StylesCollection(
     "bludgeons",
-    (PlayerStyle(Styles.pummel, DT.crush, Stances.aggressive),),
-    PlayerStyle(Styles.pummel, DT.crush, Stances.aggressive),
+    (PlayerStyle(Styles.PUMMEL, DT.CRUSH, Stances.AGGRESSIVE),),
+    PlayerStyle(Styles.PUMMEL, DT.CRUSH, Stances.AGGRESSIVE),
 )
 
 BulwarkStyles = StylesCollection(
     "bulwarks",
     (
-        PlayerStyle(Styles.pummel, DT.crush, Stances.accurate),
-        PlayerStyle(Styles.block, DT.crush, Stances.defensive),
+        PlayerStyle(Styles.PUMMEL, DT.CRUSH, Stances.ACCURATE),
+        PlayerStyle(Styles.BLOCK, DT.CRUSH, Stances.DEFENSIVE),
     ),
-    PlayerStyle(Styles.block, DT.crush, Stances.defensive),
+    PlayerStyle(Styles.BLOCK, DT.CRUSH, Stances.DEFENSIVE),
 )
 
 ClawStyles = StylesCollection(
     "claws",
     (
-        PlayerStyle(Styles.chop, DT.slash, Stances.accurate),
-        PlayerStyle(Styles.slash, DT.slash, Stances.aggressive),
-        PlayerStyle(Styles.lunge, DT.stab, Stances.controlled),
-        PlayerStyle(Styles.block, DT.slash, Stances.defensive),
+        PlayerStyle(Styles.CHOP, DT.SLASH, Stances.ACCURATE),
+        PlayerStyle(Styles.SLASH, DT.SLASH, Stances.AGGRESSIVE),
+        PlayerStyle(Styles.LUNGE, DT.STAB, Stances.CONTROLLED),
+        PlayerStyle(Styles.BLOCK, DT.SLASH, Stances.DEFENSIVE),
     ),
-    PlayerStyle(Styles.slash, DT.slash, Stances.aggressive),
+    PlayerStyle(Styles.SLASH, DT.SLASH, Stances.AGGRESSIVE),
 )
 
 PickaxeStyles = StylesCollection(
     "pickaxes",
     (
-        PlayerStyle(Styles.spike, DT.stab, Stances.accurate),
-        PlayerStyle(Styles.impale, DT.stab, Stances.aggressive),
-        PlayerStyle(Styles.smash, DT.crush, Stances.aggressive),
-        PlayerStyle(Styles.block, DT.stab, Stances.defensive),
+        PlayerStyle(Styles.SPIKE, DT.STAB, Stances.ACCURATE),
+        PlayerStyle(Styles.IMPALE, DT.STAB, Stances.AGGRESSIVE),
+        PlayerStyle(Styles.SMASH, DT.CRUSH, Stances.AGGRESSIVE),
+        PlayerStyle(Styles.BLOCK, DT.STAB, Stances.DEFENSIVE),
     ),
-    PlayerStyle(Styles.smash, DT.crush, Stances.aggressive),
+    PlayerStyle(Styles.SMASH, DT.CRUSH, Stances.AGGRESSIVE),
 )
 
 PolearmStyles = StylesCollection(
     "polearms",
     (
-        PlayerStyle(Styles.jab, DT.stab, Stances.controlled),
-        PlayerStyle(Styles.swipe, DT.slash, Stances.aggressive),
-        PlayerStyle(Styles.fend, DT.stab, Stances.defensive),
+        PlayerStyle(Styles.JAB, DT.STAB, Stances.CONTROLLED),
+        PlayerStyle(Styles.SWIPE, DT.SLASH, Stances.AGGRESSIVE),
+        PlayerStyle(Styles.FEND, DT.STAB, Stances.DEFENSIVE),
     ),
-    PlayerStyle(Styles.swipe, DT.slash, Stances.aggressive),
+    PlayerStyle(Styles.SWIPE, DT.SLASH, Stances.AGGRESSIVE),
 )
 
 ScytheStyles = StylesCollection(
     "scythes",
     (
-        PlayerStyle(Styles.reap, DT.slash, Stances.accurate),
-        PlayerStyle(Styles.chop, DT.slash, Stances.aggressive),
-        PlayerStyle(Styles.jab, DT.crush, Stances.aggressive),
-        PlayerStyle(Styles.block, DT.slash, Stances.defensive),
+        PlayerStyle(Styles.REAP, DT.SLASH, Stances.ACCURATE),
+        PlayerStyle(Styles.CHOP, DT.SLASH, Stances.AGGRESSIVE),
+        PlayerStyle(Styles.JAB, DT.CRUSH, Stances.AGGRESSIVE),
+        PlayerStyle(Styles.BLOCK, DT.SLASH, Stances.DEFENSIVE),
     ),
-    PlayerStyle(Styles.chop, DT.slash, Stances.aggressive),
+    PlayerStyle(Styles.CHOP, DT.SLASH, Stances.AGGRESSIVE),
 )
 
 SlashSwordStyles = StylesCollection(
     "slash swords",
     (
-        PlayerStyle(Styles.chop, DT.slash, Stances.accurate),
-        PlayerStyle(Styles.slash, DT.slash, Stances.aggressive),
-        PlayerStyle(Styles.lunge, DT.stab, Stances.controlled),
-        PlayerStyle(Styles.block, DT.slash, Stances.defensive),
+        PlayerStyle(Styles.CHOP, DT.SLASH, Stances.ACCURATE),
+        PlayerStyle(Styles.SLASH, DT.SLASH, Stances.AGGRESSIVE),
+        PlayerStyle(Styles.LUNGE, DT.STAB, Stances.CONTROLLED),
+        PlayerStyle(Styles.BLOCK, DT.SLASH, Stances.DEFENSIVE),
     ),
-    PlayerStyle(Styles.slash, DT.slash, Stances.aggressive),
+    PlayerStyle(Styles.SLASH, DT.SLASH, Stances.AGGRESSIVE),
 )
 
 SpearStyles = StylesCollection(
     "spears",
     (
-        PlayerStyle(Styles.lunge, DT.stab, Stances.controlled),
-        PlayerStyle(Styles.swipe, DT.slash, Stances.controlled),
-        PlayerStyle(Styles.pound, DT.crush, Stances.controlled),
-        PlayerStyle(Styles.block, DT.stab, Stances.defensive),
+        PlayerStyle(Styles.LUNGE, DT.STAB, Stances.CONTROLLED),
+        PlayerStyle(Styles.SWIPE, DT.SLASH, Stances.CONTROLLED),
+        PlayerStyle(Styles.POUND, DT.CRUSH, Stances.CONTROLLED),
+        PlayerStyle(Styles.BLOCK, DT.STAB, Stances.DEFENSIVE),
     ),
-    PlayerStyle(Styles.lunge, DT.stab, Stances.controlled),
+    PlayerStyle(Styles.LUNGE, DT.STAB, Stances.CONTROLLED),
 )
 
 SpikedWeaponsStyles = StylesCollection(
     "spiked weapons",
     (
-        PlayerStyle(Styles.pound, DT.crush, Stances.accurate),
-        PlayerStyle(Styles.pummel, DT.crush, Stances.aggressive),
-        PlayerStyle(Styles.spike, DT.stab, Stances.controlled),
-        PlayerStyle(Styles.block, DT.crush, Stances.defensive),
+        PlayerStyle(Styles.POUND, DT.CRUSH, Stances.ACCURATE),
+        PlayerStyle(Styles.PUMMEL, DT.CRUSH, Stances.AGGRESSIVE),
+        PlayerStyle(Styles.SPIKE, DT.STAB, Stances.CONTROLLED),
+        PlayerStyle(Styles.BLOCK, DT.CRUSH, Stances.DEFENSIVE),
     ),
-    PlayerStyle(Styles.pummel, DT.crush, Stances.aggressive),
+    PlayerStyle(Styles.PUMMEL, DT.CRUSH, Stances.AGGRESSIVE),
 )
 
 StabSwordStyles = StylesCollection(
     "stab swords",
     (
-        PlayerStyle(Styles.stab, DT.stab, Stances.accurate),
-        PlayerStyle(Styles.lunge, DT.stab, Stances.aggressive),
-        PlayerStyle(Styles.slash, DT.slash, Stances.aggressive),
-        PlayerStyle(Styles.block, DT.stab, Stances.defensive),
+        PlayerStyle(Styles.STAB, DT.STAB, Stances.ACCURATE),
+        PlayerStyle(Styles.LUNGE, DT.STAB, Stances.AGGRESSIVE),
+        PlayerStyle(Styles.SLASH, DT.SLASH, Stances.AGGRESSIVE),
+        PlayerStyle(Styles.BLOCK, DT.STAB, Stances.DEFENSIVE),
     ),
-    PlayerStyle(Styles.lunge, DT.stab, Stances.aggressive),
+    PlayerStyle(Styles.LUNGE, DT.STAB, Stances.AGGRESSIVE),
 )
 
 UnarmedStyles = StylesCollection(
     "unarmed weapons",
     (
-        PlayerStyle(Styles.punch, DT.crush, Stances.accurate),
-        PlayerStyle(Styles.kick, DT.crush, Stances.aggressive),
-        PlayerStyle(Styles.block, DT.crush, Stances.defensive),
+        PlayerStyle(Styles.PUNCH, DT.CRUSH, Stances.ACCURATE),
+        PlayerStyle(Styles.KICK, DT.CRUSH, Stances.AGGRESSIVE),
+        PlayerStyle(Styles.BLOCK, DT.CRUSH, Stances.DEFENSIVE),
     ),
-    PlayerStyle(Styles.kick, DT.crush, Stances.aggressive),
+    PlayerStyle(Styles.KICK, DT.CRUSH, Stances.AGGRESSIVE),
 )
 
 WhipStyles = StylesCollection(
     "whips",
     (
-        PlayerStyle(Styles.flick, DT.slash, Stances.accurate),
-        PlayerStyle(Styles.lash, DT.slash, Stances.controlled),
-        PlayerStyle(Styles.deflect, DT.slash, Stances.defensive),
+        PlayerStyle(Styles.FLICK, DT.SLASH, Stances.ACCURATE),
+        PlayerStyle(Styles.LASH, DT.SLASH, Stances.CONTROLLED),
+        PlayerStyle(Styles.DEFLECT, DT.SLASH, Stances.DEFENSIVE),
     ),
-    PlayerStyle(Styles.lash, DT.slash, Stances.controlled),
+    PlayerStyle(Styles.LASH, DT.SLASH, Stances.CONTROLLED),
 )
 
 BowStyles = StylesCollection(
     "bow",
     (
-        PlayerStyle(Styles.accurate, DT.ranged, Stances.accurate),
-        PlayerStyle(Styles.rapid, DT.ranged, Stances.rapid),
-        PlayerStyle(Styles.longrange, DT.ranged, Stances.longrange),
+        PlayerStyle(Styles.ACCURATE, DT.RANGED, Stances.ACCURATE),
+        PlayerStyle(Styles.RAPID, DT.RANGED, Stances.RAPID),
+        PlayerStyle(Styles.LONGRANGE, DT.RANGED, Stances.LONGRANGE),
     ),
-    PlayerStyle(Styles.rapid, DT.ranged, Stances.rapid),
+    PlayerStyle(Styles.RAPID, DT.RANGED, Stances.RAPID),
 )
 
 ChinchompaStyles = StylesCollection(
     "chinchompas",
     (
-        PlayerStyle(Styles.short_fuse, DT.ranged, Stances.accurate),
-        PlayerStyle(Styles.medium_fuse, DT.ranged, Stances.rapid),
-        PlayerStyle(Styles.long_fuse, DT.ranged, Stances.longrange),
+        PlayerStyle(Styles.SHORT_FUSE, DT.RANGED, Stances.ACCURATE),
+        PlayerStyle(Styles.MEDIUM_FUSE, DT.RANGED, Stances.RAPID),
+        PlayerStyle(Styles.LONG_FUSE, DT.RANGED, Stances.LONGRANGE),
     ),
-    PlayerStyle(Styles.medium_fuse, DT.ranged, Stances.rapid),
+    PlayerStyle(Styles.MEDIUM_FUSE, DT.RANGED, Stances.RAPID),
 )
 
 CrossbowStyles = StylesCollection(
     "crossbow",
     (
-        PlayerStyle(Styles.accurate, DT.ranged, Stances.accurate),
-        PlayerStyle(Styles.rapid, DT.ranged, Stances.rapid),
-        PlayerStyle(Styles.longrange, DT.ranged, Stances.longrange),
+        PlayerStyle(Styles.ACCURATE, DT.RANGED, Stances.ACCURATE),
+        PlayerStyle(Styles.RAPID, DT.RANGED, Stances.RAPID),
+        PlayerStyle(Styles.LONGRANGE, DT.RANGED, Stances.LONGRANGE),
     ),
-    PlayerStyle(Styles.rapid, DT.ranged, Stances.rapid),
+    PlayerStyle(Styles.RAPID, DT.RANGED, Stances.RAPID),
 )
 
 ThrownStyles = StylesCollection(
     "thrown",
     (
-        PlayerStyle(Styles.accurate, DT.ranged, Stances.accurate),
-        PlayerStyle(Styles.rapid, DT.ranged, Stances.rapid),
-        PlayerStyle(Styles.longrange, DT.ranged, Stances.longrange),
+        PlayerStyle(Styles.ACCURATE, DT.RANGED, Stances.ACCURATE),
+        PlayerStyle(Styles.RAPID, DT.RANGED, Stances.RAPID),
+        PlayerStyle(Styles.LONGRANGE, DT.RANGED, Stances.LONGRANGE),
     ),
-    PlayerStyle(Styles.rapid, DT.ranged, Stances.rapid),
+    PlayerStyle(Styles.RAPID, DT.RANGED, Stances.RAPID),
 )
 
 BladedStaffStyles = StylesCollection(
     "bladed staves",
     (
-        PlayerStyle(Styles.jab, DT.stab, Stances.accurate),
-        PlayerStyle(Styles.swipe, DT.slash, Stances.aggressive),
-        PlayerStyle(Styles.fend, DT.crush, Stances.defensive),
-        PlayerStyle(Styles.standard_spell, DT.magic, Stances.no_style),
-        PlayerStyle(Styles.defensive_spell, DT.magic, Stances.no_style),
+        PlayerStyle(Styles.JAB, DT.STAB, Stances.ACCURATE),
+        PlayerStyle(Styles.SWIPE, DT.SLASH, Stances.AGGRESSIVE),
+        PlayerStyle(Styles.FEND, DT.CRUSH, Stances.DEFENSIVE),
+        PlayerStyle(Styles.STANDARD_SPELL, DT.MAGIC, Stances.NO_STYLE),
+        PlayerStyle(Styles.DEFENSIVE_SPELL, DT.MAGIC, Stances.NO_STYLE),
     ),
-    PlayerStyle(Styles.swipe, DT.slash, Stances.aggressive),
+    PlayerStyle(Styles.SWIPE, DT.SLASH, Stances.AGGRESSIVE),
 )
 
 PoweredStaffStyles = StylesCollection(
     "powered staves",
     (
-        PlayerStyle(Styles.accurate, DT.magic, Stances.accurate),
-        PlayerStyle(Styles.longrange, DT.magic, Stances.longrange),
+        PlayerStyle(Styles.ACCURATE, DT.MAGIC, Stances.ACCURATE),
+        PlayerStyle(Styles.LONGRANGE, DT.MAGIC, Stances.LONGRANGE),
     ),
-    PlayerStyle(Styles.accurate, DT.magic, Stances.accurate),
+    PlayerStyle(Styles.ACCURATE, DT.MAGIC, Stances.ACCURATE),
 )
 
 StaffStyles = StylesCollection(
     "staves",
     (
-        PlayerStyle(Styles.bash, DT.crush, Stances.accurate),
-        PlayerStyle(Styles.pound, DT.crush, Stances.aggressive),
-        PlayerStyle(Styles.focus, DT.crush, Stances.defensive),
-        PlayerStyle(Styles.standard_spell, DT.magic, Stances.no_style),
-        PlayerStyle(Styles.defensive_spell, DT.magic, Stances.no_style),
+        PlayerStyle(Styles.BASH, DT.CRUSH, Stances.ACCURATE),
+        PlayerStyle(Styles.POUND, DT.CRUSH, Stances.AGGRESSIVE),
+        PlayerStyle(Styles.FOCUS, DT.CRUSH, Stances.DEFENSIVE),
+        PlayerStyle(Styles.STANDARD_SPELL, DT.MAGIC, Stances.NO_STYLE),
+        PlayerStyle(Styles.DEFENSIVE_SPELL, DT.MAGIC, Stances.NO_STYLE),
     ),
-    PlayerStyle(Styles.standard_spell, DT.magic, Stances.no_style),
+    PlayerStyle(Styles.STANDARD_SPELL, DT.MAGIC, Stances.NO_STYLE),
 )
 
 AllWeaponStylesCollections = (

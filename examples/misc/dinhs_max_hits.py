@@ -92,7 +92,7 @@ def dinhs_max(**kwargs):
     torva_salve.equipment.equip_salve()
     dummy = Dummy()
 
-    attack_style = BulwarkStyles.get_by_style(Styles.pummel)
+    attack_style = BulwarkStyles.get_by_style(Styles.PUMMEL)
     assert isinstance(attack_style, PlayerStyle)
 
     for lad in lads:
