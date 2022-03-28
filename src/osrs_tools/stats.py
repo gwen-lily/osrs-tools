@@ -6,8 +6,7 @@ from functools import total_ordering
 from typing import NamedTuple
 
 import osrs_tools.resource_reader as rr
-from osrs_tools.exceptions import OsrsException
-from osrs_tools.modifier import (
+from osrs_tools.data import (
     CallableLevelsModifier,
     CallableLevelsModifierType,
     Level,
@@ -16,6 +15,7 @@ from osrs_tools.modifier import (
     Skills,
     StyleBonus,
 )
+from osrs_tools.exceptions import OsrsException
 
 
 @dataclass

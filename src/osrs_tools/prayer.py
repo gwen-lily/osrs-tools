@@ -5,8 +5,8 @@ from cached_property import cached_property
 from osrsbox import prayers_api
 from osrsbox.prayers_api import prayer_properties
 
+from osrs_tools.data import LevelModifier, Skills
 from osrs_tools.exceptions import OsrsException
-from osrs_tools.modifier import LevelModifier, Skills
 
 PRAYERS = prayers_api.load()
 

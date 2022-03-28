@@ -1,8 +1,7 @@
 import itertools
 from dataclasses import dataclass
 
-from osrs_tools.exceptions import OsrsException
-from osrs_tools.modifier import (
+from osrs_tools.data import (
     DT,
     MagicDamageTypes,
     MeleeDamageTypes,
@@ -11,6 +10,7 @@ from osrs_tools.modifier import (
     Stances,
     Styles,
 )
+from osrs_tools.exceptions import OsrsException
 from osrs_tools.stats import StyleStats
 
 

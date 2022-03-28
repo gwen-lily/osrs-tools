@@ -14,8 +14,8 @@ from osrs_tools.character import (
     SkeletalMystic,
 )
 from osrs_tools.damage import Damage
+from osrs_tools.data import Level, Styles
 from osrs_tools.equipment import Equipment
-from osrs_tools.modifier import Level, Styles
 from osrs_tools.prayer import Piety, ProtectFromMagic, Rigour
 from osrs_tools.stats import (
     BastionPotion,

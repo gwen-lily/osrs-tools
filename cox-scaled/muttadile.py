@@ -2,8 +2,8 @@ from dataclasses import dataclass, field
 
 from osrs_tools.character import BigMuttadile, Player, SmallMuttadile
 from osrs_tools.damage import Damage
+from osrs_tools.data import Level, Styles
 from osrs_tools.equipment import Equipment
-from osrs_tools.modifier import Level, Styles
 from osrs_tools.prayer import Augury, Rigour
 from osrs_tools.spells import PoweredSpells
 from osrs_tools.stats import Boost, Overload

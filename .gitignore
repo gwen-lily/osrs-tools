@@ -19,3 +19,4 @@ resources/.~lock*
 *.egg-info
 src/osrs_tools/gear_from_osrsbox.py
 src/osrs_tools/gear_from_osrsbox.py
+src/osrs_tools/gear_from_osrsbox.py

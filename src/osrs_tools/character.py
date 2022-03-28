@@ -10,16 +10,7 @@ from osrsbox import monsters_api, monsters_api_examples
 
 import osrs_tools.resource_reader as rr
 from osrs_tools.damage import Damage, Hitsplat
-from osrs_tools.equipment import (
-    EquipableError,
-    Equipment,
-    Gear,
-    SpecialWeapon,
-    SpecialWeaponError,
-    Weapon,
-)
-from osrs_tools.exceptions import OsrsException
-from osrs_tools.modifier import (
+from osrs_tools.data import (
     DT,
     DamageModifier,
     DamageValue,
@@ -37,6 +28,15 @@ from osrs_tools.modifier import (
     Styles,
     create_modifier_pair,
 )
+from osrs_tools.equipment import (
+    EquipableError,
+    Equipment,
+    Gear,
+    SpecialWeapon,
+    SpecialWeaponError,
+    Weapon,
+)
+from osrs_tools.exceptions import OsrsException
 from osrs_tools.prayer import (
     Augury,
     Piety,

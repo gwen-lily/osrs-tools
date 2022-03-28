@@ -9,8 +9,8 @@ from osrsbox import items_api
 from osrsbox.items_api.item_properties import ItemEquipment, ItemProperties, ItemWeapon
 
 import osrs_tools.resource_reader as rr
+from osrs_tools.data import DT, DamageModifier, Level, RollModifier, Stances, Styles
 from osrs_tools.exceptions import OsrsException
-from osrs_tools.modifier import DT, DamageModifier, Level, RollModifier, Stances, Styles
 from osrs_tools.stats import (
     AggressiveStats,
     DefensiveStats,

@@ -3,8 +3,8 @@ from dataclasses import dataclass, field
 from enum import Enum, unique
 
 from osrs_tools.character import Player
+from osrs_tools.data import Level
 from osrs_tools.exceptions import OsrsException
-from osrs_tools.modifier import Level
 
 ###############################################################################
 # email:    noahgill409@gmail.com
