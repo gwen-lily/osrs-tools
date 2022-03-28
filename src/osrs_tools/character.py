@@ -1166,11 +1166,11 @@ class Player(Character):
         elif dt in MagicDamageTypes:
             if spell is None:
                 if self.equipment.weapon == Weapon.from_bb("sanguinesti staff"):
-                    self.autocast = PoweredSpells.sanguinesti_staff.value
+                    self.autocast = PoweredSpells.SANGUINESTI_STAFF.value
                 elif self.equipment.weapon == Weapon.from_bb("trident of the swamp"):
-                    self.autocast = PoweredSpells.trident_of_the_swamp.value
+                    self.autocast = PoweredSpells.TRIDENT_OF_THE_SWAMP.value
                 elif self.equipment.weapon == Weapon.from_bb("trident of the seas"):
-                    self.autocast = PoweredSpells.trident_of_the_seas.value
+                    self.autocast = PoweredSpells.TRIDENT_OF_THE_SEAS.value
                 else:
                     raise StyleError(dt, spell)
 

@@ -30,7 +30,7 @@ class SangSmallMutta:
         style = PoweredStaffStyles.get_by_style(Styles.LONGRANGE)
         assert isinstance(style, PlayerStyle)
         player.active_style = player.equipment.equip_sang(arcane=False, style=style)
-        player.autocast = PoweredSpells.sanguinesti_staff.value
+        player.autocast = PoweredSpells.SANGUINESTI_STAFF.value
 
         assert player.equipment.full_set
 
