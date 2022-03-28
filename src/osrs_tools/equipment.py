@@ -10,14 +10,7 @@ from osrsbox.items_api.item_properties import ItemEquipment, ItemProperties, Ite
 
 import osrs_tools.resource_reader as rr
 from osrs_tools.exceptions import OsrsException
-from osrs_tools.modifier import (
-    DT,
-    AttackRollModifier,
-    DamageModifier,
-    Level,
-    Stances,
-    Styles,
-)
+from osrs_tools.modifier import DT, DamageModifier, Level, RollModifier, Stances, Styles
 from osrs_tools.stats import (
     AggressiveStats,
     DefensiveStats,
@@ -184,7 +177,7 @@ def lookup_weapon_attributes_by_name(name: str, gear_df: pd.DataFrame = None):
     sdr_enum = None
 
     if (raw_sarm := item_df["special accuracy"].values[0]) != 0:
-        special_accuracy_modifiers.append(AttackRollModifier(1 + raw_sarm, comment))
+        special_accuracy_modifiers.append(RollModifier(1 + raw_sarm, comment))
     if (raw_sdm1 := item_df["special damage 1"].values[0]) != 0:
         special_damage_modifiers.append(DamageModifier(1 + raw_sdm1, comment))
     if (raw_sdm2 := item_df["special damage 2"].values[0]) != 0:
@@ -399,9 +392,7 @@ class Weapon(Gear):
 
 @define(order=True, frozen=True)
 class SpecialWeapon(Weapon):
-    special_attack_roll_modifiers: list[AttackRollModifier] = field(
-        factory=list, repr=False
-    )
+    special_attack_roll_modifiers: list[RollModifier] = field(factory=list, repr=False)
     special_damage_modifiers: list[DamageModifier] = field(factory=list, repr=False)
     special_defence_roll: DT | None = field(default=None, repr=False)
 

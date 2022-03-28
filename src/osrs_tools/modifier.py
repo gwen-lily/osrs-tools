@@ -5,7 +5,7 @@ from copy import copy
 from dataclasses import dataclass, field, fields
 from enum import Enum, unique
 from functools import total_ordering
-from typing import Callable
+from typing import Any, Callable
 
 import numpy as np
 
@@ -27,10 +27,13 @@ class DT(Enum):
     STAB = "stab"
     SLASH = "slash"
     CRUSH = "crush"
+
     # ranged style class vars
     RANGED = "ranged"
+
     # magic style class vars
     MAGIC = "magic"
+
     # typeless class vars
     TYPELESS = "typeless"
 
@@ -193,307 +196,233 @@ class MonsterLocations(Enum):
 ###############################################################################
 
 
-@total_ordering
-@dataclass
+@dataclass(eq=False, unsafe_hash=True)
 class TrackedValue:
-    value: int | float
-    comment: str | None = None
+    _value: Any
+    _value_type: type = field(init=False)
+    _comment: str | None = None
+    _comment_is_default: bool = field(init=False, default=False)
 
     def __post_init__(self):
-        if not isinstance(self.value, int):
-            self.value = int(self.value)
+        self._value_type = type(self.value)
 
-        if self.comment is None:
-            self.comment = str(self.value)
+        if self._comment is None:
+            self._comment = str(self.value)
+            self._comment_is_default = True
 
-    def __floordiv__(self, other) -> int:
-        return math.floor(self.value // other)
+    # properties
 
-    def __lt__(self, other) -> bool:
-        if isinstance(other, self.__class__):
-            return self.value < other.value
-        else:
-            return self.value < other
+    @property
+    def value(self) -> Any:
+        return self._value
+
+    @value.setter
+    def value(self, x, /):
+        if not isinstance(x, self._value_type):
+            raise TypeError(x, self._value_type)
+
+        self._value = x
+
+    @property
+    def comment(self) -> str:
+        assert self._comment is not None
+        return self._comment
+
+    @comment.setter
+    def comment(self, x, /):
+        assert isinstance(x, str)
+        self._comment = x
+
+    # comparison
+
+    # I know that @totalordering exists but I was getting strange errors with
+    # comparisons so I decided to manually define them all.
 
     def __eq__(self, other) -> bool:
-        if isinstance(other, self.__class__):
-            return self.value == other.value
-        else:
-            return self.value == other
+        if not isinstance(other, self.__class__):
+            return False
+
+        return self.value == other.value
+
+    def __lt__(self, other) -> bool:
+        if not isinstance(other, self.__class__):
+            raise NotImplementedError
+
+        return self.value < other.value
+
+    def __le__(self, other) -> bool:
+        if not isinstance(other, self.__class__):
+            raise NotImplementedError
+
+        return self.value <= other.value
+
+    def __gt__(self, other) -> bool:
+        if not isinstance(other, self.__class__):
+            raise NotImplementedError
+
+        return self.value > other.value
+
+    def __ge__(self, other) -> bool:
+        if not isinstance(other, self.__class__):
+            raise NotImplementedError
+
+        return self.value >= other.value
+
+    # operations
+
+    def __str__(self):
+        s = f"{self.__class__.__name__}({self.value})"
+
+        if not self._comment_is_default:
+            s = s[:-1] + f": {self.comment})"
+
+        return s
 
     def __copy__(self):
-        unpacked = tuple(copy(getattr(self, field.name)) for field in fields(self))
+        unpacked = (copy(getattr(self, field.name)) for field in fields(self))
         return self.__class__(*unpacked)
 
+    def __add__(self, other) -> TrackedValue:
+        if isinstance(other, TrackedValue):
+            new_val = self.value + other.value
+        elif isinstance(other, self._value_type):
+            new_val = self.value + other
+        else:
+            raise NotImplementedError
 
-# subclasses
+        new_com = f"({self} + {other})"
+        return self.__class__(new_val, new_com)
+
+    def __sub__(self, other) -> TrackedValue:
+        if isinstance(other, TrackedValue):
+            new_val = self.value - other.value
+        elif isinstance(other, self._value_type):
+            new_val = self.value - other
+        else:
+            raise NotImplementedError
+
+        new_com = f"({self} - {other})"
+        return self.__class__(new_val, new_com)
+
+    def __mul__(self, other) -> TrackedValue:
+        if isinstance(other, self.__class__):
+            new_val = self.value * other.value
+        elif isinstance(other, self._value_type):
+            new_val = self.value * other
+        else:
+            raise NotImplementedError
+
+        new_com = f"({self} · {other})"
+        return self.__class__(new_val, new_com)
+
+    def __truediv__(self, other) -> float:
+        if isinstance(other, TrackedValue):
+            return self.value / other.value
+
+        return self.value / other
+
+    def __floordiv__(self, other) -> int:
+        if isinstance(other, TrackedValue):
+            return self.value // other.value
+
+        return self.value // other
 
 
-@dataclass
-class Level(TrackedValue):
-    """A Level object which implements proper type security and modification tracking & representation.
+# generic subclasses ##########################################################
 
-    # TODO: Def smart __repr__ which implements PE(MD)(AS) to format pretty repr
 
-    Raises:
-        NotImplementedError: Raised with illegal arithmetic operations.
-    """
+class TrackedInt(TrackedValue):
 
-    value: int
-    comment: str | None = None
+    # properties ##############################################################
 
-    def __int__(self) -> int:
+    @property
+    def value(self) -> int:
+        return self._value
+
+    def __int__(self):
         return self.value
 
-    def __add__(self, other: Level | StyleBonus | int) -> Level:
-        if isinstance(other, Level) or isinstance(other, StyleBonus):
-            new_value = self.value + other.value
-            new_comment = f"({self.comment!s} + {other.comment!s})"
-        elif isinstance(other, int):
-            new_value = self.value + other
-            new_comment = f"({self.comment!s} + {other!s})"
-        else:
-            raise NotImplementedError
+    # operations ##############################################################
 
-        return Level(new_value, new_comment)
-
-    def __radd__(self, other: StyleBonus | int) -> Level:
-        if isinstance(other, StyleBonus) or isinstance(other, int):
-            return self.__add__(other)
-        else:
-            raise NotImplementedError
-
-    def __sub__(self, other: Level | StyleBonus | int) -> Level:
-        if isinstance(other, Level) or isinstance(other, StyleBonus):
-            new_value = self.value - other.value
-            new_comment = f"({self.comment!s} - {other.comment!s})"
-        elif isinstance(other, int):
-            new_value = self.value - other
-            new_comment = f"({self.comment!s} - {other!s})"
-        elif isinstance(other, float):
-            new_value = math.floor(self.value - other)
-            new_comment = f"⌊{self.comment!s} - {other!s}⌋"
-        else:
-            raise NotImplementedError
-
-        return Level(new_value, new_comment)
-
-    def __rsub__(self, other: int):
-        if isinstance(other, int):
-            new_value = int(other) - int(self)
-            new_comment = f"({other!s} - {self.comment!s})"
-        else:
-            raise NotImplementedError
-
-        return Level(new_value, new_comment)
-
-    def __mul__(self, other: LevelModifier | int) -> Level:
-        if isinstance(other, LevelModifier):
-            new_value = math.floor(int(self) * float(other))
-            new_comment = f"⌊{self.comment!s} · {other.comment!s}⌋"
-        elif isinstance(
-            other, int
-        ):  # TODO: Figure this out ->  or isinstance(other, np.int64):
-            new_value = int(self) * int(other)
-            new_comment = f"({self.comment!s} · {other!s})"
-        else:
-            raise NotImplementedError
-
-        return Level(new_value, new_comment)
-
-    def __rmul__(self, other: int) -> int:
-        if isinstance(other, int):
-            return int(self * other)
-
-    def __truediv__(self, other: int | float | Level) -> int | float:
-        if isinstance(other, Level):
-            return int(self) / int(other)
-        elif isinstance(other, int) or isinstance(other, float):
-            return int(self) / other
-        else:
-            raise NotImplementedError
-
-    def __floordiv__(self, other: float) -> int:
+    def __sub__(self, other) -> TrackedInt:
         if isinstance(other, float):
-            val = math.floor(int(self) / other)
+            new_val = math.floor(self.value - other)
+        elif isinstance(other, TrackedFloat):
+            new_val = math.floor(self.value - other.value)
         else:
-            raise NotImplementedError
+            super_val = super().__sub__(other)
+            assert isinstance(super_val, self.__class__)
+            return super_val
 
-        return val
+        new_com = f"⌊{self} - {other}⌋"
+        new_tracked_int = self.__class__(new_val, new_com)
+        assert isinstance(new_tracked_int, self.__class__)
+        return new_tracked_int
+
+    def __mul__(self, other) -> TrackedInt:
+        if isinstance(other, float):
+            new_val = math.floor(self.value * other)
+        elif isinstance(other, TrackedFloat):
+            new_val = math.floor(self.value * other.value)
+        else:
+            super_val = super().__mul__(other)
+            assert isinstance(super_val, self.__class__)
+            return super_val
+
+        new_com = f"⌊{self} · {other}⌋"
+        return self.__class__(new_val, new_com)
 
 
-@dataclass
-class Roll(TrackedValue):
-    """Roll value."""
+class TrackedFloat(TrackedValue):
 
-    value: int
-    comment: str | None = None
+    # properties
 
-    def __int__(self) -> int:
+    @property
+    def value(self) -> float:
+        return self._value
+
+    def __float__(self):
         return self.value
 
-    def __add__(self, other: Roll | int) -> Roll:
-        """Defines addition between integer-like objects.
+    # operations
 
-        Args:
-            other (Roll): An object which supports __int__
-
-        Raises:
-            NotImplementedError: Raised with unsupported addition.
-
-        Returns:
-            Roll: Summed roll.
-        """
-        if isinstance(other, Roll):
-            new_value = self.value + other.value
-            new_comment = f"({self.comment!s} + {other.comment!s})"
-        elif isinstance(other, int):
-            new_value = self.value + other
-            new_comment = f"({self.comment!s} + {other!s})"
-        else:
-            raise NotImplementedError
-
-        return Roll(new_value, new_comment)
-
-    def __sub__(self, other: Roll | int) -> Roll:
-        """Defines subtraction between integer-like objects.
-
-        Args:
-            other (Roll): An object which supports __int__
-
-        Raises:
-            NotImplementedError: Raised with unsupported subtraction.
-
-        Returns:
-            Roll: roll (self)) - roll (other).
-        """
-        if isinstance(other, Roll):
-            new_value = self.value - other.value
-            new_comment = f"({self.comment!s} - {other.comment!s})"
-        elif isinstance(other, int):
-            new_value = self.value - other
-            new_comment = f"({self.comment!s} - {other!s})"
-        elif isinstance(other, float):
-            new_value = math.floor(self.value - other)
-            new_comment = f"⌊{self.comment!s} - {other!s}⌋"
-        else:
-            raise NotImplementedError
-
-        return Roll(new_value, new_comment)
-
-    def __mul__(self, other: AttackRollModifier | int) -> Roll:
-        """Defines multiplication between Roll objects and Modifiers which act on them.
-
-        OSRS Roll objects are modified by a variable amount of Modifiers, which are floored
-        between each successive multiplication. This class defines that behavior.
-
-        Args:
-            other (Modifier): A Modifier object which acts on the Roll.
-
-        Raises:
-            NotImplementedError: Raised with unsupported multiplication.
-
-        Returns:
-            Roll: Integer roll value.
-        """
-        if isinstance(other, AttackRollModifier):
-            new_value = math.floor(int(self) * float(other))
-            new_comment = f"⌊{self.comment!s} · {other.comment!s}⌋"
-        elif isinstance(other, int):
-            new_value = int(self) * other
-            new_comment = f"({self.comment!s} · {other!s})"
-        else:
-            raise NotImplementedError
-
-        return Roll(new_value, new_comment)
-
-    def __div__(self, other: int) -> int:
-        if isinstance(other, int):
-            return int(self) // other
-        else:
+    def __mul__(self, other):
+        if isinstance(other, (float, TrackedFloat)):
+            # I don't think you ever need to do this, delete this __mul__ if I
+            # happen to be wrong in the future
             raise NotImplementedError
 
 
-@dataclass
-class DamageValue(TrackedValue):
-    value: int
-    comment: str | None = None
+# subclasses ##################################################################
 
-    def __int__(self) -> int:
-        return self.value
-
-    def __add__(self, other: DamageValue | int) -> DamageValue:
-        if isinstance(other, DamageValue):
-            new_value = self.value + other.value
-            new_comment = f"({self.comment!s} + {other.comment!s})"
-        elif isinstance(other, int):
-            new_value = self.value + other
-            new_comment = f"({self.comment!s} + {other!s})"
-        else:
-            raise NotImplementedError
-
-        return DamageValue(new_value, new_comment)
-
-    def __sub__(self, other: DamageValue | int) -> DamageValue:
-        if isinstance(other, DamageValue):
-            new_value = self.value - other.value
-            new_comment = f"({self.comment!s} - {other.comment!s})"
-        elif isinstance(other, int):
-            new_value = self.value - other
-            new_comment = f"({self.comment!s} - {other!s})"
-        else:
-            raise NotImplementedError
-
-        return DamageValue(new_value, new_comment)
-
-    def __mul__(self, other: DamageModifier) -> DamageValue:
-        if isinstance(other, DamageModifier):
-            new_value = math.floor(int(self) * float(other))
-            new_comment = f"⌊{self.comment!s} · {other.comment!s}⌋"
-        else:
-            raise NotImplementedError
-
-        return DamageValue(new_value, new_comment)
-
-    def __div__(self, other: int) -> int:
-        if isinstance(other, int):
-            return int(self) // other
-        else:
-            raise NotImplementedError
+# common pairs
+class Level(TrackedInt):
+    ...
 
 
-# modifiers
+class LevelModifier(TrackedFloat):
+    ...
 
 
-@dataclass
-class Modifier(TrackedValue):
-    """This class wraps a float with optional comment to describe the modifier application."""
-
-    value: float
-    comment: str | None = None
-
-    def __post_init__(self):
-        if not isinstance(self.value, float):
-            self.value = float(self.value)
-
-        if self.comment is None:
-            self.comment = str(self.value)
-
-    def __float__(self) -> float:
-        return self.value
+class Roll(TrackedInt):
+    ...
 
 
-# subclasses
-class LevelModifier(Modifier):
-    """Simple subclass for the Modifier object for type validation."""
+class RollModifier(TrackedFloat):
+    ...
 
 
-class AttackRollModifier(Modifier):
-    """Simple subclass for the Modifier object for type validation."""
+class DamageValue(TrackedInt):
+    ...
 
 
-class DamageModifier(Modifier):
-    """Simple subclass for the Modifier object for type validation."""
+class DamageModifier(TrackedFloat):
+    ...
+
+
+# misc. additional TrackedValues
+class StyleBonus(TrackedInt):
+    ...
 
 
 CallableLevelsModifierType = Callable[[Level], tuple[Level]]
@@ -521,15 +450,6 @@ class CallableLevelsModifier:
 
 def create_modifier_pair(
     value: float | None = None, comment: str | None = None
-) -> tuple[AttackRollModifier, DamageModifier]:
-    value = float(value) if value is not None else float(1)
-    comment = str(comment) if comment is not None else None
-    return AttackRollModifier(value, comment), DamageModifier(value, comment)
-
-
-@dataclass
-class StyleBonus(TrackedValue):
-    """Style Bonus. :3"""
-
-    value: int
-    comment: str | None = None
+) -> tuple[RollModifier, DamageModifier]:
+    value = float(1) if value is None else value
+    return RollModifier(value, comment), DamageModifier(value, comment)

@@ -21,7 +21,6 @@ from osrs_tools.equipment import (
 from osrs_tools.exceptions import OsrsException
 from osrs_tools.modifier import (
     DT,
-    AttackRollModifier,
     DamageModifier,
     DamageValue,
     Level,
@@ -32,6 +31,7 @@ from osrs_tools.modifier import (
     MonsterTypes,
     RangedDamageTypes,
     Roll,
+    RollModifier,
     Skills,
     Stances,
     Styles,
@@ -367,7 +367,7 @@ class Character(ABC):
     def maximum_roll(
         effective_level: Level,
         aggressive_or_defensive_bonus: int,
-        *roll_modifiers: AttackRollModifier,
+        *roll_modifiers: RollModifier,
     ) -> Roll:
         """
 
@@ -778,7 +778,7 @@ class Player(Character):
 
     def _salve_modifier(
         self, other: Character
-    ) -> tuple[AttackRollModifier, DamageModifier] | None:
+    ) -> tuple[RollModifier, DamageModifier] | None:
         if (
             self.equipment.salve
             and isinstance(other, Monster)
@@ -794,7 +794,7 @@ class Player(Character):
 
     def _slayer_modifier(
         self, other: Character
-    ) -> tuple[AttackRollModifier, DamageModifier] | None:
+    ) -> tuple[RollModifier, DamageModifier] | None:
         if self.task and self.equipment.slayer and isinstance(other, Monster):
             comment = "slayer"
             if (dt := self.active_style.damage_type) in MeleeDamageTypes:
@@ -810,7 +810,7 @@ class Player(Character):
 
     def _arclight_modifier(
         self, other: Character
-    ) -> tuple[AttackRollModifier, DamageModifier] | None:
+    ) -> tuple[RollModifier, DamageModifier] | None:
         if (
             self.equipment.arclight
             and isinstance(other, Monster)
@@ -822,7 +822,7 @@ class Player(Character):
 
     def _draconic_modifier(
         self, other: Character
-    ) -> tuple[AttackRollModifier, DamageModifier] | None:
+    ) -> tuple[RollModifier, DamageModifier] | None:
         if (
             self.equipment.dragonbane_weapon
             and isinstance(other, Monster)
@@ -842,7 +842,7 @@ class Player(Character):
 
     def _wilderness_modifier(
         self, other: Character
-    ) -> tuple[AttackRollModifier, DamageModifier] | None:
+    ) -> tuple[RollModifier, DamageModifier] | None:
         if (
             self.equipment.wilderness_weapon
             and isinstance(other, Monster)
@@ -861,15 +861,15 @@ class Player(Character):
             else:
                 raise NotImplementedError
 
-            return AttackRollModifier(arm, comment), DamageModifier(dm, comment)
+            return RollModifier(arm, comment), DamageModifier(dm, comment)
 
     def _twisted_bow_modifier(
         self, other: Character
-    ) -> tuple[AttackRollModifier, DamageModifier] | None:
+    ) -> tuple[RollModifier, DamageModifier] | None:
         if self.equipment.twisted_bow:
             # TODO: Re-evaluate preservation of information
             comment = "twisted bow"
-            accuracy_modifier_ceiling = AttackRollModifier(
+            accuracy_modifier_ceiling = RollModifier(
                 1.40, "twisted bow accuracy ceiling"
             )
             damage_modifier_ceiling = DamageModifier(2.50, "twisted bow damage ceiling")
@@ -896,9 +896,9 @@ class Player(Character):
 
             arm = min([accuracy_modifier_ceiling, accuracy_modifier_percent / 100])
             dm = min([damage_modifier_ceiling, damage_modifier_percent / 100])
-            return AttackRollModifier(arm, comment), DamageModifier(dm, comment)
+            return RollModifier(arm, comment), DamageModifier(dm, comment)
 
-    def _obsidian_modifier(self) -> tuple[AttackRollModifier, DamageModifier] | None:
+    def _obsidian_modifier(self) -> tuple[RollModifier, DamageModifier] | None:
         if self.equipment.obsidian_armor_set and self.equipment.obsidian_weapon:
             modifier = 1.1
             comment = "obsidian weapon & armour set"
@@ -920,7 +920,7 @@ class Player(Character):
 
     def _leafy_modifier(
         self, other: Character
-    ) -> tuple[AttackRollModifier, DamageModifier] | None:
+    ) -> tuple[RollModifier, DamageModifier] | None:
         if (
             self.equipment.leafy_weapon
             and isinstance(other, Monster)
@@ -942,7 +942,7 @@ class Player(Character):
 
     def _crystal_armor_modifier(
         self,
-    ) -> tuple[AttackRollModifier, DamageModifier] | None:
+    ) -> tuple[RollModifier, DamageModifier] | None:
         if self.equipment.crystal_weapon:
             comment = "crystal weapon & armour"
             piece_arm_bonus = 0.06
@@ -971,11 +971,11 @@ class Player(Character):
                 if crystal_arm == 1 and crystal_dm == 1:
                     return
 
-            return AttackRollModifier(crystal_arm, comment), DamageModifier(
+            return RollModifier(crystal_arm, comment), DamageModifier(
                 crystal_dm, comment
             )
 
-    def _inquisitor_modifier(self) -> tuple[AttackRollModifier, DamageModifier] | None:
+    def _inquisitor_modifier(self) -> tuple[RollModifier, DamageModifier] | None:
         if self.active_style.damage_type == DT.CRUSH:
             comment = "inquisitor"
             piece_bonus = 0.005
@@ -999,9 +999,7 @@ class Player(Character):
 
             return create_modifier_pair(modifier, comment)
 
-    def _chin_attack_roll_modifier(
-        self, distance: int = None
-    ) -> AttackRollModifier | None:
+    def _chin_attack_roll_modifier(self, distance: int = None) -> RollModifier | None:
         if self.equipment.chinchompas and distance is not None:
             comment = "chinchompa"
             if (style := self.active_style) == ChinchompaStyles.get_style(
@@ -1028,7 +1026,7 @@ class Player(Character):
             else:
                 raise StyleError(style)
 
-            return AttackRollModifier(chin_arm, comment)
+            return RollModifier(chin_arm, comment)
 
     def _vampyric_modifier(self, other: Character):
         raise NotImplementedError
@@ -1056,9 +1054,7 @@ class Player(Character):
                 damage_boost = 3
                 return damage_boost
 
-    def _smoke_modifier(
-        self, spell: Spell = None
-    ) -> tuple[AttackRollModifier, float] | None:
+    def _smoke_modifier(self, spell: Spell = None) -> tuple[RollModifier, float] | None:
         # TODO: Implment ARM & DM float wrapper classes for simplicity & type security.
 
         spell = spell if spell is not None else self.autocast
@@ -1067,7 +1063,7 @@ class Player(Character):
             gear_damage_bonus = 0.1  # strange mechanic, applied to the gear bonus
             comment = "smoke staff"
 
-            return AttackRollModifier(arm, comment), gear_damage_bonus
+            return RollModifier(arm, comment), gear_damage_bonus
 
     def _guardians_damage_modifier(self, other: Character) -> DamageModifier | None:
         if self.equipment.pickaxe and isinstance(other, Guardian):
@@ -1285,11 +1281,11 @@ class Player(Character):
             raise StyleError(self.active_style)
 
         def process_variable_modifiers(
-            *args: AttackRollModifier
+            *args: RollModifier
             | DamageModifier
-            | tuple[AttackRollModifier, DamageModifier]
+            | tuple[RollModifier, DamageModifier]
             | None
-        ) -> tuple[list[AttackRollModifier], list[DamageModifier]]:
+        ) -> tuple[list[RollModifier], list[DamageModifier]]:
             """Inner function for processing the return values offered by modifier methods.
 
             Raises:
@@ -1298,11 +1294,11 @@ class Player(Character):
             Returns:
                 tuple[list[AttackRollModifier], list[DamageModifier]]:
             """
-            filtered_arms: list[AttackRollModifier] = []
+            filtered_arms: list[RollModifier] = []
             filtered_dms: list[DamageModifier] = []
 
             for item in args:
-                if isinstance(item, AttackRollModifier):
+                if isinstance(item, RollModifier):
                     filtered_arms.append(item)
                 elif isinstance(item, DamageModifier):
                     filtered_dms.append(item)
@@ -1409,7 +1405,7 @@ class Player(Character):
         if not (self.equipment.crossbow and self.equipment.enchanted_bolts_equipped):
             # General Special Weapons
             if special_attack:
-                special_arms: list[AttackRollModifier] = []
+                special_arms: list[RollModifier] = []
                 special_dms: list[DamageModifier] = []
                 hs = None
 
