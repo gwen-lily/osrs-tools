@@ -4,10 +4,7 @@ import math
 from copy import copy
 from dataclasses import dataclass, field, fields
 from enum import Enum, unique
-from functools import total_ordering
 from typing import Any, Callable
-
-import numpy as np
 
 ###############################################################################
 # enums 'n' such
@@ -125,7 +122,7 @@ ChinchompaStylesNames = (Styles.SHORT_FUSE, Styles.MEDIUM_FUSE, Styles.LONG_FUSE
 class Skills(Enum):
     ATTACK = "attack"
     STRENGTH = "strength"
-    defence = "defence"
+    DEFENCE = "defence"
     RANGED = "ranged"
     PRAYER = "prayer"
     MAGIC = "magic"
@@ -151,7 +148,7 @@ class Skills(Enum):
 MonsterCombatSkills = (
     Skills.ATTACK,
     Skills.STRENGTH,
-    Skills.defence,
+    Skills.DEFENCE,
     Skills.RANGED,
     Skills.MAGIC,
     Skills.HITPOINTS,
@@ -282,36 +279,28 @@ class TrackedValue:
         unpacked = (copy(getattr(self, field.name)) for field in fields(self))
         return self.__class__(*unpacked)
 
-    def __add__(self, other) -> TrackedValue:
+    def _dunder_arithmetic(self, other, func: Callable[[Any, Any], Any]) -> Any:
         if isinstance(other, TrackedValue):
-            new_val = self.value + other.value
+            new_val = func(self.value, other.value)
         elif isinstance(other, self._value_type):
-            new_val = self.value + other
+            new_val = func(self.value, other)
         else:
             raise NotImplementedError
 
+        return new_val
+
+    def __add__(self, other) -> TrackedValue:
+        new_val = self._dunder_arithmetic(other, lambda x, y: x + y)
         new_com = f"({self} + {other})"
         return self.__class__(new_val, new_com)
 
     def __sub__(self, other) -> TrackedValue:
-        if isinstance(other, TrackedValue):
-            new_val = self.value - other.value
-        elif isinstance(other, self._value_type):
-            new_val = self.value - other
-        else:
-            raise NotImplementedError
-
+        new_val = self._dunder_arithmetic(other, lambda x, y: x - y)
         new_com = f"({self} - {other})"
         return self.__class__(new_val, new_com)
 
     def __mul__(self, other) -> TrackedValue:
-        if isinstance(other, self.__class__):
-            new_val = self.value * other.value
-        elif isinstance(other, self._value_type):
-            new_val = self.value * other
-        else:
-            raise NotImplementedError
-
+        new_val = self._dunder_arithmetic(other, lambda x, y: x * y)
         new_com = f"({self} · {other})"
         return self.__class__(new_val, new_com)
 
@@ -344,33 +333,31 @@ class TrackedInt(TrackedValue):
 
     # operations ##############################################################
 
-    def __sub__(self, other) -> TrackedInt:
-        if isinstance(other, float):
-            new_val = math.floor(self.value - other)
-        elif isinstance(other, TrackedFloat):
-            new_val = math.floor(self.value - other.value)
+    def _dunder_arithmetic(self, other, func: Callable[[Any, Any], Any]) -> Any:
+        if isinstance(other, TrackedFloat):
+            new_val = func(self.value, other.value)
+        elif isinstance(other, float):
+            new_val = func(self.value, other)
         else:
-            super_val = super().__sub__(other)
-            assert isinstance(super_val, self.__class__)
-            return super_val
+            raise NotImplementedError
 
+        return new_val
+
+    def __sub__(self, other) -> TrackedInt:
+        new_val = self._dunder_arithmetic(other, lambda x, y: math.floor(x - y))
         new_com = f"⌊{self} - {other}⌋"
+
         new_tracked_int = self.__class__(new_val, new_com)
         assert isinstance(new_tracked_int, self.__class__)
         return new_tracked_int
 
     def __mul__(self, other) -> TrackedInt:
-        if isinstance(other, float):
-            new_val = math.floor(self.value * other)
-        elif isinstance(other, TrackedFloat):
-            new_val = math.floor(self.value * other.value)
-        else:
-            super_val = super().__mul__(other)
-            assert isinstance(super_val, self.__class__)
-            return super_val
-
+        new_val = self._dunder_arithmetic(other, lambda x, y: math.floor(x * y))
         new_com = f"⌊{self} · {other}⌋"
-        return self.__class__(new_val, new_com)
+
+        new_tracked_int = self.__class__(new_val, new_com)
+        assert isinstance(new_tracked_int, self.__class__)
+        return new_tracked_int
 
 
 class TrackedFloat(TrackedValue):
