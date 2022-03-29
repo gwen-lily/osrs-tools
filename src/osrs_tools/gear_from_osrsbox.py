@@ -1,27 +1,63 @@
 import enum
+import logging
+from pathlib import Path
+
 from matplotlib.axes import Axes
 from osrsbox import items_api
-from osrsbox.items_api.item_properties import ItemProperties, ItemEquipment, ItemWeapon, ItemSpecialWeapon, Modifier
-from pathlib import Path
+from osrsbox.items_api.item_properties import (
+    ItemEquipment,
+    ItemProperties,
+    ItemSpecialWeapon,
+    ItemWeapon,
+    Modifier,
+)
+
+from osrs_tools.data import (
+    DamageModifier,
+    Level,
+    LevelModifier,
+    RollModifier,
+    TrackedFloat,
+)
+from osrs_tools.equipment import (
+    Gear,
+    GearError,
+    Slots,
+    SpecialWeapon,
+    Weapon,
+    WeaponError,
+)
 from osrs_tools.resource_reader import RESOURCES_DIR
-
-
-from osrs_tools.stats import PlayerLevels, AggressiveStats, DefensiveStats
-from osrs_tools.style import Style, PlayerStyle, Styles
-from osrs_tools.equipment import Gear, Weapon, SpecialWeapon, Slots, GearError, WeaponError
-from osrs_tools.modifier import Modifier, AttackRollModifier, DamageModifier, LevelModifier
-from osrs_tools.modifier import Level
+from osrs_tools.stats import AggressiveStats, DefensiveStats, PlayerLevels
 
 # TODO: submodule for style imports
-from osrs_tools.style import TwoHandedStyles, AxesStyles, BluntStyles, BludgeonStyles, BulwarkStyles
-from osrs_tools.style import ClawStyles, PickaxeStyles, PolearmStyles, ScytheStyles, SlashSwordStyles
-from osrs_tools.style import SpearStyles, SpikedWeaponsStyles, StabSwordStyles, UnarmedStyles, WhipStyles
-from osrs_tools.style import BowStyles, ChinchompaStyles, CrossbowStyles, ThrownStyles, BladedStaffStyles
-from osrs_tools.style import PoweredStaffStyles, StaffStyles
-
-import logging
-
-
+from osrs_tools.style import (
+    AxesStyles,
+    BladedStaffStyles,
+    BludgeonStyles,
+    BluntStyles,
+    BowStyles,
+    BulwarkStyles,
+    ChinchompaStyles,
+    ClawStyles,
+    CrossbowStyles,
+    PickaxeStyles,
+    PlayerStyle,
+    PolearmStyles,
+    PoweredStaffStyles,
+    ScytheStyles,
+    SlashSwordStyles,
+    SpearStyles,
+    SpikedWeaponsStyles,
+    StabSwordStyles,
+    StaffStyles,
+    Style,
+    Styles,
+    ThrownStyles,
+    TwoHandedStyles,
+    UnarmedStyles,
+    WhipStyles,
+)
 
 
 def convert_all_equippable_items(*items: ItemProperties):
@@ -39,9 +75,9 @@ def convert_all_equippable_items(*items: ItemProperties):
         # slot validation & weapon / 2h validation
         for sl in Slots:
             # specific cases > general
-            if eqp.slot == 'ammo':
+            if eqp.slot == "ammo":
                 slot = Slots.ammunition
-            elif eqp.slot == '2h':
+            elif eqp.slot == "2h":
                 slot = Slots.weapon
                 two_handed = True
             elif eqp.slot == Slots.weapon.name:
@@ -49,9 +85,9 @@ def convert_all_equippable_items(*items: ItemProperties):
                 two_handed = False
             elif eqp.slot == sl.name:
                 slot = sl
-        
+
         if slot is None:
-            raise GearError(f'{eqp.slot}')
+            raise GearError(f"{eqp.slot}")
 
         ab = AggressiveStats(
             stab=eqp.attack_stab,
@@ -68,15 +104,15 @@ def convert_all_equippable_items(*items: ItemProperties):
             slash=eqp.defence_slash,
             crush=eqp.defence_crush,
             magic=eqp.defence_magic,
-            ranged=eqp.defence_ranged
+            ranged=eqp.defence_ranged,
         )
         pb = eqp.prayer
-        
+
         if eqp.requirements is not None:
-            combat_key = 'combat'
+            combat_key = "combat"
             if combat_key in eqp.requirements:
                 eqp.requirements.pop(combat_key)
-            
+
             reqs = PlayerLevels(**{k: Level(v) for k, v in eqp.requirements.items()})
         else:
             reqs = PlayerLevels.no_requirements()
@@ -138,18 +174,22 @@ def convert_all_equippable_items(*items: ItemProperties):
         elif wt == "staff":
             weapon_styles = StaffStyles
         else:
-            logging.log(logging.INFO, f'{wt} not recognized as weapon type, possibly on purpose')
+            logging.log(
+                logging.INFO, f"{wt} not recognized as weapon type, possibly on purpose"
+            )
             continue
 
         weapons.append(
-            Weapon(name, slot, ab, db, pb, reqs, weapon_styles, attack_speed, two_handed)
+            Weapon(
+                name, slot, ab, db, pb, reqs, weapon_styles, attack_speed, two_handed
+            )
         )
 
         if item.special_weapon is not None:
             pass
-    
+
     return gear, weapons, special_weapons
-    
+
 
 def write_gear_definition(out_file: str | Path, *gear: Gear):
 
@@ -163,39 +203,34 @@ def write_gear_definition(out_file: str | Path, *gear: Gear):
     if out_fp.exists():
         raise FileExistsError()
 
-    gear_definition = RESOURCES_DIR.joinpath('gear_definition.txt')
+    gear_definition = RESOURCES_DIR.joinpath("gear_definition.txt")
 
     with gear_definition.open() as f:
         lines = f.readlines()
 
-    return lines            
-    
+    return lines
+
     for g in gear:
         if issubclass(g, Gear):
             raise GearError()
 
 
-    
-
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     # items = items_api.load()
     # gear, weapons, special_weapons = convert_all_equippable_items(*items)
-    out_file = RESOURCES_DIR.joinpath('all_gear.txt')
+    out_file = RESOURCES_DIR.joinpath("all_gear.txt")
     lines = write_gear_definition(out_file)
 
-    g = Gear.from_osrsbox('torva full helm')
+    g = Gear.from_osrsbox("torva full helm")
 
     for idx, line in enumerate(lines):
         print(line.format(g))
 
     # for g in gear[:10]:
     #     print(g)
-    
+
     # for w in weapons[:10]:
     #     print(w)
-
-
 
     # # Used to help generate the decision tree for weapon stances
     # weapon_example_names = [
@@ -227,4 +262,3 @@ if __name__ == '__main__':
 
     # for wp in weapons:
     #     print(f'{wp.weapon.weapon_type}')
-    

@@ -1537,7 +1537,7 @@ class Equipment:
         black: bool = False,
         red: bool = False,
         grey: bool = False,
-        style: PlayerStyle = None,  # type: ignore
+        style: PlayerStyle = ChinchompaStyles.default,  # type: ignore
     ) -> PlayerStyle:
         chin_name = None
         if black:
