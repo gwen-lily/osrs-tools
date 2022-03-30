@@ -62,7 +62,7 @@ def bgloves_zvambs_chin_comparison(scale: int, **kwargs):
     lad = Player(task=True)
     lad.equipment.equip_basic_ranged_gear()
     lad.equipment.equip_arma_set()
-    lad.equipment.unequip(Slots.head)
+    lad.equipment.unequip(Slots.HEAD)
     lad.active_style = lad.equipment.equip_chins(
         red=True, style=ChinchompaStyles.get_by_style(Styles.LONG_FUSE)
     )

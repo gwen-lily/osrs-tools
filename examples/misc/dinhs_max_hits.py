@@ -74,7 +74,7 @@ def dinhs_max(**kwargs):
 
     normal_equipment_axis = generate_equipment_axis(*eligible_gear)
     salve_equipment_axis = generate_equipment_axis(
-        *[g for g in eligible_gear if g.slot is not Slots.neck]
+        *[g for g in eligible_gear if g.slot is not Slots.NECK]
     )
     lad_names = ("torva (salve ei)", "torva (slayer helm)", "torva", "justi")
     lads = [Player(name=name) for name in lad_names]

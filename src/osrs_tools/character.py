@@ -295,7 +295,7 @@ class Character(ABC):
         lb = self.level_bounds
 
         stat_enum_bound_tuples = (
-            (Skills.defence, lb.__getattribute__(Skills.defence.name)),
+            (Skills.DEFENCE, lb.__getattribute__(Skills.DEFENCE.name)),
             (Skills.STRENGTH, lb.__getattribute__(Skills.STRENGTH.name)),
             (Skills.ATTACK, lb.__getattribute__(Skills.ATTACK.name)),
             (Skills.MAGIC, lb.__getattribute__(Skills.MAGIC.name)),
@@ -321,7 +321,7 @@ class Character(ABC):
             else:
                 raise NotImplementedError
 
-            for skill in (Skills.ATTACK, Skills.STRENGTH, Skills.defence):
+            for skill in (Skills.ATTACK, Skills.STRENGTH, Skills.DEFENCE):
                 self.base_levels.__setattr__(
                     skill, reduction_mod * self.base_levels.__getattribute__(skill)
                 )

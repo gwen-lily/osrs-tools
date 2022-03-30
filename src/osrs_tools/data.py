@@ -6,6 +6,8 @@ from dataclasses import dataclass, field, fields
 from enum import Enum, unique
 from typing import Any, Callable
 
+from numpy import float64, int64
+
 ###############################################################################
 # enums 'n' such
 ###############################################################################
@@ -232,38 +234,47 @@ class TrackedValue:
 
     # comparison
 
+    def _dunder_helper(self, other, func: Callable[[Any, Any], Any]) -> Any:
+        """Performs a function on self and other with respect to TrackedValue datatypes.
+
+        Args:
+            other (_type_): Must be either a TrackedValue or the same type as
+            self._value_type.
+
+            func (Callable[[Any, Any], Any]): Takes self and other, yields Any.
+
+        Raises:
+            NotImplementedError:
+
+        Returns:
+            Any: Type return controlled by subclasses, with self taking precedence.
+        """
+        if isinstance(other, TrackedValue):
+            new_val = func(self.value, other.value)
+        elif isinstance(other, self._value_type):
+            new_val = func(self.value, other)
+        else:
+            raise NotImplementedError
+
+        return new_val
+
     # I know that @totalordering exists but I was getting strange errors with
     # comparisons so I decided to manually define them all.
 
     def __eq__(self, other) -> bool:
-        if not isinstance(other, self.__class__):
-            return False
-
-        return self.value == other.value
+        return self._dunder_helper(other, lambda x, y: x == y)
 
     def __lt__(self, other) -> bool:
-        if not isinstance(other, self.__class__):
-            raise NotImplementedError
-
-        return self.value < other.value
+        return self._dunder_helper(other, lambda x, y: x < y)
 
     def __le__(self, other) -> bool:
-        if not isinstance(other, self.__class__):
-            raise NotImplementedError
-
-        return self.value <= other.value
+        return self._dunder_helper(other, lambda x, y: x <= y)
 
     def __gt__(self, other) -> bool:
-        if not isinstance(other, self.__class__):
-            raise NotImplementedError
-
-        return self.value > other.value
+        return self._dunder_helper(other, lambda x, y: x > y)
 
     def __ge__(self, other) -> bool:
-        if not isinstance(other, self.__class__):
-            raise NotImplementedError
-
-        return self.value >= other.value
+        return self._dunder_helper(other, lambda x, y: x >= y)
 
     # operations
 
@@ -279,28 +290,18 @@ class TrackedValue:
         unpacked = (copy(getattr(self, field.name)) for field in fields(self))
         return self.__class__(*unpacked)
 
-    def _dunder_arithmetic(self, other, func: Callable[[Any, Any], Any]) -> Any:
-        if isinstance(other, TrackedValue):
-            new_val = func(self.value, other.value)
-        elif isinstance(other, self._value_type):
-            new_val = func(self.value, other)
-        else:
-            raise NotImplementedError
-
-        return new_val
-
     def __add__(self, other) -> TrackedValue:
-        new_val = self._dunder_arithmetic(other, lambda x, y: x + y)
+        new_val = self._dunder_helper(other, lambda x, y: x + y)
         new_com = f"({self} + {other})"
         return self.__class__(new_val, new_com)
 
     def __sub__(self, other) -> TrackedValue:
-        new_val = self._dunder_arithmetic(other, lambda x, y: x - y)
+        new_val = self._dunder_helper(other, lambda x, y: x - y)
         new_com = f"({self} - {other})"
         return self.__class__(new_val, new_com)
 
     def __mul__(self, other) -> TrackedValue:
-        new_val = self._dunder_arithmetic(other, lambda x, y: x * y)
+        new_val = self._dunder_helper(other, lambda x, y: x * y)
         new_com = f"({self} · {other})"
         return self.__class__(new_val, new_com)
 
@@ -320,64 +321,67 @@ class TrackedValue:
 # generic subclasses ##########################################################
 
 
+@dataclass(eq=False, unsafe_hash=True)
 class TrackedInt(TrackedValue):
+    _value: int | int64
 
-    # properties ##############################################################
+    # properties
 
     @property
-    def value(self) -> int:
+    def value(self) -> int | int64:
         return self._value
 
     def __int__(self):
-        return self.value
+        return int(self.value)
 
-    # operations ##############################################################
+    # operations
 
-    def _dunder_arithmetic(self, other, func: Callable[[Any, Any], Any]) -> Any:
-        if isinstance(other, TrackedFloat):
-            new_val = func(self.value, other.value)
-        elif isinstance(other, float):
-            new_val = func(self.value, other)
+    def __add__(self, other) -> TrackedInt:
+        if isinstance(other, TrackedInt):
+            new_com = f"({self} + {other}"
         else:
-            raise NotImplementedError
+            new_com = f"⌊{self} + {other}⌋"
 
-        return new_val
+        new_val = self._dunder_helper(other, lambda x, y: math.floor(x + y))
+        new_tracked_int = self.__class__(new_val, new_com)
+        assert isinstance(new_tracked_int, self.__class__)
+        return new_tracked_int
 
     def __sub__(self, other) -> TrackedInt:
-        new_val = self._dunder_arithmetic(other, lambda x, y: math.floor(x - y))
-        new_com = f"⌊{self} - {other}⌋"
+        if isinstance(other, TrackedInt):
+            new_com = f"({self} - {other}"
+        else:
+            new_com = f"⌊{self} - {other}⌋"
 
+        new_val = self._dunder_helper(other, lambda x, y: math.floor(x - y))
         new_tracked_int = self.__class__(new_val, new_com)
         assert isinstance(new_tracked_int, self.__class__)
         return new_tracked_int
 
     def __mul__(self, other) -> TrackedInt:
-        new_val = self._dunder_arithmetic(other, lambda x, y: math.floor(x * y))
-        new_com = f"⌊{self} · {other}⌋"
+        if isinstance(other, TrackedInt):
+            new_com = f"({self} · {other})"
+        else:
+            new_com = f"⌊{self} · {other}⌋"
 
+        new_val = self._dunder_helper(other, lambda x, y: math.floor(x * y))
         new_tracked_int = self.__class__(new_val, new_com)
         assert isinstance(new_tracked_int, self.__class__)
         return new_tracked_int
 
 
+@dataclass(eq=False, unsafe_hash=True)
 class TrackedFloat(TrackedValue):
+    _value: float | float64
 
     # properties
 
     @property
-    def value(self) -> float:
+    def value(self) -> float | float64:
         return self._value
 
     def __float__(self):
-        return self.value
-
-    # operations
-
-    def __mul__(self, other):
-        if isinstance(other, (float, TrackedFloat)):
-            # I don't think you ever need to do this, delete this __mul__ if I
-            # happen to be wrong in the future
-            raise NotImplementedError
+        return float(self.value)
 
 
 # subclasses ##################################################################
@@ -409,6 +413,10 @@ class DamageModifier(TrackedFloat):
 
 # misc. additional TrackedValues
 class StyleBonus(TrackedInt):
+    ...
+
+
+class EquipmentStat(TrackedInt):
     ...
 
 

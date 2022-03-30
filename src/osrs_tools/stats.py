@@ -1,38 +1,117 @@
 from __future__ import annotations
 
 from copy import copy
-from dataclasses import astuple, dataclass, field, fields
-from functools import total_ordering
-from typing import NamedTuple
+from dataclasses import dataclass, fields
+from functools import total_ordering, wraps
+from typing import Any, Callable, NamedTuple
+
+from numpy import isin
 
 import osrs_tools.resource_reader as rr
 from osrs_tools.data import (
     CallableLevelsModifier,
     CallableLevelsModifierType,
+    EquipmentStat,
     Level,
     LevelModifier,
     MonsterCombatSkills,
     Skills,
     StyleBonus,
+    TrackedFloat,
+    TrackedInt,
+    TrackedValue,
 )
 from osrs_tools.exceptions import OsrsException
 
+###############################################################################
+# main classes
+###############################################################################
+
+# stats #######################################################################
+
 
 @dataclass
+@total_ordering
 class Stats:
     """Base stats class."""
 
+    def _dunder_helper(self, other, func: Callable[[Any, Any], Any]) -> Any:
+
+        if isinstance(other, self.__class__):
+            val = self.__class__(
+                **{
+                    f.name: func(getattr(self, f.name), getattr(other, f.name))
+                    for f in fields(self)
+                }
+            )
+        else:
+            raise NotImplementedError
+
+        assert isinstance(val, self.__class__)
+        return val
+
+    def __add__(self, other):
+        return self._dunder_helper(other, lambda x, y: x + y)
+
+    def __sub__(self, other):
+        return self._dunder_helper(other, lambda x, y: x - y)
+
     def __copy__(self):
-        unpacked = tuple(getattr(self, field.name) for field in fields(self))
-        return self.__class__(*(copy(x) for x in unpacked))
+        unpacked = [copy(getattr(self, f.name)) for f in fields(self)]
+        return self.__class__(*unpacked)
+
+    def __lt__(self, other):
+        if isinstance(other, self.__class__):
+            val = all(
+                getattr(self, f.name) < getattr(other, f.name) for f in fields(self)
+            )
+        else:
+            raise NotImplementedError
+
+        return val
 
 
 # TODO: Validate @dataclass / @total_ordering decorater order importance
 
 
+class StatsOptional(Stats):
+    @staticmethod
+    def _arithmetic_wrapper(
+        func: Callable[[Any, Any], Any], bidirectional: bool = False
+    ) -> Callable[[Any, Any], Any]:
+        @wraps(func)
+        def inner(x, y, /):
+            if x is not None and y is None:
+                arith_val = x
+            elif x is None and y is not None:
+                if bidirectional:
+                    arith_val = y
+                else:
+                    raise NotImplementedError
+
+            elif x is not None and y is not None:
+                arith_val = func(x, y)
+            else:
+                raise NotImplementedError
+
+            return arith_val
+
+        return inner
+
+    def __add__(self, other):
+        mod_func = self._arithmetic_wrapper(lambda x, y: x + y, bidirectional=True)
+        return self._dunder_helper(other, mod_func)
+
+    def __sub__(self, other):
+        mod_func = self._arithmetic_wrapper(lambda x, y: x - y, bidirectional=False)
+        return self._dunder_helper(other, mod_func)
+
+    # TODO: Define eq, lt, etc...
+
+
 @dataclass
 @total_ordering
-class PlayerLevels(Stats):
+class PlayerLevels(StatsOptional):
     attack: Level | None = None
     strength: Level | None = None
     defence: Level | None = None
@@ -59,116 +138,32 @@ class PlayerLevels(Stats):
 
     def __add__(self, other: PlayerLevels | CallableLevelsModifier) -> PlayerLevels:
         if isinstance(other, PlayerLevels):
-            new_vals = []
-            for skill in Skills:
-                self_val = self.__getattribute__(skill.name)
-                other_val = self.__getattribute__(skill.name)
-
-                if self_val is not None and other_val is None:
-                    new_vals.append(self_val)
-                elif self_val is None and other_val is not None:
-                    new_vals.append(other_val)
-                else:
-                    new_vals.append(self_val + other_val)
-
-            return PlayerLevels(*new_vals)
-
+            val = super().__add__(other)
         elif isinstance(other, CallableLevelsModifier):
-            modified = copy(self)
+            val = copy(self)
             for skill in other.skills:
-                if (self_val := modified.__getattribute__(skill.name)) is None:
+                if (self_val := val.__getattribute__(skill.name)) is None:
                     continue
                 elif isinstance(self_val, Level):
                     new_val = other.func(self_val)
-                    modified.__setattr__(skill.name, new_val)
-
-            return modified
+                    val.__setattr__(skill.name, new_val)
 
         else:
             raise NotImplementedError
 
-    def __sub__(self, other: PlayerLevels) -> PlayerLevels:
-        if isinstance(other, PlayerLevels):
-            new_vals = []
-            for skill in Skills:
-                self_val = self.__getattribute__(skill.name)
-                other_val = self.__getattribute__(skill.name)
-
-                if self_val is not None and other_val is None:
-                    new_vals.append(self_val)
-                elif self_val is None and other_val is not None:
-                    raise StatsError(f"Subtraction between None and {other_val}")
-                else:
-                    new_vals.append(self_val - other_val)
-
-            return PlayerLevels(*new_vals)
-        else:
-            raise NotImplementedError
-
-    def __lt__(self, other: PlayerLevels) -> bool:
-        if isinstance(other, PlayerLevels):
-            for skill in Skills:
-                self_val = self.__getattribute__(skill.name)
-                other_val = self.__getattribute__(skill.name)
-
-                if self_val is not None and other_val is not None:
-                    if not self_val < other_val:
-                        return False
-
-            return True
-        else:
-            raise NotImplementedError
-
-    def __eq__(self, other: PlayerLevels) -> bool:
-        if isinstance(other, PlayerLevels):
-            for skill in Skills:
-                self_val = self.__getattribute__(skill.name)
-                other_val = other.__getattribute__(skill.name)
-
-                if self_val is not None and other_val is not None:
-                    if self_val != other_val:
-                        return False
-                elif self_val is None and other_val is None:
-                    continue
-                elif self_val is not None and other_val is None:
-                    return False
-                elif self_val is None and other_val is not None:
-                    return False
-
-            return True
-        else:
-            raise NotImplementedError
+        return val
 
     def max_levels_per_skill(self, other: PlayerLevels) -> PlayerLevels:
-        skill_vals_dict = {}
-        for skill in Skills:
-            self_val = self.__getattribute__(skill.name)
-            other_val = other.__getattribute__(skill.name)
-
-            if self_val is not None and other_val is None:
-                value = self_val
-            elif self_val is None and other_val is not None:
-                value = other_val
-            elif self_val is None and other_val is None:
-                value = None
-            else:
-                value = max([self_val, other_val])
-
-            skill_vals_dict[skill.name] = value
-
-        return PlayerLevels(**skill_vals_dict)
+        mod_func = self._arithmetic_wrapper(max, bidirectional=True)
+        return self._dunder_helper(other, mod_func)
 
     @staticmethod
     def max_skill_level() -> Level:
         return Level(99, "max skill level")
 
-    def min_skill_level(self, skill: Skills) -> Level:
+    def min_skill_level(self, __skill: Skills, /) -> Level:
         comment = "min skill level"
-        if skill is Skills.HITPOINTS:
-            value = 10
-        else:
-            value = 1
-
+        value = 10 if __skill is Skills.HITPOINTS else 1
         return Level(value, comment)
 
     @classmethod
@@ -189,9 +184,11 @@ class PlayerLevels(Stats):
 
     @classmethod
     def from_rsn(cls, rsn: str):
-        hs = rr.lookup_player_highscores(rsn)
+        high_scores = rr.lookup_player_highscores(rsn)
         levels = [
-            Level(hs.__getattribute__(skill.name).level, f"{rsn}: {skill.name}")
+            Level(
+                high_scores.__getattribute__(skill.name).level, f"{rsn}: {skill.name}"
+            )
             for skill in Skills
         ]
         return cls(*levels)
@@ -199,7 +196,7 @@ class PlayerLevels(Stats):
 
 @total_ordering
 @dataclass
-class MonsterLevels(Stats):
+class MonsterLevels(StatsOptional):
     attack: Level | None = None
     strength: Level | None = None
     defence: Level | None = None
@@ -207,95 +204,35 @@ class MonsterLevels(Stats):
     magic: Level | None = None
     hitpoints: Level | None = None
 
-    def __add__(self, other: MonsterLevels) -> MonsterLevels:
-        if isinstance(other, MonsterLevels):
-            new_vals = []
-            for skill in MonsterCombatSkills:
-                self_val = self.__getattribute__(skill.name)
-                other_val = self.__getattribute__(skill.name)
-
-                if self_val is not None and other_val is None:
-                    new_vals.append(self_val)
-                elif self_val is None and other_val is not None:
-                    new_vals.append(other_val)
-                else:
-                    new_vals.append(self_val + other_val)
-
-            return MonsterLevels(*new_vals)
-
-        else:
-            raise NotImplementedError
-
-    def __sub__(self, other: MonsterLevels) -> MonsterLevels:
-        if isinstance(other, MonsterLevels):
-            new_vals = []
-            for skill in MonsterCombatSkills:
-                self_val = self.__getattribute__(skill.name)
-                other_val = self.__getattribute__(skill.name)
-
-                if self_val is not None and other_val is None:
-                    new_vals.append(self_val)
-                elif self_val is None and other_val is not None:
-                    raise StatsError(f"Subtraction between None and {other_val}")
-                else:
-                    new_vals.append(self_val - other_val)
-
-            return MonsterLevels(*new_vals)
-
-        else:
-            raise NotImplementedError
-
-    def __lt__(self, other: MonsterLevels) -> bool:
-        if isinstance(other, MonsterLevels):
-            for skill in MonsterCombatSkills:
-                self_val = self.__getattribute__(skill.name)
-                other_val = self.__getattribute__(skill.name)
-
-                if self_val is not None and other_val is not None:
-                    if not self_val < other_val:
-                        return False
-
-            return True
-        else:
-            raise NotImplementedError
-
-    def __eq__(self, other: MonsterLevels) -> bool:
-        if isinstance(other, MonsterLevels):
-            for skill in MonsterCombatSkills:
-                self_val = self.__getattribute__(skill.name)
-                other_val = other.__getattribute__(skill.name)
-
-                if self_val is not None and other_val is not None:
-                    if self_val != other_val:
-                        return False
-                elif self_val is None and other_val is None:
-                    continue
-                elif self_val is not None and other_val is None:
-                    return False
-                elif self_val is None and other_val is not None:
-                    return False
-
-            return True
-        else:
-            raise NotImplementedError
-
     @classmethod
     def from_bb(cls, name: str):
         mon_df = rr.lookup_normal_monster_by_name(name)
         return cls(
             mon_df[Skills.ATTACK.name].values[0],
             mon_df[Skills.STRENGTH.name].values[0],
-            mon_df[Skills.defence.name].values[0],
+            mon_df[Skills.DEFENCE.name].values[0],
             mon_df[Skills.RANGED.name].values[0],
             mon_df[Skills.MAGIC.name].values[0],
             mon_df[Skills.HITPOINTS.name].values[0],
         )
 
     @classmethod
-    def dummy_levels(cls, hitpoints: Level | int = None):
-        hp = hitpoints if hitpoints is not None else 1000
+    def dummy_levels(cls, hitpoints: Level | int | None = None):
+        if isinstance(hitpoints, int):
+            hp = Level(hitpoints)
+        elif isinstance(hitpoints, Level):
+            hp = hitpoints
+        else:
+            hp = Level(1000)
 
-        return cls(Level(1), Level(1), Level(0), Level(1), Level(1), Level(int(hp)))
+        return cls(
+            attack=Level(1),
+            strength=Level(1),
+            defence=Level(0),
+            ranged=Level(1),
+            magic=Level(1),
+            hitpoints=hp,
+        )
 
     @classmethod
     def zeros(cls):
@@ -306,66 +243,52 @@ class MonsterLevels(Stats):
 class StyleStats(Stats):
     """Integer container class for validation, security, and logging."""
 
-    melee_attack: StyleBonus | None = field(default=None)
-    melee_strength: StyleBonus | None = field(default=None)
-    defence: StyleBonus | None = field(default=None)
-    ranged_attack: StyleBonus | None = field(default=None)
-    ranged_strength: StyleBonus | None = field(default=None)
-    magic_attack: StyleBonus | None = field(default=None)
+    melee_attack: StyleBonus = StyleBonus(0)
+    melee_strength: StyleBonus = StyleBonus(0)
+    defence: StyleBonus = StyleBonus(0)
+    ranged_attack: StyleBonus = StyleBonus(0)
+    ranged_strength: StyleBonus = StyleBonus(0)
+    magic_attack: StyleBonus = StyleBonus(0)
 
     @classmethod
     def melee_shared_bonus(cls):
-        value = 1
-        comment = "shared style"
-        return cls(
-            melee_attack=StyleBonus(value, comment),
-            melee_strength=StyleBonus(value, comment),
-            defence=StyleBonus(value, comment),
-        )
+        val = StyleBonus(1, "shared style")
+        return cls(melee_attack=val, melee_strength=val, defence=val)
 
     @classmethod
     def melee_accurate_bonuses(cls):
-        value = 3
-        comment = "accurate style"
-        return cls(melee_attack=StyleBonus(value, comment))
+        val = StyleBonus(3, "accurate style")
+        return cls(melee_attack=val)
 
     @classmethod
     def melee_strength_bonuses(cls):
-        value = 3
-        comment = "aggressive style"
-        return cls(melee_strength=StyleBonus(value, comment))
+        val = StyleBonus(3, "aggressive style")
+        return cls(melee_strength=val)
 
     @classmethod
     def defensive_bonuses(cls):
-        value = 3
-        comment = "defensive style"
-        return cls(defence=StyleBonus(value, comment))
+        val = StyleBonus(3, "defensive style")
+        return cls(defence=val)
 
     @classmethod
     def ranged_bonus(cls):
-        value = 3
-        comment = "ranged (accurate) style"
-        return cls(
-            ranged_attack=StyleBonus(value, comment),
-            ranged_strength=StyleBonus(value, comment),
-        )
+        val = StyleBonus(3, "ranged (accurate) style")
+        return cls(ranged_attack=val, ranged_strength=val)
 
     @classmethod
     def magic_bonus(cls):
-        value = 3
-        comment = "magic (accurate) style"
-        return cls(magic_attack=StyleBonus(value, comment))
+        val = StyleBonus(3, "magic (accurate) style")
+        return cls(magic_attack=val)
 
     @classmethod
     def npc_bonus(cls):
-        value = 1
-        comment = "npc style"
+        val = StyleBonus(1, "npc style")
         return cls(
-            melee_attack=StyleBonus(value, comment),
-            melee_strength=StyleBonus(value, comment),
-            defence=StyleBonus(value, comment),
-            ranged_attack=StyleBonus(value, comment),
-            magic_attack=StyleBonus(value, comment),
+            melee_attack=val,
+            melee_strength=val,
+            defence=val,
+            ranged_attack=val,
+            magic_attack=val,
         )
 
     @classmethod
@@ -382,14 +305,14 @@ class AggressiveStats(Stats):
     This class stores magic strength (float modifier) as opposed to percentile magic damage (percentage)
     """
 
-    stab: int = 0
-    slash: int = 0
-    crush: int = 0
-    magic_attack: int = 0
-    ranged_attack: int = 0
-    melee_strength: int = 0
-    ranged_strength: int = 0
-    magic_strength: float = 0
+    stab: TrackedInt = TrackedInt(0)
+    slash: TrackedInt = TrackedInt(0)
+    crush: TrackedInt = TrackedInt(0)
+    magic_attack: TrackedInt = TrackedInt(0)
+    ranged_attack: TrackedInt = TrackedInt(0)
+    melee_strength: TrackedInt = TrackedInt(0)
+    ranged_strength: TrackedInt = TrackedInt(0)
+    magic_strength: TrackedFloat = TrackedFloat(0)
 
     def __add__(self, other: int | AggressiveStats) -> AggressiveStats:
         if isinstance(other, int):
@@ -456,11 +379,11 @@ class DefensiveStats(Stats):
     Included attributes are defence bonus values: stab, slash, crush, magic, & ranged.
     """
 
-    stab: int = 0
-    slash: int = 0
-    crush: int = 0
-    magic: int = 0
-    ranged: int = 0
+    stab: TrackedInt = TrackedInt(0)
+    slash: TrackedInt = TrackedInt(0)
+    crush: TrackedInt = TrackedInt(0)
+    magic: TrackedInt = TrackedInt(0)
+    ranged: TrackedInt = TrackedInt(0)
 
     def __add__(self, other: int | DefensiveStats) -> DefensiveStats:
         if isinstance(other, int):
@@ -630,7 +553,7 @@ saradomin_brew_hitpoints_callable = clmb.create_simple_callable(
     2, 0.15, comment="sara brew"
 )
 
-ancient_brew_debuff_skills = (Skills.ATTACK, Skills.STRENGTH, Skills.defence)
+ancient_brew_debuff_skills = (Skills.ATTACK, Skills.STRENGTH, Skills.DEFENCE)
 ancient_brew_debuffs = clmb.create_simple_callable_modifiers(
     ancient_brew_debuff_skills, 2, 0.10, True, "ancient brew (debuff)"
 )
@@ -638,7 +561,7 @@ ancient_brew_debuffs = clmb.create_simple_callable_modifiers(
 overload_buffs_skills = (
     Skills.ATTACK,
     Skills.STRENGTH,
-    Skills.defence,
+    Skills.DEFENCE,
     Skills.RANGED,
     Skills.MAGIC,
 )
@@ -661,7 +584,7 @@ SuperStrengthPotion = Boost(
 
 SuperDefencePotion = Boost(
     "super defence potion",
-    CallableLevelsModifier((Skills.defence,), super_combat_callable, "super defence"),
+    CallableLevelsModifier((Skills.DEFENCE,), super_combat_callable, "super defence"),
 )
 
 SuperCombatPotion = Boost(
@@ -700,7 +623,7 @@ StrengthPotion = Boost(
 
 DefencePotion = Boost(
     "defence potion",
-    CallableLevelsModifier((Skills.defence,), combat_potion_callable, "defence"),
+    CallableLevelsModifier((Skills.DEFENCE,), combat_potion_callable, "defence"),
 )
 
 CombatPotion = Boost("combat potion", (AttackPotion, StrengthPotion))
@@ -773,7 +696,7 @@ for skill in saradomin_brew_debuff_skills:
 
 saradomin_brew_clms.append(
     CallableLevelsModifier(
-        (Skills.defence,), saradomin_brew_debuff_callable, "saradomin brew (buff)"
+        (Skills.DEFENCE,), saradomin_brew_debuff_callable, "saradomin brew (buff)"
     )
 )
 
@@ -793,7 +716,7 @@ zamorak_brew_clms = [
         (Skills.STRENGTH,), clmb.create_simple_callable(2, 0.12), "zamorak brew (buff)"
     ),
     CallableLevelsModifier(
-        (Skills.defence,),
+        (Skills.DEFENCE,),
         clmb.create_simple_callable(2, 0.10, True),
         "zamorak brew (debuff)",
     ),

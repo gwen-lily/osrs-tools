@@ -13,8 +13,14 @@ from osrs_tools.data import (
 from osrs_tools.exceptions import OsrsException
 from osrs_tools.stats import StyleStats
 
+###############################################################################
+# main classes
+###############################################################################
 
-@dataclass(eq=True)
+# style #######################################################################
+
+
+@dataclass
 class Style:
     """A Style object with information about combat bonuses and modifiers."""
 
@@ -93,7 +99,7 @@ class StylesCollection:
     default: Style
 
     def __iter__(self):
-        return iter(self.styles)
+        yield from self.styles
 
     def get_by_style(self, style: Styles) -> Style:
         for instance_style in self.styles:

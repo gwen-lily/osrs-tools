@@ -46,7 +46,7 @@ class Prayer:
         options = {
             Skills.ATTACK.name: None,
             Skills.STRENGTH.name: None,
-            Skills.defence.name: None,
+            Skills.DEFENCE.name: None,
             "ranged_attack": None,
             "ranged_strength": None,
             "magic_attack": None,
@@ -149,7 +149,7 @@ class PrayerCollection:
 
     @property
     def defence(self):
-        return self._get_prayer_collection_attribute(Skills.defence.name)
+        return self._get_prayer_collection_attribute(Skills.DEFENCE.name)
 
     @property
     def ranged_attack(self):
