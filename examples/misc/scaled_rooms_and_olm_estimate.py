@@ -4,30 +4,17 @@ from random import random
 
 import numpy as np
 from matplotlib import pyplot as plt
-from osrs_tools.analysis_tools import DataMode, bedevere_the_wise, tabulate_enhanced
-from osrs_tools.character import (
-    AbyssalPortal,
-    DeathlyMage,
-    DeathlyRanger,
-    Guardian,
-    Player,
-    SkeletalMystic,
-)
+from osrs_tools.analysis_tools import tabulate_enhanced
+from osrs_tools.character import AbyssalPortal, DeathlyMage, DeathlyRanger, Guardian, Player, SkeletalMystic
 from osrs_tools.damage import Damage
 from osrs_tools.data import Level, Styles
 from osrs_tools.equipment import Equipment
 from osrs_tools.prayer import Piety, ProtectFromMagic, Rigour
-from osrs_tools.stats import (
-    BastionPotion,
-    Boost,
-    Overload,
-    SuperAttackPotion,
-    SuperCombatPotion,
-)
+from osrs_tools.stats import BastionPotion, Boost, Overload, PlayerLevels, SuperAttackPotion, SuperCombatPotion
 from osrs_tools.style import ChinchompaStyles
 from osrs_tools.unique_loot_calculator import individual_point_cap, zero_purple_chance
 
-from .scaled_smol_olms import solo_olm_ticks_and_points_estimate
+from scaled_smol_olms import solo_olm_ticks_and_points_estimate
 
 
 def guardian_estimates(scale: int, boost: Boost, **kwargs) -> tuple[float, int]:
@@ -42,16 +29,12 @@ def guardian_estimates(scale: int, boost: Boost, **kwargs) -> tuple[float, int]:
         "party_average_mining_level": 61 * (15 / 31)
         + 85 * (5 / 31) * 1 * (11 / 31),  # hack math based on the alts I usually use
         "guardian_alts": 4,
-        "guardian_alt_levels": PlayerLevels(
-            attack=Level(99), strength=Level(99), mining=Level(61)
-        ),
+        "guardian_alt_levels": PlayerLevels(attack=Level(99), strength=Level(99), mining=Level(61)),
     }
     options.update(kwargs)
     extra_lads = options["guardian_alts"]
 
-    guardian = Guardian.from_de0(
-        scale, party_average_mining_level=options["party_average_mining_level"]
-    )
+    guardian = Guardian.from_de0(scale, party_average_mining_level=options["party_average_mining_level"])
     lad = Player(name="guardians fit")
 
     # gear
@@ -70,14 +53,10 @@ def guardian_estimates(scale: int, boost: Boost, **kwargs) -> tuple[float, int]:
     points_raw = guardian.points_per_room()
 
     if extra_lads:
-        extra_lad = Player(
-            name="guardian alt", base_levels=options["guardian_alt_levels"]
-        )
+        extra_lad = Player(name="guardian alt", base_levels=options["guardian_alt_levels"])
         extra_lad.equipment.equip_basic_melee_gear()
         extra_lad.equipment.equip_bandos_set()
-        extra_lad.active_style = extra_lad.equipment.equip_dragon_pickaxe(
-            avernic=True, berserker=True
-        )
+        extra_lad.active_style = extra_lad.equipment.equip_dragon_pickaxe(avernic=True, berserker=True)
         assert extra_lad.equipment.full_set
 
         extra_lad.boost(boost)
@@ -89,10 +68,7 @@ def guardian_estimates(scale: int, boost: Boost, **kwargs) -> tuple[float, int]:
         dpt = dpt_ary.sum()
         damage_ticks = guardian.count_per_room() * guardian.base_levels.hitpoints / dpt
         #                       lads [unitless] * (ticks / room) * (damage / tick) * (points / damage) = points / room
-        total_points = (
-            points_raw
-            - extra_lads * damage_ticks * extra_lad_dpt * guardian.points_per_hitpoint
-        )
+        total_points = points_raw - extra_lads * damage_ticks * extra_lad_dpt * guardian.points_per_hitpoint
 
     else:
         dpt = lad.damage_distribution(guardian).per_tick
@@ -145,9 +121,7 @@ def mystics_estimates(scale: int, mode: MysticModes, **kwargs) -> tuple[float, i
         assert lad.equipment.full_set
 
         if options["dwh_specialist_equipment"] is None:
-            dwh_specialist.equipment.equip_basic_melee_gear(
-                torture=False, infernal=False, berserker=False
-            )
+            dwh_specialist.equipment.equip_basic_melee_gear(torture=False, infernal=False, berserker=False)
             dwh_specialist.active_style = dwh_specialist.equipment.equip_dwh(
                 inquisitor_set=True, avernic=True, tyrannical=True
             )
@@ -170,9 +144,7 @@ def mystics_estimates(scale: int, mode: MysticModes, **kwargs) -> tuple[float, i
             mystic.reset_stats()
 
             for _ in range(options["dwh_attempts_per_mystic"]):
-                p = dwh_specialist.damage_distribution(
-                    mystic, special_attack=True
-                ).probability_nonzero_damage
+                p = dwh_specialist.damage_distribution(mystic, special_attack=True).probability_nonzero_damage
                 if random() < p:
                     mystic.apply_dwh()
 
@@ -207,9 +179,7 @@ def mystics_estimates(scale: int, mode: MysticModes, **kwargs) -> tuple[float, i
         assert lad.equipment.full_set
 
         if options["dwh_specialist_equipment"] is None:
-            dwh_specialist.equipment.equip_basic_melee_gear(
-                torture=False, infernal=False, berserker=False
-            )
+            dwh_specialist.equipment.equip_basic_melee_gear(torture=False, infernal=False, berserker=False)
             dwh_specialist.active_style = dwh_specialist.equipment.equip_dwh(
                 inquisitor_set=True, avernic=True, tyrannical=True
             )
@@ -232,13 +202,8 @@ def mystics_estimates(scale: int, mode: MysticModes, **kwargs) -> tuple[float, i
         for trial_index in trials:
             trial_ticks = 0
 
-            mystics = [
-                mystic.from_de0(ps) for ps in [scale_at_load_time] * mystics_per_room
-            ]
-            st_alts = [
-                Player(name=f"spec transfer alt {num}")
-                for num in range(spec_transfer_alts)
-            ]
+            mystics = [mystic.from_de0(ps) for ps in [scale_at_load_time] * mystics_per_room]
+            st_alts = [Player(name=f"spec transfer alt {num}") for num in range(spec_transfer_alts)]
             tracked_spec_lads = [dwh_specialist, *st_alts]
 
             # boosts
@@ -246,9 +211,7 @@ def mystics_estimates(scale: int, mode: MysticModes, **kwargs) -> tuple[float, i
             dwh_specialist.reset_stats()
 
             lad.boost(Overload)
-            dwh_specialist.levels.strength = options[
-                "dwh_specialist_target_strength_level"
-            ]
+            dwh_specialist.levels.strength = options["dwh_specialist_target_strength_level"]
             dwh_specialist.boost(SuperAttackPotion)
 
             for mys_idx, mys in enumerate(mystics):
@@ -260,9 +223,7 @@ def mystics_estimates(scale: int, mode: MysticModes, **kwargs) -> tuple[float, i
 
                 while mys.alive:
                     if dwh_landed == dwh_target:
-                        remaining_ticks = mys.levels.hitpoints // (
-                            cached_dam.per_tick + thrall_dam.per_tick
-                        )
+                        remaining_ticks = mys.levels.hitpoints // (cached_dam.per_tick + thrall_dam.per_tick)
                         mys.levels.hitpoints = Level(0)
 
                     else:
@@ -274,20 +235,14 @@ def mystics_estimates(scale: int, mode: MysticModes, **kwargs) -> tuple[float, i
 
                         if (
                             dwh_landed < dwh_target
-                            and (
-                                hp_ratio := mys.levels.hitpoints
-                                / mys.base_levels.hitpoints
-                            )
-                            > hp_threshold
+                            and (hp_ratio := mys.levels.hitpoints / mys.base_levels.hitpoints) > hp_threshold
                         ):
                             if dwh_specialist.special_energy >= 50:
                                 if tc % ticks_per_dwh_specialist_action == 0:
                                     p = dwh_specialist.damage_distribution(
                                         mys, special_attack=True
                                     ).probability_nonzero_damage
-                                    dwh_specialist.special_energy -= (
-                                        50  # TODO: Part of SpecialWeapon class
-                                    )
+                                    dwh_specialist.special_energy -= 50  # TODO: Part of SpecialWeapon class
 
                                     if random() < p:
                                         dwh_landed += 1
@@ -394,9 +349,7 @@ def vespula_estimates(
     if mode is VespulaModes.TBOW:
         lad.active_style = lad.equipment.equip_twisted_bow()
     elif mode is VespulaModes.ZCB:
-        lad.active_style = lad.equipment.equip_zaryte_crossbow(
-            buckler=True, rubies=True
-        )
+        lad.active_style = lad.equipment.equip_zaryte_crossbow(buckler=True, rubies=True)
 
     if vulnerability:
         portal.apply_vulnerability()
@@ -455,28 +408,17 @@ def rope_estimates(
         mage_dpt = lad.damage_distribution(mage).per_tick + thrall_dpt
         ranger_dpt = lad.damage_distribution(ranger).per_tick + thrall_dpt
 
-        mage_damage_ticks = (
-            mage.count_per_room() * mage.base_levels.hitpoints / mage_dpt
-        )
-        ranger_damage_ticks = (
-            ranger.count_per_room() * ranger.base_levels.hitpoints / ranger_dpt
-        )
-        setup_ticks = (
-            6 + 0 * vulnerability
-        )  # 10*bone_crossbow_specs    # lure ticks + nonsense
+        mage_damage_ticks = mage.count_per_room() * mage.base_levels.hitpoints / mage_dpt
+        ranger_damage_ticks = ranger.count_per_room() * ranger.base_levels.hitpoints / ranger_dpt
+        setup_ticks = 6 + 0 * vulnerability  # 10*bone_crossbow_specs    # lure ticks + nonsense
         total_ticks = mage_damage_ticks + ranger_damage_ticks + setup_ticks
 
     elif mode is RopeModes.CHIN_BOTH:
-        lad.active_style = lad.equipment.equip_black_chins(
-            style=ChinchompaStyles.get_by_style(Styles.LONG_FUSE)
-        )
+        lad.active_style = lad.equipment.equip_black_chins(style=ChinchompaStyles.get_by_style(Styles.LONG_FUSE))
         dpt_mage = lad.damage_distribution(mage).per_tick
         dpt_ranger = lad.damage_distribution(ranger).per_tick
 
-        damage_ticks = (
-            mage.base_levels.hitpoints / dpt_mage
-            + ranger.base_levels.hitpoints / dpt_ranger
-        )
+        damage_ticks = mage.base_levels.hitpoints / dpt_mage + ranger.base_levels.hitpoints / dpt_ranger
         setup_ticks = 15 * vulnerability
         total_ticks = damage_ticks + setup_ticks
     else:
@@ -499,9 +441,7 @@ def thieving_estimates(scale: int, **kwargs) -> tuple[float, int]:
         return 16 * inner_scale - 1
 
     def jank_grub_estimate(modifier: float = None):
-        modifier = (
-            268 / flat_grub_estimate(28) if modifier is None else modifier
-        )  # my one data point
+        modifier = 268 / flat_grub_estimate(28) if modifier is None else modifier  # my one data point
         return math.floor(flat_grub_estimate(scale) * modifier)
 
     grub_estimate = jank_grub_estimate()
@@ -539,8 +479,7 @@ def main(
 ) -> tuple[float, int, float]:
     options = {
         "trials": int(1e0),
-        "setup_ticks_meta": 15
-        * 100,  # 30 minutes to wrangle a reasonable scale + scalers + gear the lads
+        "setup_ticks_meta": 15 * 100,  # 30 minutes to wrangle a reasonable scale + scalers + gear the lads
         "spec_transfer_alts": 0,
         "guardian_alts": 4,
         "bone_crossbow_specs": 0,
@@ -659,9 +598,7 @@ def main(
 
     row_labels = ["points"]
     list_of_data = [pt_data]
-    points_table = tabulate_enhanced(
-        list_of_data, col_labels, row_labels, floatfmt=".0f"
-    )
+    points_table = tabulate_enhanced(list_of_data, col_labels, row_labels, floatfmt=".0f")
 
     # points per hour ##################################################################################################
     adjusted_total_points = pt_data[0]
@@ -714,8 +651,7 @@ if __name__ == "__main__":
 
     my_kwargs = {
         "trials": int(1),
-        "setup_ticks_meta": 15
-        * 100,  # 30 minutes to wrangle a reasonable scale + scalers + gear the lads
+        "setup_ticks_meta": 15 * 100,  # 30 minutes to wrangle a reasonable scale + scalers + gear the lads
         "spec_transfer_alts": 6,
         "guardian_alts": 4,
         "dwh_target_per_mystic": 2,
