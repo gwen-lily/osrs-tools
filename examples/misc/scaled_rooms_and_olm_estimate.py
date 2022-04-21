@@ -4,30 +4,33 @@ from random import random
 
 import numpy as np
 from matplotlib import pyplot as plt
-from osrs_tools.analysis_tools import DataMode, bedevere_the_wise, tabulate_enhanced
+from osrs_tools.analysis_tools import tabulate_enhanced
 from osrs_tools.character import (
     AbyssalPortal,
     DeathlyMage,
     DeathlyRanger,
     Guardian,
+    LizardmanShaman,
     Player,
+    PlayerError,
     SkeletalMystic,
 )
 from osrs_tools.damage import Damage
-from osrs_tools.equipment import Equipment
+from osrs_tools.equipment import Equipment, Gear
 from osrs_tools.modifier import Level, Styles
 from osrs_tools.prayer import Piety, ProtectFromMagic, Rigour
 from osrs_tools.stats import (
     BastionPotion,
     Boost,
     Overload,
+    PlayerLevels,
     SuperAttackPotion,
     SuperCombatPotion,
 )
-from osrs_tools.style import ChinchompaStyles
+from osrs_tools.style import ChinchompaStyles, PlayerStyle
 from osrs_tools.unique_loot_calculator import individual_point_cap, zero_purple_chance
 
-from .scaled_smol_olms import solo_olm_ticks_and_points_estimate
+from scaled_smol_olms import solo_olm_ticks_and_points_estimate
 
 
 def guardian_estimates(scale: int, boost: Boost, **kwargs) -> tuple[float, int]:
@@ -65,7 +68,7 @@ def guardian_estimates(scale: int, boost: Boost, **kwargs) -> tuple[float, int]:
     lad.boost(boost)
 
     # dwh / bgs / zero defence assumed if you have enough alts
-    guardian.levels.defence = 0
+    guardian.levels.defence = Level(0)
     lad_dpt = lad.damage_distribution(guardian).per_tick
     points_raw = guardian.points_per_room()
 
@@ -87,7 +90,9 @@ def guardian_estimates(scale: int, boost: Boost, **kwargs) -> tuple[float, int]:
 
         dpt_ary = np.asarray([lad_dpt, *(extra_lad_dpt,) * extra_lads])
         dpt = dpt_ary.sum()
-        damage_ticks = guardian.count_per_room() * guardian.base_levels.hitpoints / dpt
+        hp = guardian.base_levels.hitpoints
+        assert isinstance(hp, Level)
+        damage_ticks = guardian.count_per_room() * hp / dpt
         #                       lads [unitless] * (ticks / room) * (damage / tick) * (points / damage) = points / room
         total_points = (
             points_raw
@@ -96,7 +101,9 @@ def guardian_estimates(scale: int, boost: Boost, **kwargs) -> tuple[float, int]:
 
     else:
         dpt = lad.damage_distribution(guardian).per_tick
-        damage_ticks = guardian.count_per_room() * guardian.base_levels.hitpoints / dpt
+        hp = guardian.base_levels.hitpoints
+        assert isinstance(hp, Level)
+        damage_ticks = guardian.count_per_room() * hp / dpt
         total_points = points_raw
 
     setup_ticks = 20 * 6 + 100  # 100 for inefficiency and jank
@@ -118,7 +125,7 @@ def mystics_estimates(scale: int, mode: MysticModes, **kwargs) -> tuple[float, i
     Extended description.
     """
     options = {
-        "scale_at_load_time": scale,
+        "scale_at_mystics_load": scale,
         "dwh_attempts_per_mystic": 3,
         "dwh_specialist_equipment": None,
         "dwh_specialist_target_strength_level": 13,
@@ -129,8 +136,8 @@ def mystics_estimates(scale: int, mode: MysticModes, **kwargs) -> tuple[float, i
     options.update(kwargs)
 
     # top level information
-    mystic = SkeletalMystic.from_de0(options["scale_at_load_time"])
-    mystics_per_room = mystic.count_per_room(options["scale_at_load_time"])
+    mystic = SkeletalMystic.from_de0(options["scale_at_mystics_load"])
+    mystics_per_room = mystic.count_per_room(options["scale_at_mystics_load"])
     trials = options["trials"]
 
     if mode is MysticModes.tbow_thralls:
@@ -185,7 +192,9 @@ def mystics_estimates(scale: int, mode: MysticModes, **kwargs) -> tuple[float, i
         dpt = lad.damage_distribution(mystic).per_tick + thrall_dpt
         assert isinstance(mystic.base_levels.hitpoints, Level)
         kill_ticks = mystic.base_levels.hitpoints / dpt
-        damage_ticks = kill_ticks * mystic.count_per_room(options["scale_at_load_time"])
+        damage_ticks = kill_ticks * mystic.count_per_room(
+            options["scale_at_mystics_load"]
+        )
         tank_ticks = 200
         jank_ticks = 6 * options["dwh_attempts_per_mystic"]
         total_ticks = damage_ticks + tank_ticks + jank_ticks
@@ -194,7 +203,7 @@ def mystics_estimates(scale: int, mode: MysticModes, **kwargs) -> tuple[float, i
         lad = Player(name="mystics fit")
         dwh_specialist = Player(name="dwh specialist")
         trials = options["trials"]
-        scale_at_load_time = options["scale_at_load_time"]
+        scale_at_mystics_load = options["scale_at_mystics_load"]
         spec_transfer_alts = options["spec_transfer_alts"]
         dwh_target = options["dwh_target_per_mystic"]
         hp_threshold = options["dwh_health_remaining_ratio_threshold"]
@@ -233,7 +242,7 @@ def mystics_estimates(scale: int, mode: MysticModes, **kwargs) -> tuple[float, i
             trial_ticks = 0
 
             mystics = [
-                mystic.from_de0(ps) for ps in [scale_at_load_time] * mystics_per_room
+                mystic.from_de0(ps) for ps in [scale_at_mystics_load] * mystics_per_room
             ]
             st_alts = [
                 Player(name=f"spec transfer alt {num}")
@@ -260,39 +269,37 @@ def mystics_estimates(scale: int, mode: MysticModes, **kwargs) -> tuple[float, i
 
                 while mys.alive:
                     if dwh_landed == dwh_target:
-                        remaining_ticks = mys.levels.hitpoints // (
+                        remaining_ticks = mys.hp // (
                             cached_dam.per_tick + thrall_dam.per_tick
                         )
-                        mys.levels.hitpoints = Level(0)
+                        mys.hp = Level(0)
 
                     else:
                         if tc % ticks_per_lad_attack == 0:
-                            mys.damage(lad, cached_dam.random_hit())
+                            random_hs = cached_dam.random_hit()
+                            assert isinstance(random_hs, int)
+                            mys.damage(lad, random_hs)
 
                         if tc % int(thrall_dam.attack_speed) == 0:
-                            mys.damage(None, thrall_dam.random_hit())
+                            random_hs = thrall_dam.random_hit()
+                            assert isinstance(random_hs, int)
+                            mys.damage(lad, random_hs)
 
-                        if (
-                            dwh_landed < dwh_target
-                            and (
-                                hp_ratio := mys.levels.hitpoints
-                                / mys.base_levels.hitpoints
-                            )
-                            > hp_threshold
-                        ):
-                            if dwh_specialist.special_energy >= 50:
-                                if tc % ticks_per_dwh_specialist_action == 0:
-                                    p = dwh_specialist.damage_distribution(
-                                        mys, special_attack=True
-                                    ).probability_nonzero_damage
-                                    dwh_specialist.special_energy -= (
-                                        50  # TODO: Part of SpecialWeapon class
-                                    )
+                        if dwh_landed < dwh_target:
+                            if (mys.hp / mys.base_hp) > hp_threshold:
+                                if dwh_specialist.special_energy >= 50:
+                                    if tc % ticks_per_dwh_specialist_action == 0:
+                                        p = dwh_specialist.damage_distribution(
+                                            mys, special_attack=True
+                                        ).probability_nonzero_damage
+                                        dwh_specialist.special_energy -= (
+                                            50  # TODO: Part of SpecialWeapon class
+                                        )
 
-                                    if random() < p:
-                                        dwh_landed += 1
-                                        mys.apply_dwh()
-                                        cached_dam = lad.damage_distribution(mys)
+                                        if random() < p:
+                                            dwh_landed += 1
+                                            mys.apply_dwh()
+                                            cached_dam = lad.damage_distribution(mys)
 
                             else:
                                 for sta in st_alts:
@@ -317,10 +324,6 @@ def mystics_estimates(scale: int, mode: MysticModes, **kwargs) -> tuple[float, i
         tank_ticks = 200
         total_ticks = mean_kill_ticks + tank_ticks
 
-    elif mode is MysticModes.chin_six_by_two:
-        pass
-    elif mode is MysticModes.chin_ten:
-        pass
     else:
         raise NotImplementedError
 
@@ -350,8 +353,7 @@ def shamans_estimates(
     lad.equipment.equip_arma_set(zaryte=True)
     lad.equipment.equip_slayer_helm()
     lad.task = True
-    lad.active_style = lad.equipment.equip_black_chins()
-
+    lad.active_style = lad.equipment.equip_chins(black=True)
     # boosts
     lad.pray(Rigour)
     lad.boost(boost)
@@ -361,7 +363,7 @@ def shamans_estimates(
         shaman.apply_vulnerability()
 
     dpt = lad.damage_distribution(shaman).per_tick
-    damage_ticks = shaman.base_levels.hitpoints / dpt
+    damage_ticks = shaman.base_hp / dpt
     setup_ticks = 200 + bone_crossbow_specs * 10
     jank_ticks = 50  # cleanup n such
     total_ticks = damage_ticks + setup_ticks + jank_ticks
@@ -455,28 +457,21 @@ def rope_estimates(
         mage_dpt = lad.damage_distribution(mage).per_tick + thrall_dpt
         ranger_dpt = lad.damage_distribution(ranger).per_tick + thrall_dpt
 
-        mage_damage_ticks = (
-            mage.count_per_room() * mage.base_levels.hitpoints / mage_dpt
-        )
-        ranger_damage_ticks = (
-            ranger.count_per_room() * ranger.base_levels.hitpoints / ranger_dpt
-        )
+        mage_damage_ticks = mage.count_per_room() * mage.base_hp / mage_dpt
+        ranger_damage_ticks = ranger.count_per_room() * ranger.base_hp / ranger_dpt
         setup_ticks = (
             6 + 0 * vulnerability
         )  # 10*bone_crossbow_specs    # lure ticks + nonsense
         total_ticks = mage_damage_ticks + ranger_damage_ticks + setup_ticks
 
     elif mode is RopeModes.CHIN_BOTH:
-        lad.active_style = lad.equipment.equip_black_chins(
-            style=ChinchompaStyles.get_by_style(Styles.LONG_FUSE)
-        )
+        long_fuse = ChinchompaStyles.get_by_style(Styles.LONG_FUSE)
+        assert isinstance(long_fuse, PlayerStyle)
+        lad.active_style = lad.equipment.equip_chins(black=True, style=long_fuse)
         dpt_mage = lad.damage_distribution(mage).per_tick
         dpt_ranger = lad.damage_distribution(ranger).per_tick
 
-        damage_ticks = (
-            mage.base_levels.hitpoints / dpt_mage
-            + ranger.base_levels.hitpoints / dpt_ranger
-        )
+        damage_ticks = mage.base_hp / dpt_mage + ranger.base_hp / dpt_ranger
         setup_ticks = 15 * vulnerability
         total_ticks = damage_ticks + setup_ticks
     else:
@@ -498,7 +493,7 @@ def thieving_estimates(scale: int, **kwargs) -> tuple[float, int]:
     def flat_grub_estimate(inner_scale: int) -> int:
         return 16 * inner_scale - 1
 
-    def jank_grub_estimate(modifier: float = None):
+    def jank_grub_estimate(modifier: float | None = None):
         modifier = (
             268 / flat_grub_estimate(28) if modifier is None else modifier
         )  # my one data point
@@ -525,9 +520,9 @@ class CombatRotations(Enum):
 
 
 class PuzzleRotations(Enum):
-    THROPE: auto()
-    RICE: auto()
-    CROPE: auto()
+    THROPE = auto()
+    RICE = auto()
+    CROPE = auto()
 
 
 def main(
@@ -544,11 +539,13 @@ def main(
         "spec_transfer_alts": 0,
         "guardian_alts": 4,
         "bone_crossbow_specs": 0,
+        "scale_at_mystics_load": scale,
         "dwh_specialist_strength_level": 13,
         "dwh_target_per_mystic": 3,
         "dwh_health_remaining_ratio_threshold": 0.50,
         "points_per_overload_dose": 600,
         "points_per_food": 90,
+        "leave": True,
     }
     options.update(kwargs)
 
@@ -594,21 +591,11 @@ def main(
 
     # 1 stam * (4 doses / 1 stam) * (4 minutes / 1 dose) * (100 ticks / 1 minute)
     minimum_stams_needed = math.ceil(olm_ticks / (1 * 4 * 4 * 100))
+    print(f"{minimum_stams_needed=}")
 
-    # ticks ############################################################################################################
-    tick_data = [
-        guardians_ticks,
-        mystics_ticks,
-        shamans_ticks,
-        rope_ticks,
-        thieving_ticks,
-        olm_ticks,
-    ]
-    tick_data.insert(0, sum(tick_data[:]) + options["setup_ticks_meta"])
-    tick_data.append(minimum_stams_needed)
+    # table construction ###############################################################################################
 
-    data_minutes = [d / 100 for d in tick_data[:-1]]
-    data_hours = [d / 6000 for d in tick_data[:-1]]
+    header_title = f"scale:{scale:3.0f}"
     col_labels = [
         "time unit",
         "total",
@@ -618,20 +605,22 @@ def main(
         "rope",
         "thieving",
         "olm",
-        "minimum stamina pots",
     ]
-    row_labels = ["ticks", "minutes", "hours"]
+    row_labels = ["ticks", "minutes", "hours", "points", "points per tick (ppt)"]
 
-    list_of_data = [tick_data, data_minutes, data_hours]
-    header_title = f"scale:{scale:3.0f}"
-
-    time_table = tabulate_enhanced(
-        list_of_data,
-        col_labels=col_labels,
-        row_labels=row_labels,
-        meta_header=header_title,
-        floatfmt=".1f",
-    )
+    data_ticks = [
+        guardians_ticks,
+        mystics_ticks,
+        shamans_ticks,
+        rope_ticks,
+        thieving_ticks,
+        olm_ticks,
+    ]
+    data_ticks.insert(0, sum(data_ticks[:]) + options["setup_ticks_meta"])
+    # same data, different units
+    data_minutes = [int(d // 100) for d in data_ticks]
+    data_hours = [d / 6000 for d in data_ticks]
+    data_ticks = [int(_dt) for _dt in data_ticks]
 
     # points ###########################################################################################################
 
@@ -643,7 +632,6 @@ def main(
         thieving_points,
         olm_points,
     ]
-    col_labels = [""] + col_labels[1:-1]
 
     if cap_overload:
         overload_points = options["points_per_overload_dose"] * 5 * (scale - 1)
@@ -655,70 +643,67 @@ def main(
         pt_data.append(food_points)
         col_labels.append("food")
 
-    pt_data.insert(0, sum(pt_data) - individual_point_cap)  # loss from leaving
+    pt_data.insert(0, sum(pt_data))
 
-    row_labels = ["points"]
-    list_of_data = [pt_data]
-    points_table = tabulate_enhanced(
-        list_of_data, col_labels, row_labels, floatfmt=".0f"
+    if options["leave"] is True:
+        pt_data[0] -= individual_point_cap
+
+    pt_data = [int(_pd) for _pd in pt_data]
+
+    ppt_data = []
+
+    for idx, _pd in enumerate(pt_data):
+        try:
+            ppt_data.append(_pd / data_ticks[idx])
+        except IndexError:
+            ppt_data.append(np.NAN)
+
+    list_of_data = [data_ticks, data_minutes, data_hours, pt_data, ppt_data]
+
+    table = tabulate_enhanced(
+        list_of_data,
+        col_labels=col_labels,
+        row_labels=row_labels,
+        meta_header=header_title,
+        floatfmt=".0f",
     )
 
-    # points per hour ##################################################################################################
+    # split the table into lines
+    lines = table.split("\n")
+    double_header = lines[:3]  # grab sub-header for time unit
+
+    # change meta+subheader for points
+    subh_points = double_header[:]
+    subh_points[0] = subh_points[-1]
+    subh_points[1] = subh_points[1].replace("time unit", "loot     ")
+
+    # add to the table
+    lines.insert(-2, "\n".join(subh_points))
+    table = "\n".join(lines)
+    print(table)
+
+    points_per_hour = ppt_data[0] / 6000
     adjusted_total_points = pt_data[0]
     total_hours = data_hours[0]
-    points_per_hour = adjusted_total_points / total_hours
 
-    print(
-        "\n".join(
-            [
-                "\n",
-                time_table,
-                "\n",
-                points_table,
-                "\n",
-                f"points per hr: {points_per_hour:.0f}",
-            ]
-        )
-    )
     return points_per_hour, adjusted_total_points, total_hours
 
 
 if __name__ == "__main__":
-    # my_scale = 27
-    # my_spec_transfer_alts = 6
-    # dwh_target_range = np.arange(0, 5+1)
-    # my_trials = int(1e0)
-    # mythical_cape = Gear.from_bb('mythical cape')
-    # mystic_sim_data = np.empty(shape=dwh_target_range.shape, dtype=float)
-
-    # for alts_index, dwh_target in enumerate(dwh_target_range):
-    # 	my_kwargs = {
-    # 		'trials': my_trials,
-    # 		'spec_transfer_alts': my_spec_transfer_alts,
-    # 		'dwh_target_per_mystic': dwh_target,
-    # 		'dwh_health_remaining_ratio_threshold': 0.50,
-    # 	}
-
-    # 	room_ticks, _ = mystics_estimates(my_scale, mode=MysticModes.tbow_thralls_simulated_spec_transfer, **my_kwargs)
-    # 	mystic_sim_data[alts_index] = room_ticks
-
-    # plt.plot(dwh_target_range, mystic_sim_data)
-    # plt.show()
-
-    # sys.exit(0)
-
     my_rot = CombatRotations.GMS
-    my_scales = list(range(14, 18, 1))
+    my_scales = list(range(15, 16))
     outer_cap_ovl = True
     outer_cap_food = False
 
+    # 20 minutes to wrangle a reasonable scale + scalers + gear the lads
     my_kwargs = {
-        "trials": int(1),
-        "setup_ticks_meta": 15
-        * 100,  # 30 minutes to wrangle a reasonable scale + scalers + gear the lads
+        "trials": int(10),
+        "setup_ticks_meta": 20 * 100,
         "spec_transfer_alts": 6,
         "guardian_alts": 4,
         "dwh_target_per_mystic": 2,
+        "leave": False,
+        "scale_at_mystics_load": 2,
     }
 
     mythical_cape = Gear.from_bb("mythical cape")

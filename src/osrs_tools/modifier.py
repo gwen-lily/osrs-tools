@@ -122,7 +122,7 @@ ChinchompaStylesNames = (Styles.SHORT_FUSE, Styles.MEDIUM_FUSE, Styles.LONG_FUSE
 class Skills(Enum):
     ATTACK = "attack"
     STRENGTH = "strength"
-    defence = "defence"
+    DEFENCE = "defence"
     RANGED = "ranged"
     PRAYER = "prayer"
     MAGIC = "magic"
@@ -148,7 +148,7 @@ class Skills(Enum):
 MonsterCombatSkills = (
     Skills.ATTACK,
     Skills.STRENGTH,
-    Skills.defence,
+    Skills.DEFENCE,
     Skills.RANGED,
     Skills.MAGIC,
     Skills.HITPOINTS,

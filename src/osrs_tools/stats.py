@@ -61,8 +61,8 @@ class PlayerLevels(Stats):
         if isinstance(other, PlayerLevels):
             new_vals = []
             for skill in Skills:
-                self_val = self.__getattribute__(skill.name)
-                other_val = self.__getattribute__(skill.name)
+                self_val = self.__getattribute__(skill.value)
+                other_val = self.__getattribute__(skill.value)
 
                 if self_val is not None and other_val is None:
                     new_vals.append(self_val)
@@ -76,11 +76,11 @@ class PlayerLevels(Stats):
         elif isinstance(other, CallableLevelsModifier):
             modified = copy(self)
             for skill in other.skills:
-                if (self_val := modified.__getattribute__(skill.name)) is None:
+                if (self_val := modified.__getattribute__(skill.value)) is None:
                     continue
                 elif isinstance(self_val, Level):
                     new_val = other.func(self_val)
-                    modified.__setattr__(skill.name, new_val)
+                    modified.__setattr__(skill.value, new_val)
 
             return modified
 
@@ -91,8 +91,8 @@ class PlayerLevels(Stats):
         if isinstance(other, PlayerLevels):
             new_vals = []
             for skill in Skills:
-                self_val = self.__getattribute__(skill.name)
-                other_val = self.__getattribute__(skill.name)
+                self_val = self.__getattribute__(skill.value)
+                other_val = self.__getattribute__(skill.value)
 
                 if self_val is not None and other_val is None:
                     new_vals.append(self_val)
@@ -108,8 +108,8 @@ class PlayerLevels(Stats):
     def __lt__(self, other: PlayerLevels) -> bool:
         if isinstance(other, PlayerLevels):
             for skill in Skills:
-                self_val = self.__getattribute__(skill.name)
-                other_val = self.__getattribute__(skill.name)
+                self_val = self.__getattribute__(skill.value)
+                other_val = self.__getattribute__(skill.value)
 
                 if self_val is not None and other_val is not None:
                     if not self_val < other_val:
@@ -122,8 +122,8 @@ class PlayerLevels(Stats):
     def __eq__(self, other: PlayerLevels) -> bool:
         if isinstance(other, PlayerLevels):
             for skill in Skills:
-                self_val = self.__getattribute__(skill.name)
-                other_val = other.__getattribute__(skill.name)
+                self_val = self.__getattribute__(skill.value)
+                other_val = other.__getattribute__(skill.value)
 
                 if self_val is not None and other_val is not None:
                     if self_val != other_val:
@@ -142,8 +142,8 @@ class PlayerLevels(Stats):
     def max_levels_per_skill(self, other: PlayerLevels) -> PlayerLevels:
         skill_vals_dict = {}
         for skill in Skills:
-            self_val = self.__getattribute__(skill.name)
-            other_val = other.__getattribute__(skill.name)
+            self_val = self.__getattribute__(skill.value)
+            other_val = other.__getattribute__(skill.value)
 
             if self_val is not None and other_val is None:
                 value = self_val
@@ -154,7 +154,7 @@ class PlayerLevels(Stats):
             else:
                 value = max([self_val, other_val])
 
-            skill_vals_dict[skill.name] = value
+            skill_vals_dict[skill.value] = value
 
         return PlayerLevels(**skill_vals_dict)
 
@@ -177,6 +177,17 @@ class PlayerLevels(Stats):
         return cls(*maxed_levels)
 
     @classmethod
+    def starting_stats(cls):
+        skills_dict: dict[str, Level] = {}
+
+        for skill in Skills:
+            val = 10 if skill is Skills.HITPOINTS else 1
+            comment = "minimum"
+            skills_dict[skill.value] = Level(val, comment)
+
+        return cls(**skills_dict)
+
+    @classmethod
     def no_requirements(cls):
         # min_level_values = [*(1, )*7, 10, *(1, )*15]    # 10 for Skills.hitpoints
         # min_levels = (Level(lvl, 'min skill level') for lvl in min_level_values)
@@ -191,7 +202,7 @@ class PlayerLevels(Stats):
     def from_rsn(cls, rsn: str):
         hs = rr.lookup_player_highscores(rsn)
         levels = [
-            Level(hs.__getattribute__(skill.name).level, f"{rsn}: {skill.name}")
+            Level(hs.__getattribute__(skill.value).level, f"{rsn}: {skill.value}")
             for skill in Skills
         ]
         return cls(*levels)
@@ -211,8 +222,8 @@ class MonsterLevels(Stats):
         if isinstance(other, MonsterLevels):
             new_vals = []
             for skill in MonsterCombatSkills:
-                self_val = self.__getattribute__(skill.name)
-                other_val = self.__getattribute__(skill.name)
+                self_val = self.__getattribute__(skill.value)
+                other_val = self.__getattribute__(skill.value)
 
                 if self_val is not None and other_val is None:
                     new_vals.append(self_val)
@@ -230,8 +241,8 @@ class MonsterLevels(Stats):
         if isinstance(other, MonsterLevels):
             new_vals = []
             for skill in MonsterCombatSkills:
-                self_val = self.__getattribute__(skill.name)
-                other_val = self.__getattribute__(skill.name)
+                self_val = self.__getattribute__(skill.value)
+                other_val = self.__getattribute__(skill.value)
 
                 if self_val is not None and other_val is None:
                     new_vals.append(self_val)
@@ -248,8 +259,8 @@ class MonsterLevels(Stats):
     def __lt__(self, other: MonsterLevels) -> bool:
         if isinstance(other, MonsterLevels):
             for skill in MonsterCombatSkills:
-                self_val = self.__getattribute__(skill.name)
-                other_val = self.__getattribute__(skill.name)
+                self_val = self.__getattribute__(skill.value)
+                other_val = self.__getattribute__(skill.value)
 
                 if self_val is not None and other_val is not None:
                     if not self_val < other_val:
@@ -262,8 +273,8 @@ class MonsterLevels(Stats):
     def __eq__(self, other: MonsterLevels) -> bool:
         if isinstance(other, MonsterLevels):
             for skill in MonsterCombatSkills:
-                self_val = self.__getattribute__(skill.name)
-                other_val = other.__getattribute__(skill.name)
+                self_val = self.__getattribute__(skill.value)
+                other_val = other.__getattribute__(skill.value)
 
                 if self_val is not None and other_val is not None:
                     if self_val != other_val:
@@ -283,12 +294,12 @@ class MonsterLevels(Stats):
     def from_bb(cls, name: str):
         mon_df = rr.lookup_normal_monster_by_name(name)
         return cls(
-            mon_df[Skills.ATTACK.name].values[0],
-            mon_df[Skills.STRENGTH.name].values[0],
-            mon_df[Skills.defence.name].values[0],
-            mon_df[Skills.RANGED.name].values[0],
-            mon_df[Skills.MAGIC.name].values[0],
-            mon_df[Skills.HITPOINTS.name].values[0],
+            mon_df[Skills.ATTACK.value].values[0],
+            mon_df[Skills.STRENGTH.value].values[0],
+            mon_df[Skills.DEFENCE.value].values[0],
+            mon_df[Skills.RANGED.value].values[0],
+            mon_df[Skills.MAGIC.value].values[0],
+            mon_df[Skills.HITPOINTS.value].values[0],
         )
 
     @classmethod
@@ -306,66 +317,124 @@ class MonsterLevels(Stats):
 class StyleStats(Stats):
     """Integer container class for validation, security, and logging."""
 
-    melee_attack: StyleBonus | None = field(default=None)
-    melee_strength: StyleBonus | None = field(default=None)
-    defence: StyleBonus | None = field(default=None)
-    ranged_attack: StyleBonus | None = field(default=None)
-    ranged_strength: StyleBonus | None = field(default=None)
-    magic_attack: StyleBonus | None = field(default=None)
+    _melee_attack: StyleBonus | None = field(default=None)
+    _melee_strength: StyleBonus | None = field(default=None)
+    _defence: StyleBonus | None = field(default=None)
+    _ranged_attack: StyleBonus | None = field(default=None)
+    _ranged_strength: StyleBonus | None = field(default=None)
+    _magic_attack: StyleBonus | None = field(default=None)
+
+    # type validation properties
+
+    @property
+    def melee_attack(self) -> StyleBonus:
+        assert isinstance(self._melee_attack, StyleBonus)
+        return self._melee_attack
+
+    @melee_attack.setter
+    def melee_attack(self, __value: StyleBonus):
+        self._melee_attack = __value
+
+    @property
+    def melee_strength(self) -> StyleBonus:
+        assert isinstance(self._melee_strength, StyleBonus)
+        return self._melee_strength
+
+    @melee_strength.setter
+    def melee_strength(self, __value: StyleBonus):
+        self._melee_strength = __value
+
+    @property
+    def defence(self) -> StyleBonus:
+        assert isinstance(self._defence, StyleBonus)
+        return self._defence
+
+    @defence.setter
+    def defence(self, __value: StyleBonus):
+        self._defence = __value
+
+    @property
+    def ranged_attack(self) -> StyleBonus:
+        assert isinstance(self._ranged_attack, StyleBonus)
+        return self._ranged_attack
+
+    @ranged_attack.setter
+    def ranged_attack(self, __value: StyleBonus):
+        self._ranged_attack = __value
+
+    @property
+    def ranged_strength(self) -> StyleBonus:
+        assert isinstance(self._ranged_strength, StyleBonus)
+        return self._ranged_strength
+
+    @ranged_strength.setter
+    def ranged_strength(self, __value: StyleBonus):
+        self._ranged_strength = __value
+
+    @property
+    def magic_attack(self) -> StyleBonus:
+        assert isinstance(self._magic_attack, StyleBonus)
+        return self._magic_attack
+
+    @magic_attack.setter
+    def magic_attack(self, __value: StyleBonus):
+        self._magic_attack = __value
+
+    # class methods
 
     @classmethod
     def melee_shared_bonus(cls):
         value = 1
         comment = "shared style"
         return cls(
-            melee_attack=StyleBonus(value, comment),
-            melee_strength=StyleBonus(value, comment),
-            defence=StyleBonus(value, comment),
+            _melee_attack=StyleBonus(value, comment),
+            _melee_strength=StyleBonus(value, comment),
+            _defence=StyleBonus(value, comment),
         )
 
     @classmethod
     def melee_accurate_bonuses(cls):
         value = 3
         comment = "accurate style"
-        return cls(melee_attack=StyleBonus(value, comment))
+        return cls(_melee_attack=StyleBonus(value, comment))
 
     @classmethod
     def melee_strength_bonuses(cls):
         value = 3
         comment = "aggressive style"
-        return cls(melee_strength=StyleBonus(value, comment))
+        return cls(_melee_strength=StyleBonus(value, comment))
 
     @classmethod
     def defensive_bonuses(cls):
         value = 3
         comment = "defensive style"
-        return cls(defence=StyleBonus(value, comment))
+        return cls(_defence=StyleBonus(value, comment))
 
     @classmethod
     def ranged_bonus(cls):
         value = 3
         comment = "ranged (accurate) style"
         return cls(
-            ranged_attack=StyleBonus(value, comment),
-            ranged_strength=StyleBonus(value, comment),
+            _ranged_attack=StyleBonus(value, comment),
+            _ranged_strength=StyleBonus(value, comment),
         )
 
     @classmethod
     def magic_bonus(cls):
         value = 3
         comment = "magic (accurate) style"
-        return cls(magic_attack=StyleBonus(value, comment))
+        return cls(_magic_attack=StyleBonus(value, comment))
 
     @classmethod
     def npc_bonus(cls):
         value = 1
         comment = "npc style"
         return cls(
-            melee_attack=StyleBonus(value, comment),
-            melee_strength=StyleBonus(value, comment),
-            defence=StyleBonus(value, comment),
-            ranged_attack=StyleBonus(value, comment),
-            magic_attack=StyleBonus(value, comment),
+            _melee_attack=StyleBonus(value, comment),
+            _melee_strength=StyleBonus(value, comment),
+            _defence=StyleBonus(value, comment),
+            _ranged_attack=StyleBonus(value, comment),
+            _magic_attack=StyleBonus(value, comment),
         )
 
     @classmethod
@@ -387,7 +456,7 @@ class AggressiveStats(Stats):
     crush: int = 0
     magic_attack: int = 0
     ranged_attack: int = 0
-    melee_strength: int = 0
+    _melee_strength: int = 0
     ranged_strength: int = 0
     magic_strength: float = 0
 
@@ -453,7 +522,7 @@ class AggressiveStats(Stats):
 class DefensiveStats(Stats):
     """Class with information relevant to defensive damage calculation.
 
-    Included attributes are defence bonus values: stab, slash, crush, magic, & ranged.
+    Included attributes are _defence bonus values: stab, slash, crush, magic, & ranged.
     """
 
     stab: int = 0
@@ -630,7 +699,7 @@ saradomin_brew_hitpoints_callable = clmb.create_simple_callable(
     2, 0.15, comment="sara brew"
 )
 
-ancient_brew_debuff_skills = (Skills.ATTACK, Skills.STRENGTH, Skills.defence)
+ancient_brew_debuff_skills = (Skills.ATTACK, Skills.STRENGTH, Skills.DEFENCE)
 ancient_brew_debuffs = clmb.create_simple_callable_modifiers(
     ancient_brew_debuff_skills, 2, 0.10, True, "ancient brew (debuff)"
 )
@@ -638,7 +707,7 @@ ancient_brew_debuffs = clmb.create_simple_callable_modifiers(
 overload_buffs_skills = (
     Skills.ATTACK,
     Skills.STRENGTH,
-    Skills.defence,
+    Skills.DEFENCE,
     Skills.RANGED,
     Skills.MAGIC,
 )
@@ -661,7 +730,7 @@ SuperStrengthPotion = Boost(
 
 SuperDefencePotion = Boost(
     "super defence potion",
-    CallableLevelsModifier((Skills.defence,), super_combat_callable, "super defence"),
+    CallableLevelsModifier((Skills.DEFENCE,), super_combat_callable, "super defence"),
 )
 
 SuperCombatPotion = Boost(
@@ -700,7 +769,7 @@ StrengthPotion = Boost(
 
 DefencePotion = Boost(
     "defence potion",
-    CallableLevelsModifier((Skills.defence,), combat_potion_callable, "defence"),
+    CallableLevelsModifier((Skills.DEFENCE,), combat_potion_callable, "defence"),
 )
 
 CombatPotion = Boost("combat potion", (AttackPotion, StrengthPotion))
@@ -773,7 +842,7 @@ for skill in saradomin_brew_debuff_skills:
 
 saradomin_brew_clms.append(
     CallableLevelsModifier(
-        (Skills.defence,), saradomin_brew_debuff_callable, "saradomin brew (buff)"
+        (Skills.DEFENCE,), saradomin_brew_debuff_callable, "saradomin brew (buff)"
     )
 )
 
@@ -793,7 +862,7 @@ zamorak_brew_clms = [
         (Skills.STRENGTH,), clmb.create_simple_callable(2, 0.12), "zamorak brew (buff)"
     ),
     CallableLevelsModifier(
-        (Skills.defence,),
+        (Skills.DEFENCE,),
         clmb.create_simple_callable(2, 0.10, True),
         "zamorak brew (debuff)",
     ),

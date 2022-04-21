@@ -44,9 +44,9 @@ class Prayer:
                 Prayer:
         """
         options = {
-            Skills.ATTACK.name: None,
-            Skills.STRENGTH.name: None,
-            Skills.defence.name: None,
+            Skills.ATTACK.value: None,
+            Skills.STRENGTH.value: None,
+            Skills.DEFENCE.value: None,
             "ranged_attack": None,
             "ranged_strength": None,
             "magic_attack": None,
@@ -93,7 +93,7 @@ EagleEye = Prayer.from_osrsbox(prayer_id=20, drain_effect=12)
 ProtectFromMelee = Prayer.from_osrsbox(prayer_id=19, drain_effect=12)
 ProtectFromMissiles = Prayer.from_osrsbox(prayer_id=18, drain_effect=12)
 ProtectFromMagic = Prayer.from_osrsbox(prayer_id=17, drain_effect=12)
-
+IncredibleReflexes = Prayer.from_osrsbox(prayer_id=16, drain_effect=12)
 MysticLore = Prayer.from_osrsbox(prayer_id=13, drain_effect=6)
 
 
@@ -104,7 +104,7 @@ def prayer_collection_validator(instance, attribute: str, value: tuple[Prayer, .
 @define
 class PrayerCollection:
     name: str = field(factory=str, converter=str)
-    prayers: tuple[Prayer, ...] = field(factory=tuple)
+    prayers: list[Prayer] = field(factory=list)
 
     def pray(self, *prayers: Prayer | PrayerCollection):
         prayers_list = []
@@ -115,10 +115,10 @@ class PrayerCollection:
             elif isinstance(p, PrayerCollection):
                 prayers_list.extend(p.prayers)
 
-        self.prayers = tuple(prayers_list)
+        self.prayers = prayers_list
 
     def reset_prayers(self):
-        self.prayers = tuple()
+        self.prayers = []
 
     @property
     def drain_effect(self):
@@ -141,15 +141,15 @@ class PrayerCollection:
 
     @property
     def attack(self):
-        return self._get_prayer_collection_attribute(Skills.ATTACK.name)
+        return self._get_prayer_collection_attribute(Skills.ATTACK.value)
 
     @property
     def strength(self):
-        return self._get_prayer_collection_attribute(Skills.STRENGTH.name)
+        return self._get_prayer_collection_attribute(Skills.STRENGTH.value)
 
     @property
     def defence(self):
-        return self._get_prayer_collection_attribute(Skills.defence.name)
+        return self._get_prayer_collection_attribute(Skills.DEFENCE.value)
 
     @property
     def ranged_attack(self):

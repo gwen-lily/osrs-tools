@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+from collections import Counter
+from dataclasses import dataclass, field, fields
 from enum import Enum, unique
 from functools import reduce
 
 import pandas as pd
-from attrs import astuple, define, field, validators
 from osrsbox import items_api
 from osrsbox.items_api.item_properties import ItemEquipment, ItemProperties, ItemWeapon
+from typing_extensions import Self
 
 import osrs_tools.resource_reader as rr
 from osrs_tools.exceptions import OsrsException
@@ -52,6 +54,7 @@ from osrs_tools.style import (
     ThrownStyles,
     TwoHandedStyles,
     UnarmedStyles,
+    WeaponStyles,
     WhipStyles,
 )
 
@@ -86,17 +89,19 @@ class WeaponError(GearError):
 
 @unique
 class Slots(Enum):
-    head = "head"
-    cape = "cape"
-    neck = "neck"
-    ammunition = "ammunition"
-    weapon = "weapon"
-    shield = "shield"
-    body = "body"
-    legs = "legs"
-    hands = "hands"
-    feet = "feet"
-    ring = "ring"
+    """Complete list of gear slots in order from top to bottom, left to right."""
+
+    HEAD = "head"
+    CAPE = "cape"
+    NECK = "neck"
+    AMMUNITION = "ammunition"
+    WEAPON = "weapon"
+    BODY = "body"
+    SHIELD = "shield"
+    LEGS = "legs"
+    HANDS = "hands"
+    FEET = "feet"
+    RING = "ring"
 
 
 Items = items_api.load()
@@ -206,27 +211,18 @@ def lookup_weapon_attributes_by_name(name: str, gear_df: pd.DataFrame = None):
     )
 
 
-@define(order=True, frozen=True)
+@dataclass(order=True, frozen=True)
 class Gear:
     name: str
-    slot: Slots = field(validator=validators.instance_of(Slots))
-    aggressive_bonus: AggressiveStats = field(
-        validator=validators.instance_of(AggressiveStats), repr=False
-    )
-    defensive_bonus: DefensiveStats = field(
-        validator=validators.instance_of(DefensiveStats), repr=False
-    )
+    slot: Slots
+    aggressive_bonus: AggressiveStats = field(repr=False)
+    defensive_bonus: DefensiveStats = field(repr=False)
     prayer_bonus: int = field(repr=False)
-    level_requirements: PlayerLevels = field(
-        validator=validators.instance_of(PlayerLevels), repr=False
-    )
+    level_requirements: PlayerLevels = field(repr=False)
 
     def __str__(self):
-        s = f"{self.__class__.__name__}({self.name!s})"
-        return s
-
-    def __repr__(self):
-        return str(self)
+        _s = f"{self.__class__.__name__}({self.name})"
+        return _s
 
     @classmethod
     def from_bb(cls, name: str):
@@ -249,19 +245,23 @@ class Gear:
         )
 
     @classmethod
-    def from_osrsbox(cls, name: str = None, item_id: int = None, **kwargs):
+    def from_osrsbox(
+        cls, name: str | None = None, item_id: int | None = None, **kwargs
+    ):
 
-        if name:
+        if name is not None and item_id is None:
             item = Items.lookup_by_item_name(name)
-        elif item_id:
+        elif name is None and item_id is not None:
             item = Items.lookup_by_item_id(item_id)
         else:
-            raise GearNotFoundError(f"{kwargs=}")
+            raise ValueError(name, item_id, **kwargs)
 
         if not item.equipable_by_player:
             raise EquipableError("attempt to create false gear")
 
         eqp = item.equipment
+        assert isinstance(eqp, ItemEquipment)
+
         name = item.name.lower()
         slot = None
 
@@ -269,8 +269,8 @@ class Gear:
         for sl in Slots:
             # specific cases > general
             if eqp.slot == "ammo":
-                slot = Slots.ammunition
-            elif eqp.slot == "2h" or eqp.slot == Slots.weapon.name:
+                slot = Slots.AMMUNITION
+            elif eqp.slot == "2h" or eqp.slot == Slots.WEAPON.name:
                 raise WeaponError("Instance of weapon in Gear class.")
             elif eqp.slot == sl.name:
                 slot = sl
@@ -308,8 +308,17 @@ class Gear:
 
         return cls(name, slot, ab, db, pb, reqs)
 
-    def empty_slot(cls, slot: str):
-        return
+    @classmethod
+    def empty_slot(cls, slot: Slots):
+        _name = f"empty {slot.value}"
+        return cls(
+            name=_name,
+            slot=slot,
+            aggressive_bonus=AggressiveStats.no_bonus(),
+            defensive_bonus=DefensiveStats.no_bonus(),
+            prayer_bonus=0,
+            level_requirements=PlayerLevels.no_requirements(),
+        )
 
 
 class SpecialWeaponError(WeaponError):
@@ -325,38 +334,23 @@ class TwoHandedError(EquipmentError):
     pass
 
 
-# noinspection PyArgumentList
-@define(order=True, frozen=True)
+@dataclass(order=True, frozen=True)
 class Weapon(Gear):
-    name: str
-    slot: Slots = field(repr=False)
-    aggressive_bonus: AggressiveStats = field(
-        validator=validators.instance_of(AggressiveStats), repr=False
-    )
-    defensive_bonus: DefensiveStats = field(
-        validator=validators.instance_of(DefensiveStats), repr=False
-    )
-    prayer_bonus: int = field(repr=False)
-    level_requirements: PlayerLevels = field(
-        validator=validators.instance_of(PlayerLevels), repr=False
-    )
-    styles_coll: StylesCollection = field(
-        validator=validators.instance_of(StylesCollection)
-    )
-    attack_speed: int
-    two_handed: bool = field(repr=False)
+    slot: Slots = field(init=False, default=Slots.WEAPON, repr=False)
+    styles: WeaponStyles = field()
+    attack_speed: int = field()
+    two_handed: bool = field()
 
     @classmethod
     def empty_slot(cls):
-        slot = Slots.weapon
+        _name = f"empty {Slots.WEAPON.value}"
         return cls(
-            name="empty " + slot.name,
-            slot=slot,
+            name=_name,
             aggressive_bonus=AggressiveStats.no_bonus(),
             defensive_bonus=DefensiveStats.no_bonus(),
             prayer_bonus=0,
             level_requirements=PlayerLevels.no_requirements(),
-            styles_coll=UnarmedStyles,
+            styles=UnarmedStyles,
             attack_speed=4,
             two_handed=False,
         )
@@ -381,8 +375,8 @@ class Weapon(Gear):
             _,
         ) = lookup_weapon_attributes_by_name(name)
 
-        if not slot is Slots.weapon:
-            raise WeaponError(slot)
+        if slot is not Slots.WEAPON:
+            raise ValueError(slot)
 
         return cls(
             name=name,
@@ -391,19 +385,26 @@ class Weapon(Gear):
             defensive_bonus=defensive_bonus,
             prayer_bonus=prayer_bonus,
             level_requirements=level_requirements,
-            styles_coll=weapon_styles,
+            styles=weapon_styles,
             attack_speed=attack_speed,
             two_handed=two_handed,
         )
 
 
-@define(order=True, frozen=True)
+@dataclass(order=True, frozen=True)
 class SpecialWeapon(Weapon):
     special_attack_roll_modifiers: list[AttackRollModifier] = field(
-        factory=list, repr=False
+        default_factory=list, repr=False
     )
-    special_damage_modifiers: list[DamageModifier] = field(factory=list, repr=False)
-    special_defence_roll: DT | None = field(default=None, repr=False)
+    special_damage_modifiers: list[DamageModifier] = field(
+        default_factory=list, repr=False
+    )
+    _special_defence_roll: DT | None = field(default=None, repr=False)
+
+    @property
+    def special_defence_roll(self) -> DT:
+        assert isinstance(self._special_defence_roll, DT)
+        return self._special_defence_roll
 
     @classmethod
     def from_bb(cls, name: str):
@@ -425,17 +426,16 @@ class SpecialWeapon(Weapon):
             sdr,
         ) = lookup_weapon_attributes_by_name(name)
 
-        if not slot is Slots.weapon:
-            raise WeaponError(slot)
+        if slot is not Slots.WEAPON:
+            raise ValueError(slot)
 
         return cls(
             name=name,
-            slot=slot,
             aggressive_bonus=aggressive_bonus,
             defensive_bonus=defensive_bonus,
             prayer_bonus=prayer_bonus,
             level_requirements=level_requirements,
-            styles_coll=weapon_styles,
+            styles=weapon_styles,
             attack_speed=attack_speed,
             two_handed=two_handed,
             special_attack_roll_modifiers=spec_arm_mods,
@@ -444,8 +444,8 @@ class SpecialWeapon(Weapon):
         )
 
     @classmethod
-    def empty_slot(cls, slot: str = None):
-        raise WeaponError(f"Attempt to create empty special weapon")
+    def empty_slot(cls):
+        raise WeaponError("Attempt to create empty special weapon")
 
 
 def equipment_weapon_validator(instance: Equipment, attribute: str, value: Weapon):
@@ -462,30 +462,148 @@ def equipment_shield_validator(instance: Equipment, attribute: str, value: Gear)
         raise TwoHandedError(f"{value.name} equipped with {instance.weapon.name}")
 
 
-@define(order=True)
+@dataclass(order=True)
 class Equipment:
-    """
-    The Equipment class has attributes for each piece of Gear a player can use as well as methods to query and change
-    the gear.
-    """
+    """Container class for tracking and manipulating Gear."""
 
-    head: Gear | None = None
-    cape: Gear | None = None
-    neck: Gear | None = None
-    ammunition: Gear | None = None
-    weapon: Weapon | None = field(validator=equipment_weapon_validator, default=None)
-    shield: Gear | None = field(validator=equipment_shield_validator, default=None)
-    body: Gear | None = None
-    legs: Gear | None = None
-    hands: Gear | None = None
-    feet: Gear | None = None
-    ring: Gear | None = None
-    set_name: str | None = None
+    name: str = field(default_factory=str)
+    _head: Gear | None = None
+    _cape: Gear | None = None
+    _neck: Gear | None = None
+    _ammunition: Gear | None = None
+    _weapon: Weapon | None = None
+    _shield: Gear | None = None
+    _body: Gear | None = None
+    _legs: Gear | None = None
+    _hands: Gear | None = None
+    _feet: Gear | None = None
+    _ring: Gear | None = None
 
-    # Basic properties and methods for manipulating Equipment objects ######################################################
+    # slot properties for type validation
+
+    def _slot_getter(self, __slot: Slots, /) -> Gear:
+        attribute_name = f"_{__slot.value}"
+        gear = getattr(self, attribute_name)
+        assert isinstance(gear, Gear)
+
+        return gear
+
+    def _slot_setter(self, __slot: Slots, __value: Gear, /):
+        assert __value.slot is __slot
+        attribute_name = f"_{__slot.value}"
+        setattr(self, attribute_name, __value)
+
+    @property
+    def head(self) -> Gear:
+        return self._slot_getter(Slots.HEAD)
+
+    @head.setter
+    def head(self, __value: Gear):
+        self._slot_setter(Slots.HEAD, __value)
+
+    @property
+    def cape(self) -> Gear:
+        return self._slot_getter(Slots.CAPE)
+
+    @cape.setter
+    def cape(self, __value: Gear):
+        self._slot_setter(Slots.CAPE, __value)
+
+    @property
+    def neck(self) -> Gear:
+        return self._slot_getter(Slots.NECK)
+
+    @neck.setter
+    def neck(self, __value: Gear):
+        self._slot_setter(Slots.NECK, __value)
+
+    @property
+    def ammunition(self) -> Gear:
+        return self._slot_getter(Slots.AMMUNITION)
+
+    @ammunition.setter
+    def ammunition(self, __value: Gear):
+        self._slot_setter(Slots.AMMUNITION, __value)
+
+    @property
+    def weapon(self) -> Weapon:
+        wpn = self._slot_getter(Slots.WEAPON)
+        assert isinstance(wpn, Weapon)
+
+        return wpn
+
+    @weapon.setter
+    def weapon(self, __value: Weapon):
+        self._slot_setter(Slots.WEAPON, __value)
+
+        if __value.two_handed:
+            self.unequip(Slots.SHIELD)
+
+    @property
+    def body(self) -> Gear:
+        return self._slot_getter(Slots.BODY)
+
+    @body.setter
+    def body(self, __value: Gear):
+        self._slot_setter(Slots.BODY, __value)
+
+    @property
+    def shield(self) -> Gear:
+        return self._slot_getter(Slots.SHIELD)
+
+    @shield.setter
+    def shield(self, __value: Gear):
+        self._slot_setter(Slots.SHIELD, __value)
+
+        if self.weapon.two_handed:
+            self.unequip(Slots.WEAPON)
+
+    @property
+    def legs(self) -> Gear:
+        return self._slot_getter(Slots.LEGS)
+
+    @legs.setter
+    def legs(self, __value: Gear):
+        self._slot_setter(Slots.LEGS, __value)
+
+    @property
+    def hands(self) -> Gear:
+        return self._slot_getter(Slots.HANDS)
+
+    @hands.setter
+    def hands(self, __value: Gear):
+        self._slot_setter(Slots.HANDS, __value)
+
+    @property
+    def feet(self) -> Gear:
+        return self._slot_getter(Slots.FEET)
+
+    @feet.setter
+    def feet(self, __value: Gear):
+        self._slot_setter(Slots.FEET, __value)
+
+    @property
+    def ring(self) -> Gear:
+        return self._slot_getter(Slots.RING)
+
+    @ring.setter
+    def ring(self, __value: Gear):
+        self._slot_setter(Slots.RING, __value)
+
+    # Basic properties
+
     @property
     def aggressive_bonus(self) -> AggressiveStats:
-        # Notably does not account for Dinh's strength bonus, which is handled via Player._dinhs_modifier()
+        """Find the equipment set's aggressive bonus.
+
+        The one edge case to look out for is the Dinh's Bulwark, which is
+        handled via the Player class. Honestly, just use that one whenever
+        able.
+
+        Returns
+        -------
+        AggressiveStats
+        """
         val = sum(g.aggressive_bonus for g in self.equipped_gear)
 
         if isinstance(val, int) and val == 0:
@@ -495,6 +613,12 @@ class Equipment:
 
     @property
     def defensive_bonus(self) -> DefensiveStats:
+        """Find the equipment set's defensive bonus.
+
+        Returns
+        -------
+        DefensiveStats
+        """
         val = sum(g.defensive_bonus for g in self.equipped_gear)
 
         if isinstance(val, int) and val == 0:
@@ -504,83 +628,104 @@ class Equipment:
 
     @property
     def prayer_bonus(self) -> int:
+        """Find the equipment set's prayer bonus."""
         return sum(g.prayer_bonus for g in self.equipped_gear)
 
     @property
     def level_requirements(self) -> PlayerLevels:
-        # PlayerLevels.__mul__(self, other) handles the behavior of aggregating level requirements.
-        individual_level_reqs = [g.level_requirements for g in self.equipped_gear]
+        """Find the equipment set's level requirements."""
+        indiv_reqs = [g.level_requirements for g in self.equipped_gear]
 
-        if len(individual_level_reqs) != 0:
-            comb_reqs = reduce(
-                lambda x, y: x.max_levels_per_skill(y), individual_level_reqs
-            )
-            return comb_reqs
+        if len(indiv_reqs) > 0:
+            reqs = reduce(lambda x, y: x.max_levels_per_skill(y), indiv_reqs)
         else:
-            return PlayerLevels.no_requirements()
+            reqs = PlayerLevels.no_requirements()
+
+        return reqs
 
     @property
     def equipped_gear(self) -> list[Gear]:
-        return [g for g in astuple(self, recurse=False) if isinstance(g, Gear)]
+        """Return a list of all equipped gear, in class order."""
 
-    def equip(self, *gear: Gear, style: PlayerStyle = None) -> PlayerStyle | None:  # type: ignore
-        weapon_style = style if style is not None else None
+        _equipped_gear = []
+
+        for f in fields(self):
+            if f.name == "name":
+                continue
+
+            if (_val := getattr(self, f.name)) is None:
+                continue
+
+            _equipped_gear.append(_val)
+
+        return _equipped_gear
+
+    # basic methods
+
+    def equip(self, *gear: Gear, duplicates_allowed: bool = False) -> Self:
+        """Equip the provided gear, also supports weapons."""
+
+        if duplicates_allowed is False:
+            slots_list = [g.slot for g in gear]
+            slots_set = set(slots_list)
+
+            if len(slots_list) != len(slots_set):
+                # create a list of the offending dupes
+                dupe_gear = []
+
+                for slot, count in Counter(slots_list).items():
+                    if not count > 1:
+                        continue
+
+                    dupe_gear.append([g for g in gear if g.slot is slot])
+
+                raise ValueError(f"Duplicate gear: {', '.join(dupe_gear)}")
 
         for g in gear:
-            if self.__getattribute__(g.slot.name) == g:
+
+            # type checking
+            if not isinstance(g, Gear):
+                raise TypeError(f"{type(g)} not allowed")
+
+            # attribute modification
+            public_slot_name = g.slot.value
+            protected_slot_name = f"_{g.slot.value}"
+
+            # don't re-equip the same gear.
+            if getattr(self, protected_slot_name) == g:
                 continue
-            else:
-                if isinstance(g, Weapon):
-                    weapon_style = style if style is not None else g.styles_coll.default
 
-                    if weapon_style not in g.styles_coll.styles:
-                        raise StyleError(str(weapon_style))
+            setattr(self, public_slot_name, g)
 
-                    try:
-                        self.weapon = g
-                    except TwoHandedError:
-                        self.shield = None
-                        self.weapon = g
+        return self
 
-                else:
-                    try:
-                        self.__setattr__(g.slot.name, g)
-                    except TwoHandedError:
-                        assert g.slot is Slots.shield
-                        self.weapon = Weapon.empty_slot()
-                        self.shield = g
-
-        if weapon_style is not None:
-            assert isinstance(weapon_style, PlayerStyle)
-            return weapon_style
-
-    def unequip(self, *slots: Slots, style: PlayerStyle = None) -> PlayerStyle | None:  # type: ignore
-        return_style = None
+    def unequip(self, *slots: Slots) -> Self:
+        """Unequip any gear in the provided slots."""
 
         for slot in slots:
-            if slot is Slots.weapon:
-                return_style = style if style else UnarmedStyles.default
-                assert isinstance(return_style, PlayerStyle)
-                self.weapon = Weapon.empty_slot()
-            else:
-                self.__setattr__(slot.name, None)
+            if slot is Slots.WEAPON:
+                setattr(self, Slots.WEAPON.name, Weapon.empty_slot())
+                continue
 
-        if return_style is not None:
-            assert isinstance(return_style, PlayerStyle)
-            return return_style
+            public_slot_name = slot.value
+            setattr(self, public_slot_name, None)
+
+        return self
 
     def wearing(self, *args, **kwargs) -> bool:
+        """Return True if and only if all items are equipped."""
+
         m = len(args)
         n = len(kwargs)
         if m == 0 and n == 0:
-            raise EquipmentError(f"Equipment.wearing call with no *args or **kwargs")
+            raise EquipmentError("Equipment.wearing call with no *args or **kwargs")
 
         if m > 0:
-            if any(self.__getattribute__(g.slot.name) != g for g in args):
+            if any(getattr(self, g.slot.value) != g for g in args):
                 return False
 
         if n > 0:
-            if any(self.__getattribute__(k) != v for k, v in kwargs.items()):
+            if any(getattr(self, k) != v for k, v in kwargs.items()):
                 return False
 
         return True
@@ -612,31 +757,30 @@ class Equipment:
         """
         if isinstance(other, Equipment):
             for gear in other.equipped_gear:
-                if self.__getattribute__(gear.slot.name) == gear:
+                if getattr(self, gear.slot.value) == gear:
                     self.unequip(gear.slot)
+
         elif isinstance(other, Gear):
-            if self.__getattribute__(other.slot.name) == other:
+            if self.__getattribute__(other.slot.value) == other:
                 self.unequip(other.slot)
+
         else:
             raise NotImplementedError
 
         return self
 
     def __str__(self):
-        if self.set_name is None:
+        if self.name is None:
             message = f'{self.__class__.__name__}({", ".join([g.name for g in self.equipped_gear])})'
         else:
-            message = f"{self.__class__.__name__}({self.set_name})"
+            message = f"{self.__class__.__name__}({self.name})"
 
         return message
-
-    def __repr__(self):
-        return self.__str__()
 
     def __copy__(self):
         return Equipment.from_gear(*self.equipped_gear)
 
-    # class methods ########################################################################################################
+    # class methods
 
     @classmethod
     def from_gear(cls, *gear: Gear):
@@ -648,8 +792,9 @@ class Equipment:
     def no_equipment(cls):
         return cls()
 
-    # Wearing Properties ###################################################################################################
-    def full_set_method(self, requires_ammo: bool = None) -> bool:  # type: ignore
+    # Wearing Properties
+
+    def full_set_method(self, requires_ammo: bool | None = None) -> bool:
         """Property which returns True if the Equipment slots are fulfilled as needed to perform attacks.
 
         # TODO: implement osrsbox-db wrapper which eliminates the need for assume_2h parameter.
@@ -662,35 +807,35 @@ class Equipment:
         Returns:
             bool: True
         """
-        assert isinstance(self.weapon, Weapon)
+        wpn = self.weapon
 
         if requires_ammo is None:
-            if self.weapon.styles_coll in [BowStyles, CrossbowStyles, ThrownStyles]:
+            if wpn.styles in [BowStyles, CrossbowStyles, ThrownStyles]:
                 requires_ammo = True
             else:
                 requires_ammo = False
 
-        if requires_ammo and self.ammunition is None:
+        if requires_ammo and self._ammunition is None:
             return False
 
-        if not self.weapon.two_handed and self.shield is None:
+        if not wpn.two_handed and self._shield is None:
             return False
 
         for slot in Slots:
-            if slot is Slots.ammunition or slot is Slots.shield:
+            if slot in (Slots.AMMUNITION, Slots.SHIELD):
                 continue
-            elif slot is Slots.weapon:
-                if self.weapon == Weapon.empty_slot():
+            elif slot is Slots.WEAPON:
+                if wpn == Weapon.empty_slot():
                     return False
-
             else:
-                if self.__getattribute__(slot.name) is None:
-                    return False
+                _ = getattr(self, slot.value)  # runs slot assertion
 
         return True
 
     @property
     def full_set(self) -> bool:
+        """Return True if the equipment is a complete set, else False."""
+
         return self.full_set_method()
 
     @property
@@ -922,25 +1067,29 @@ class Equipment:
         """
         return self.wearing(weapon=SpecialWeapon.from_bb("abyssal bludgeon"))
 
-    @property
-    def crossbow(self) -> bool:
-        """Property representing whether or not any form of crossbow is equipped.
+    @staticmethod
+    def _is_crossbow(__wpn: Weapon, /) -> bool:
+        """Return True if any form of crossbow is equipped.
 
-        This generic property checks a few obvious values to ensure that other modules can interact with Crossbows simply.
+        This generic property checks a few obvious values to ensure that other
+        modules can interact with Crossbows simply.
 
         Returns:
             bool: True if any crossbow is equiped, otherwise False.
         """
-        # use names because crossbows may be SpecialWeapon or Weapon.
-        # TODO: Re-assess whether using name search is still valid.
-        try:
-            assert isinstance(self.weapon, Weapon)
-            return (
-                "crossbow" in self.weapon.name
-                and self.weapon.styles_coll == CrossbowStyles
-            )
-        except AssertionError:
-            return False
+        name_check = "crossbow" in __wpn.name
+        styles_check = __wpn.styles == CrossbowStyles
+
+        return name_check and styles_check
+
+    @property
+    def crossbow(self) -> bool:
+        """Property representing whether or not any form of crossbow is equipped.
+
+        Returns:
+            bool: True if any crossbow is equiped, otherwise False.
+        """
+        return self._is_crossbow(self.weapon)
 
     @property
     def arclight(self) -> bool:
@@ -1051,7 +1200,7 @@ class Equipment:
     def dwh(self) -> bool:
         return self.weapon == SpecialWeapon.from_bb("dragon warhammer")
 
-    # Ammunition / Bolts ###################################################################################################
+    # Ammunition / Bolts
 
     @property
     def enchanted_opal_bolts(self) -> bool:
@@ -1159,9 +1308,7 @@ class Equipment:
         implemented_properties = tuple(p for p in properties if isinstance(p, bool))
         return any(implemented_properties)
 
-    ########################################################################################################################
-    # Equipment helpers ####################################################################################################
-    ########################################################################################################################
+    # Equipment helpers
 
     def equip_basic_melee_gear(
         self,
@@ -1171,7 +1318,7 @@ class Equipment:
         ferocious: bool = True,
         berserker: bool = True,
         brimstone: bool = False,
-    ):
+    ) -> Self:
         gear_options = [
             Gear.from_bb("amulet of torture"),
             Gear.from_bb("primordial boots"),
@@ -1190,6 +1337,7 @@ class Equipment:
             gear.append(ring)
 
         self.equip(*gear)
+        return self
 
     def equip_basic_ranged_gear(
         self,
@@ -1198,7 +1346,7 @@ class Equipment:
         pegasian: bool = True,
         brimstone: bool = True,
         archers: bool = False,
-    ):
+    ) -> Self:
         gear_options = (
             Gear.from_bb("ava's assembler"),
             Gear.from_bb("necklace of anguish"),
@@ -1216,6 +1364,7 @@ class Equipment:
             gear.append(ring)
 
         self.equip(*gear)
+        return self
 
     def equip_basic_magic_gear(
         self,
@@ -1227,7 +1376,7 @@ class Equipment:
         eternal: bool = True,
         brimstone: bool = True,
         seers: bool = False,
-    ):
+    ) -> Self:
         if ancestral_set:
             self.equip_ancestral_set()
 
@@ -1250,14 +1399,18 @@ class Equipment:
             gear.append(ring)
 
         self.equip(*gear)
+        return self
 
-    def equip_void_set(self, elite: bool = True):
+    def equip_void_set(self, elite: bool = True) -> Self:
         """Equip an entire void set, either elite (default) or normal.
 
-        # TODO: Specific void items per style (with osrsbox-db implementation) & provide parameter support.
-        Args:
-            elite (bool, optional): If True, equip elite void components instead of normal ones. Defaults to True.
+        Arguments
+        ---------
+            elite (bool, optional): If True, equip elite void components
+            instead of normal ones. Defaults to True.
         """
+        # TODO: Specific void items per style (with osrsbox-db implementation)
+        # TODO: and provide parameter support.
         void_gear_names = ["void knight helm", "void knight gloves"]
 
         if elite:
@@ -1268,14 +1421,17 @@ class Equipment:
         void_gear_names.extend(specific_void_gear_names)
         gear = [Gear.from_bb(name) for name in void_gear_names]
         self.equip(*gear)
+        return self
 
-    def equip_slayer_helm(self, imbued: bool = True):
+    def equip_slayer_helm(self, imbued: bool = True) -> Self:
         if imbued is False:
             raise NotImplementedError
 
         self.equip(Gear.from_bb("slayer helmet (i)"))
 
-    def equip_salve(self, e: bool = True, i: bool = True):
+        return self
+
+    def equip_salve(self, e: bool = True, i: bool = True) -> Self:
         if e and i:
             self.equip(Gear.from_bb("salve amulet (ei)"))
         elif i:
@@ -1283,7 +1439,9 @@ class Equipment:
         else:
             raise NotImplementedError
 
-    def equip_fury(self, blood: bool = False):
+        return self
+
+    def equip_fury(self, blood: bool = False) -> Self:
         fury = (
             Gear.from_bb("amulet of blood fury")
             if blood
@@ -1291,34 +1449,45 @@ class Equipment:
         )
         self.equip(fury)
 
-    # melee gear helpers ###################################################################################################
-    def equip_bandos_set(self):
+        return self
+
+    # melee gear helpers
+
+    def equip_bandos_set(self) -> Self:
         self.equip(
             Gear.from_bb("neitiznot faceguard"),
             Gear.from_bb("bandos chestplate"),
             Gear.from_bb("bandos tassets"),
         )
 
-    def equip_inquisitor_set(self):
+        return self
+
+    def equip_inquisitor_set(self) -> Self:
         self.equip(
             Gear.from_bb("inquisitor's great helm"),
             Gear.from_bb("inquisitor's hauberk"),
             Gear.from_bb("inquisitor's plateskirt"),
         )
 
-    def equip_torva_set(self):
+        return self
+
+    def equip_torva_set(self) -> Self:
         self.equip(
             Gear.from_bb("torva full helm"),
             Gear.from_bb("torva platebody"),
             Gear.from_bb("torva platelegs"),
         )
 
-    def equip_justi_set(self):
+        return self
+
+    def equip_justi_set(self) -> Self:
         self.equip(
             Gear.from_bb("justiciar faceguard"),
             Gear.from_bb("justiciar chestguard"),
             Gear.from_bb("justiciar legguard"),
         )
+
+        return self
 
     def equip_dwh(
         self,
@@ -1327,13 +1496,12 @@ class Equipment:
         avernic: bool = True,
         brimstone: bool = True,
         tyrannical: bool = False,
-        style: Style = None,  # type: ignore
-    ) -> PlayerStyle:
+    ) -> Self:
 
         if inquisitor_set:
             self.equip_inquisitor_set()
 
-        gear = []
+        gear: list[Gear] = [SpecialWeapon.from_bb("dragon warhammer")]
 
         if avernic:
             gear.append(Gear.from_bb("avernic defender"))
@@ -1344,192 +1512,115 @@ class Equipment:
         elif brimstone:
             gear.append(Gear.from_bb("brimstone ring"))
 
-        weapon_style = style if style is not None else BluntStyles.default
-        assert isinstance(style, PlayerStyle)
+        return self.equip(*gear)
 
-        return_style = self.equip(
-            SpecialWeapon.from_bb("dragon warhammer"), *gear, style=weapon_style
-        )
-        assert isinstance(return_style, PlayerStyle)
-        return return_style
+    def equip_bgs(self, berserker: bool = False) -> Self:
+        gear: list[Gear] = [SpecialWeapon.from_bb("bandos godsword")]
 
-    def equip_bgs(self, style: PlayerStyle = None) -> PlayerStyle:  # type: ignore
-        if style is not None:
-            weapon_style = style
-        elif self.inquisitor_set:
-            weapon_style = TwoHandedStyles.get_by_style(Styles.SMASH)
-        else:
-            weapon_style = TwoHandedStyles.default
+        if berserker:
+            gear.append(Gear.from_bb("berserker (i)"))
 
-        assert isinstance(weapon_style, PlayerStyle)
-        return_val = self.equip(
-            SpecialWeapon.from_bb("bandos godsword"), style=weapon_style
-        )
-        assert isinstance(return_val, PlayerStyle)
-        return return_val
+        return self.equip(*gear)
 
-    def equip_scythe(
-        self, berserker: bool = False, style: PlayerStyle = None  # type: ignore
-    ) -> PlayerStyle:
+    def equip_scythe(self, berserker: bool = False) -> Self:
+        gear: list[Gear] = [Weapon.from_bb("scythe of vitur")]
 
-        if style is not None:
-            weapon_style = style
-        else:
-            if self.inquisitor_set:
-                weapon_style = ScytheStyles.get_by_style(Styles.JAB)
-            else:
-                weapon_style = ScytheStyles.default
+        if berserker:
+            gear.append(Gear.from_bb("berserker (i)"))
 
-        assert isinstance(weapon_style, PlayerStyle)
-        gear = [Gear.from_bb("berserker (i)")] if berserker else []
-        return_val = self.equip(
-            Weapon.from_bb("scythe of vitur"), *gear, style=weapon_style
-        )
-        assert isinstance(return_val, PlayerStyle)
-        return return_val
+        return self.equip(*gear)
 
-    def equip_lance(
-        self, avernic: bool = True, berserker: bool = False, style: PlayerStyle = None  # type: ignore
-    ) -> PlayerStyle:
-        if style is not None:
-            weapon_style = style
-        elif self.inquisitor_set:
-            weapon_style = SpearStyles.get_by_style(Styles.POUND)
-        else:
-            weapon_style = SpearStyles.default
-
-        gear_options = (
+    def equip_lance(self, avernic: bool = True, berserker: bool = False) -> Self:
+        gear_bools = [avernic, berserker]
+        gear_options = [
             Gear.from_bb("avernic defender"),
             Gear.from_bb("berserker (i)"),
-        )
-        gear_bools = (avernic, berserker)
-        gear = (g for g, b in zip(gear_options, gear_bools) if b)
-        assert isinstance(weapon_style, PlayerStyle)
-        return_val = self.equip(
-            Weapon.from_bb("dragon hunter lance"), *gear, style=weapon_style
-        )
+        ]
 
-        assert isinstance(return_val, PlayerStyle)
-        return return_val
+        gear = [g for g, b in zip(gear_options, gear_bools) if b]
+        gear.append(Weapon.from_bb("dragon hunter lance"))
+
+        return self.equip(*gear)
 
     def equip_dragon_pickaxe(
-        self, avernic: bool = True, berserker: bool = False, style: PlayerStyle = None  # type: ignore
-    ) -> PlayerStyle:
-        weapon_style = style if style is not None else PickaxeStyles.default
-        assert isinstance(weapon_style, PlayerStyle)
+        self, avernic: bool = True, berserker: bool = False
+    ) -> Self:
+        gear_bools = [avernic, berserker]
         gear_options = [Gear.from_bb("avernic defender"), Gear.from_bb("berserker (i)")]
-        gear_bools = (avernic, berserker)
 
-        gear = (g for g, b in zip(gear_options, gear_bools) if b)
-        return_val = self.equip(
-            Weapon.from_bb("dragon pickaxe"), *gear, style=weapon_style
-        )
-        assert isinstance(return_val, PlayerStyle)
-        return return_val
+        gear = [g for g, b in zip(gear_options, gear_bools) if b]
+        gear.append(SpecialWeapon.from_bb("dragon pickaxe"))
 
-    def equip_arclight(self, style: PlayerStyle = None) -> PlayerStyle:  # type: ignore
-        weapon_style = style if style is not None else SlashSwordStyles.default
-        assert isinstance(weapon_style, PlayerStyle)
+        return self.equip(*gear)
 
-        return_val = self.equip(SpecialWeapon.from_bb("arclight"), style=weapon_style)
-        assert isinstance(return_val, PlayerStyle)
-        return return_val
+    def equip_arclight(self) -> Self:
+        self.weapon = SpecialWeapon.from_bb("arclight")
+        return self
 
-    def equip_dinhs(self, style: PlayerStyle = None) -> PlayerStyle:  # type: ignore
-        weapon_style = BulwarkStyles.default if style is None else style
-        assert isinstance(weapon_style, PlayerStyle)
+    def equip_dinhs(self) -> Self:
+        self.weapon = SpecialWeapon.from_bb("dinh's bulwark")
+        return self
 
-        return_val = self.equip(
-            SpecialWeapon.from_bb("dinh's bulwark"), style=weapon_style
-        )
-        assert isinstance(return_val, PlayerStyle)
-        return return_val
+    def equip_sotd(self) -> Self:
+        self.weapon = SpecialWeapon.from_bb("staff of the dead")
+        return self
 
-    def equip_sotd(self, style: PlayerStyle = None) -> PlayerStyle:  # type: ignore
-        weapon_style = BladedStaffStyles.default if style is None else style
-        assert isinstance(weapon_style, PlayerStyle)
+    # ranged gear helpers
 
-        return_val = self.equip(SpecialWeapon.from_bb("staff of the dead"), style=style)
-        assert isinstance(return_val, PlayerStyle)
-        return return_val
-
-    # ranged gear helpers ##################################################################################################
-    def equip_arma_set(self, zaryte: bool = False, barrows: bool = False):
-        if zaryte:
-            gear = (Gear.from_bb("zaryte vambraces"),)
-        elif barrows:
-            gear = (Gear.from_bb("barrows gloves"),)
-        else:
-            gear = tuple()
-
-        self.equip(
+    def equip_arma_set(self, zaryte: bool = False, barrows: bool = False) -> Self:
+        gear: list[Gear] = [
             Gear.from_bb("armadyl helmet"),
             Gear.from_bb("armadyl chestplate"),
             Gear.from_bb("armadyl chainskirt"),
-            *gear,
-        )
+        ]
 
-    def equip_god_dhide(self):
-        self.equip(
+        if zaryte:
+            gear.append(Gear.from_bb("zaryte vambraces"))
+        elif barrows:
+            gear.append(Gear.from_bb("barrows gloves"))
+
+        return self.equip(*gear)
+
+    def equip_god_dhide(self) -> Self:
+        gear: list[Gear] = [
             Gear.from_bb("god coif"),
             Gear.from_bb("god d'hide body"),
             Gear.from_bb("god d'hide chaps"),
             Gear.from_bb("god bracers"),
             Gear.from_bb("blessed d'hide boots"),
-        )
+        ]
 
-    def equip_crystal_set(self, zaryte: bool = False, barrows: bool = False):
-        if zaryte:
-            gear = (Gear.from_bb("zaryte vambraces"),)
-        elif barrows:
-            gear = (Gear.from_bb("barrows gloves"),)
-        else:
-            gear = tuple()
+        return self.equip(*gear)
 
-        self.equip(
+    def equip_crystal_set(self, zaryte: bool = False, barrows: bool = False) -> Self:
+        gear: list[Gear] = [
             Gear.from_bb("crystal helm"),
             Gear.from_bb("crystal body"),
             Gear.from_bb("crystal legs"),
-            *gear,
-        )
+        ]
 
-    def equip_twisted_bow(
-        self, dragon_arrows: bool = True, style: PlayerStyle = None  # type: ignore
-    ) -> PlayerStyle:
-        gear = [Gear.from_bb("dragon arrow")] if dragon_arrows else []
-        weapon_style = style if style else BowStyles.default
-        assert isinstance(weapon_style, PlayerStyle)
+        if zaryte:
+            gear.append(Gear.from_bb("zaryte vambraces"))
+        elif barrows:
+            gear.append(Gear.from_bb("barrows gloves"))
 
-        return_val = self.equip(
-            Weapon.from_bb("twisted bow"), *gear, style=weapon_style
-        )
-        assert isinstance(return_val, PlayerStyle)
-        return return_val
+        return self.equip(*gear)
 
-    def equip_blowpipe(
-        self, dragon_darts: bool = True, style: PlayerStyle = None  # type: ignore
-    ) -> PlayerStyle:
-        gear = (
-            [
-                Gear.from_bb("dragon darts"),
-            ]
-            if dragon_darts
-            else []
-        )
-        weapon_style = style if style else ThrownStyles.default
-        assert isinstance(weapon_style, PlayerStyle)
+    def equip_twisted_bow(self, dragon_arrows: bool = True) -> Self:
+        gear: list[Gear] = [Weapon.from_bb("twisted bow")]
 
-        return_val = self.equip(
-            SpecialWeapon.from_bb("toxic blowpipe"), *gear, style=weapon_style
-        )
-        assert isinstance(return_val, PlayerStyle)
-        return return_val
+        if dragon_arrows:
+            gear.append(Gear.from_bb("dragon arrow"))
 
-    def equip_black_chins(
-        self, buckler: bool = True, style: PlayerStyle = None  # type: ignore
-    ) -> PlayerStyle:
-        """legacy function, see @equip_chins"""
-        raise DeprecationWarning("Equipment.equip_chins")
+        return self.equip(*gear)
+
+    def equip_blowpipe(self, dragon_darts: bool = True) -> Self:
+        gear: list[Gear] = [SpecialWeapon.from_bb("toxic blowpipe")]
+
+        if dragon_darts:
+            gear.append(Gear.from_bb("dragon darts"))
+
+        return self.equip(*gear)
 
     def equip_chins(
         self,
@@ -1537,8 +1628,8 @@ class Equipment:
         black: bool = False,
         red: bool = False,
         grey: bool = False,
-        style: PlayerStyle = ChinchompaStyles.default,  # type: ignore
-    ) -> PlayerStyle:
+    ) -> Self:
+
         chin_name = None
         if black:
             chin_name = "black chinchompa"
@@ -1547,115 +1638,112 @@ class Equipment:
         elif grey:
             chin_name = "grey chinchompa"
         else:
-            raise WeaponError(f"no chins bruh")
+            raise AssertionError("no chins bruh")
 
-        chins = Weapon.from_bb(chin_name)
-        gear = (Gear.from_bb("twisted buckler"),) if buckler else tuple()
-        weapon_style = style if style else ChinchompaStyles.default
-        assert isinstance(weapon_style, PlayerStyle)
-
-        return_val = self.equip(chins, *gear, style=weapon_style)
-        assert isinstance(return_val, PlayerStyle)
-        return return_val
-
-    def equip_zaryte_crossbow(
-        self,
-        buckler: bool = True,
-        rubies: bool = False,
-        diamonds: bool = False,
-        style: PlayerStyle = None,  # type: ignore
-    ) -> PlayerStyle:
-        gear = []
-
-        if rubies:
-            gear.append(Gear.from_bb("ruby dragon bolts (e)"))
-        elif diamonds:
-            gear.append(Gear.from_bb("diamond dragon bolts (e)"))
+        gear: list[Gear] = [Weapon.from_bb(chin_name)]
 
         if buckler:
             gear.append(Gear.from_bb("twisted buckler"))
 
-        weapon_style = style if style else CrossbowStyles.default
-        assert isinstance(weapon_style, PlayerStyle)
+        return self.equip(*gear)
 
-        return_val = self.equip(
-            SpecialWeapon.from_bb("zaryte crossbow"),
-            *gear,
-            style=weapon_style,
-        )
-        assert isinstance(return_val, PlayerStyle)
-        return return_val
+    def equip_crossbow(
+        self,
+        crossbow: Weapon,
+        buckler: bool = False,
+        rubies: bool = False,
+        diamonds: bool = False,
+        ammunition: Gear | None = None,
+    ) -> Self:
+        """Equip any crossbow with options for the most common ammo.
 
-    def equip_dorgeshuun_crossbow(
-        self, buckler: bool = True, bone_bolts: bool = True, style: PlayerStyle = None  # type: ignore
-    ) -> PlayerStyle:
-        if style is not None:
-            weapon_style = style
+        Parameters
+        ----------
+        crossbow : Weapon
+            A crossbow Weapon.
+        buckler : bool
+            Set to True to equip a twisted buckler.
+        rubies : bool, optional
+            Set to True to equip ruby bolts, by default False
+        diamonds : bool, optional
+            Set to True to equip diamond bolts, by default False
+        ammunition : Gear | None, optional
+            Provide your own ammunition, by default None.
+
+        Returns
+        -------
+        Self
+        """
+        assert self._is_crossbow(crossbow)
+        gear: list[Gear] = [crossbow]
+
+        if buckler:
+            gear.append(Gear.from_bb("twisted buckler"))
+
+        if rubies:
+            ammo_name = "ruby dragon bolts (e)"
+            gear.append(Gear.from_bb(ammo_name))
+        elif diamonds:
+            ammo_name = "diamond dragon bolts (e)"
+            gear.append(Gear.from_bb(ammo_name))
         else:
-            weapon_style = CrossbowStyles.get_by_style(Styles.ACCURATE)
+            assert ammunition is not None
+            assert ammunition.slot is Slots.AMMUNITION
+            gear.append(ammunition)
 
-        assert isinstance(weapon_style, PlayerStyle)
+        self.equip(*gear)
+        return self
 
-        gear_options = (Gear.from_bb("twisted buckler"), Gear.from_bb("bone bolts"))
-        gear_bools = (buckler, bone_bolts)
-        gear = [g for g, b in zip(gear_options, gear_bools) if b]
+    def equip_zaryte_crossbow(
+        self, buckler: bool = True, rubies: bool = False, diamonds: bool = False
+    ) -> Self:
+        raise DeprecationWarning
 
-        return_val = self.equip(
-            SpecialWeapon.from_bb("dorgeshuun crossbow"), *gear, style=weapon_style
-        )
-        assert isinstance(return_val, PlayerStyle)
-        return return_val
+    def equip_dorgeshuun_crossbow(self, buckler: bool = True) -> Self:
+        wpn = SpecialWeapon.from_bb("dorgeshuun crossbow")
+        ammo = Gear.from_bb("bone bolts")
 
-    def equip_crystal_bowfa(
-        self, crystal_set: bool = True, style: PlayerStyle = None  # type: ignore
-    ) -> PlayerStyle:
+        return self.equip_crossbow(wpn, buckler=buckler, ammunition=ammo)
+
+    def equip_crystal_bowfa(self, crystal_set: bool = True) -> Self:
         if crystal_set:
             self.equip_crystal_set()
 
-        weapon_style = style if style else BowStyles.default
-        assert isinstance(weapon_style, PlayerStyle)
+        self.weapon = Weapon.from_bb("bow of faerdhinen")
 
-        return_val = self.equip(Weapon.from_bb("bow of faerdhinen"), style=weapon_style)
-        assert isinstance(return_val, PlayerStyle)
-        return return_val
+        return self
 
-    def equip_seercull(self, style: PlayerStyle = None) -> PlayerStyle:  # type: ignore
-        seercull = SpecialWeapon.from_bb("seercull")
-        weapon_style = style if style else BowStyles.get_by_stance(Stances.ACCURATE)
-        assert isinstance(weapon_style, PlayerStyle)
+    def equip_seercull(self, amethyst: bool = True) -> Self:
+        gear: list[Gear] = [SpecialWeapon.from_bb("seercull")]
 
-        return_val = self.equip(seercull, style=weapon_style)
-        assert isinstance(return_val, PlayerStyle)
-        return return_val
+        if amethyst:
+            gear.append(Gear.from_bb("amethyst arrow"))
 
-    # magic gear helpers ###################################################################################################
-    def equip_ancestral_set(self):
-        self.equip(
+        return self.equip(*gear)
+
+    # magic gear helpers
+
+    def equip_ancestral_set(self) -> Self:
+        gear: list[Gear] = [
             Gear.from_bb("ancestral hat"),
             Gear.from_bb("ancestral robe top"),
             Gear.from_bb("ancestral robe bottoms"),
-        )
+        ]
 
-    def equip_sang(self, arcane: bool = True, style: PlayerStyle = None) -> PlayerStyle:  # type: ignore
-        gear = [Gear.from_bb("arcane spirit shield")] if arcane else []
-        weapon_style = (
-            style if style else PoweredStaffStyles.get_by_stance(Stances.ACCURATE)
-        )
-        assert isinstance(weapon_style, PlayerStyle)
+        return self.equip(*gear)
 
-        return_val = self.equip(
-            Weapon.from_bb("sanguinesti staff"), *gear, style=weapon_style
-        )
-        assert isinstance(return_val, PlayerStyle)
-        return return_val
+    def equip_sang(self, arcane: bool = False) -> Self:
+        gear: list[Gear] = [Weapon.from_bb("sanguinesti staff")]
 
-    def equip_harm(self, tome: bool = True, style: PlayerStyle = None) -> PlayerStyle:  # type: ignore
-        gear = [Gear.from_bb("tome of fire")] if tome else []
-        weapon_style = style if style else StaffStyles.default
-        assert isinstance(weapon_style, PlayerStyle)
+        if arcane:
+            gear.append(Gear.from_bb("arcane spirit shield"))
 
-        return_val = self.equip(
-            Weapon.from_bb("harmonised staff"), *gear, style=weapon_style
-        )
-        assert isinstance(return_val, PlayerStyle)
-        return return_val
+        return self.equip(*gear)
+
+    def equip_harm(self, tome: bool = True) -> Self:
+        gear: list[Gear] = [Weapon.from_bb("harmonised staff")]
+
+        if tome:
+            gear.append(Gear.from_bb("tome of fire"))
+
+        return self.equip(*gear)

@@ -6,7 +6,6 @@ from copy import copy
 
 import numpy as np
 from attrs import Factory, define, field, fields, validators
-from osrsbox import monsters_api, monsters_api_examples
 
 import osrs_tools.resource_reader as rr
 from osrs_tools.damage import Damage, Hitsplat
@@ -38,8 +37,6 @@ from osrs_tools.modifier import (
     create_modifier_pair,
 )
 from osrs_tools.prayer import (
-    Augury,
-    Piety,
     Prayer,
     PrayerCollection,
     ProtectFromMagic,
@@ -49,62 +46,35 @@ from osrs_tools.prayer import (
 )
 from osrs_tools.spells import (
     AncientSpell,
-    AncientSpells,
     BoltSpells,
     FireSpells,
     GodSpell,
-    GodSpells,
     PoweredSpell,
     PoweredSpells,
     Spell,
     SpellError,
     StandardSpell,
-    StandardSpells,
 )
 from osrs_tools.stats import (
     AggressiveStats,
-    BastionPotion,
     Boost,
     CallableLevelsModifier,
     DefensiveStats,
-    ImbuedHeart,
     MonsterLevels,
-    Overload,
     PlayerLevels,
     Stats,
     StyleBonus,
-    SuperCombatPotion,
 )
 
 # TODO: submodule for style imports
 from osrs_tools.style import (
-    AxesStyles,
-    BladedStaffStyles,
-    BludgeonStyles,
-    BluntStyles,
-    BowStyles,
     BulwarkStyles,
     ChinchompaStyles,
-    ClawStyles,
-    CrossbowStyles,
-    NpcStyle,
-    PickaxeStyles,
+    MonsterStyle,
     PlayerStyle,
-    PolearmStyles,
-    PoweredStaffStyles,
-    ScytheStyles,
-    SlashSwordStyles,
-    SpearStyles,
-    SpikedWeaponsStyles,
-    StabSwordStyles,
-    StaffStyles,
     Style,
     StyleError,
     StylesCollection,
-    ThrownStyles,
-    TwoHandedStyles,
-    UnarmedStyles,
-    WhipStyles,
 )
 
 character_attrs_settings = {"order": False, "frozen": False}
@@ -159,8 +129,8 @@ class Character(ABC):
             if amt <= 0:
                 continue
 
-            damage_allowed = min([int(self.levels.hitpoints), amt])
-            self.levels.hitpoints -= damage_allowed
+            damage_allowed = min([int(self.hp), amt])
+            self.hp -= damage_allowed
             damage_dealt += damage_allowed
 
         return damage_dealt
@@ -168,12 +138,12 @@ class Character(ABC):
     def heal(self, amount: int | DamageValue, overheal: bool = False):
         assert int(amount) >= 0
         if overheal:
-            self.levels.hitpoints += amount
+            self.hp += amount
         else:
-            if (new_hp := self.levels.hitpoints + amount) <= self.base_levels.hitpoints:
-                self.levels.hitpoints = new_hp
+            if (new_hp := self.hp + amount) <= self.base_hp:
+                self.hp = new_hp
             else:
-                self.levels.hitpoints = copy(self.base_levels.hitpoints)
+                self.hp = copy(self.base_hp)
 
     @abstractmethod
     def reset_stats(self):
@@ -182,7 +152,58 @@ class Character(ABC):
     @property
     def alive(self) -> bool:
         # TODO: this probably works because of PlayerLevel.__int__??
-        return int(self.levels.hitpoints) > 0
+        return int(self.hp) > 0
+
+    @property
+    def hp(self) -> Level:
+        lvl = self.levels.hitpoints
+        assert isinstance(lvl, Level)
+        return lvl
+
+    @hp.setter
+    def hp(self, val: int | Level):
+        if isinstance(val, int):
+            val = Level(val)
+        elif isinstance(val, Level):
+            val = val
+        else:
+            raise NotImplementedError
+
+        self.levels.hitpoints = val
+
+    @property
+    def defence(self) -> Level:
+        lvl = self.levels.defence
+        assert isinstance(lvl, Level)
+        return lvl
+
+    @defence.setter
+    def defence(self, val: int | Level):
+        if isinstance(val, int):
+            val = Level(val)
+        elif isinstance(val, Level):
+            val = val
+        else:
+            raise NotImplementedError
+
+        self.levels.defence
+
+    @property
+    def base_hp(self) -> Level:
+        lvl = self.base_levels.hitpoints
+        assert isinstance(lvl, Level)
+        return lvl
+
+    @base_hp.setter
+    def base_hp(self, val: int | Level):
+        if isinstance(val, int):
+            val = Level(val)
+        elif isinstance(val, Level):
+            val = val
+        else:
+            raise NotImplementedError
+
+        self.base_hp = val
 
     @property
     @abstractmethod
@@ -248,7 +269,8 @@ class Character(ABC):
         else:
             raise StyleError(f"damage type: {dt}")
 
-        defensive_bonus = db.__getattribute__(dt.name)
+        defensive_bonus = db.__getattribute__(dt.value)
+        defensive_bonus = int(defensive_bonus)
         defensive_roll = self.maximum_roll(defensive_stat, defensive_bonus)
 
         if isinstance(other, Player):
@@ -295,7 +317,7 @@ class Character(ABC):
         lb = self.level_bounds
 
         stat_enum_bound_tuples = (
-            (Skills.defence, lb.__getattribute__(Skills.defence.name)),
+            (Skills.DEFENCE, lb.__getattribute__(Skills.DEFENCE.name)),
             (Skills.STRENGTH, lb.__getattribute__(Skills.STRENGTH.name)),
             (Skills.ATTACK, lb.__getattribute__(Skills.ATTACK.name)),
             (Skills.MAGIC, lb.__getattribute__(Skills.MAGIC.name)),
@@ -311,20 +333,21 @@ class Character(ABC):
             )
 
     def apply_arclight(self, success: bool = True):
-        if success:
-            if isinstance(self, Player):
-                reduction_mod = 0.05
-            elif isinstance(self, Monster):
-                reduction_mod = (
-                    0.10 if MonsterTypes.DEMON in self.special_attributes else 0.05
-                )
-            else:
-                raise NotImplementedError
+        if not success:
+            return
 
-            for skill in (Skills.ATTACK, Skills.STRENGTH, Skills.defence):
-                self.base_levels.__setattr__(
-                    skill, reduction_mod * self.base_levels.__getattribute__(skill)
-                )
+        if isinstance(self, Player):
+            reduction_mod = 0.05
+        elif isinstance(self, Monster):
+            reduction_mod = (
+                0.10 if MonsterTypes.DEMON in self.special_attributes else 0.05
+            )
+        else:
+            raise NotImplementedError
+
+        for skill in (Skills.ATTACK, Skills.STRENGTH, Skills.DEFENCE):
+            skill_mod = reduction_mod * getattr(self.base_levels, skill.value)
+            setattr(self.base_levels, skill.value, skill_mod)
 
     def apply_bone_weapon_special(self, amount: int):
         self.levels.defence -= amount
@@ -434,7 +457,7 @@ class Character(ABC):
 
 
 def Player_active_style_validator(instance: Player, attribute: str, value: Style):
-    if value not in instance.equipment.weapon.styles_coll.styles:
+    if value not in instance.equipment.weapon.styles.styles:
         raise StyleError(value)
 
 
@@ -494,7 +517,7 @@ class Player(Character):
         self.levels = copy(self.base_levels)
 
         if self.equipment.weapon is not None:
-            self.active_style = self.equipment.weapon.styles_coll.default
+            self.active_style = self.equipment.weapon.styles.default
 
     def __copy__(self):
         unpacked = {
@@ -513,6 +536,7 @@ class Player(Character):
         return cls(base_levels=base_levels, name=rsn)
 
     # properties
+
     @property
     def aggressive_bonus(self) -> AggressiveStats:
         """Simple wrapper for Equipment.aggressive_bonus which accounts for edge cases.
@@ -650,7 +674,7 @@ class Player(Character):
     @property
     def effective_melee_attack_level(self) -> Level:
         accuracy_level = self.invisible_attack
-        style_bonus = self.active_style.combat_bonus.melee_attack
+        style_bonus = self.active_style._combat_bonus.melee_attack
 
         if (void_modifiers := self._void_modifiers()) is not None:
             void_alm, _ = void_modifiers
@@ -661,7 +685,7 @@ class Player(Character):
     @property
     def effective_melee_strength_level(self) -> Level:
         strength_level = self.invisible_strength
-        style_bonus = self.active_style.combat_bonus.melee_strength
+        style_bonus = self.active_style._combat_bonus.melee_strength
 
         if (void_modifiers := self._void_modifiers()) is not None:
             _, void_slm = void_modifiers
@@ -672,13 +696,13 @@ class Player(Character):
     @property
     def effective_defence_level(self) -> Level:
         accuracy_level = self.invisible_defence
-        style_bonus = self.active_style.combat_bonus.defence
+        style_bonus = self.active_style._combat_bonus.defence
         return self.effective_level(accuracy_level, style_bonus)
 
     @property
     def effective_ranged_attack_level(self) -> Level:
         accuracy_level = self.invisible_ranged_attack
-        style_bonus = self.active_style.combat_bonus.ranged_attack
+        style_bonus = self.active_style._combat_bonus.ranged_attack
 
         if (void_modifiers := self._void_modifiers()) is not None:
             void_alm, _ = void_modifiers
@@ -689,7 +713,7 @@ class Player(Character):
     @property
     def effective_ranged_strength_level(self) -> Level:
         strength_level = self.invisible_ranged_strength
-        style_bonus = self.active_style.combat_bonus.ranged_attack
+        style_bonus = self.active_style._combat_bonus.ranged_attack
 
         if (void_modifiers := self._void_modifiers()) is not None:
             _, void_slm = void_modifiers
@@ -700,7 +724,7 @@ class Player(Character):
     @property
     def effective_magic_attack_level(self) -> Level:
         accuracy_level = self.invisible_magic
-        style_bonus = self.active_style.combat_bonus.magic_attack
+        style_bonus = self.active_style._combat_bonus.magic_attack
 
         if (void_modifiers := self._void_modifiers()) is not None:
             void_alm, _ = void_modifiers
@@ -912,9 +936,7 @@ class Player(Character):
 
     def _dharok_damage_modifier(self) -> DamageModifier | None:
         if self.equipment.dharok_set:
-            modifier = 1 + (
-                self.base_levels.hitpoints - self.levels.hitpoints
-            ) / 100 * (self.base_levels.hitpoints / 100)
+            modifier = 1 + (self.base_hp - self.hp) / 100 * (self.base_hp / 100)
             comment = "dharok's set"
             return DamageModifier(modifier, comment)
 
@@ -1270,7 +1292,7 @@ class Player(Character):
         if dt in MeleeDamageTypes:
             effective_accuracy_level = self.effective_melee_attack_level
             effective_strength_level = self.effective_melee_strength_level
-            accuracy_bonus = ab.__getattribute__(dt.name)
+            accuracy_bonus = ab.__getattribute__(dt.value)
             strength_bonus = ab.melee_strength
         elif dt in RangedDamageTypes:
             effective_accuracy_level = self.effective_ranged_attack_level
@@ -1283,6 +1305,8 @@ class Player(Character):
             strength_bonus = ab.magic_strength
         else:
             raise StyleError(self.active_style)
+
+        accuracy_bonus = int(accuracy_bonus)
 
         def process_variable_modifiers(
             *args: AttackRollModifier
@@ -1399,7 +1423,7 @@ class Player(Character):
                 max_hit, *damage_modifiers
             )  # max hit before special modifiers
 
-        hitpoints_cap: Level = other.levels.hitpoints
+        hitpoints_cap: Level = other.hp
         attack_speed = self.attack_speed(spell)
         damage = None
 
@@ -1660,9 +1684,7 @@ class Player(Character):
                             else targets[:max_targets]
                         )
                         hs = [
-                            Hitsplat.basic_constructor(
-                                max_hit, accuracy, t.base_levels.hitpoints
-                            )
+                            Hitsplat.basic_constructor(max_hit, accuracy, t.base_hp)
                             for t in targets
                         ]
                     else:
@@ -1723,7 +1745,7 @@ class Player(Character):
             elif self.equipment.enchanted_ruby_bolts:
                 # TODO: Pester wiki admins about adding generic bolt_activation_chance for ammunition slot :3
                 proc_chance = modified_proc_chance(0.06)
-                target_hp = other.levels.hitpoints
+                target_hp = other.hp
                 max_effective_hp = 500
                 hp_ratio = 0.20 + 0.02 * self.equipment.zaryte_crossbow
 
@@ -1846,8 +1868,8 @@ class Player(Character):
             self.regenerate_special_attack()
 
     def cast_energy_transfer(self, other: Player):
-        if self.special_energy_full and self.levels.hitpoints > 10:
-            self.levels.hitpoints -= 10
+        if self.special_energy_full and self.hp > 10:
+            self.hp -= 10
 
             self.special_energy = 0
             other.special_energy = 100
@@ -1855,7 +1877,7 @@ class Player(Character):
             self.special_energy_counter = 0
             other.special_energy_counter = 0
         else:
-            raise PlayerError(f"{self.special_energy=}, {self.levels.hitpoints}")
+            raise PlayerError(f"{self.special_energy=}, {self.hp}")
 
 
 @define(**character_attrs_settings)
@@ -1868,7 +1890,7 @@ class Monster(Character):
     levels: MonsterLevels = field(
         init=False, validator=validators.instance_of(MonsterLevels), repr=False
     )
-    active_style: NpcStyle | None = field(init=False, default=None, repr=False)
+    active_style: MonsterStyle | None = field(init=False, default=None, repr=False)
     # monster only fields
     aggressive_bonus: AggressiveStats = field(
         factory=AggressiveStats.no_bonus,
@@ -1907,8 +1929,8 @@ class Monster(Character):
     @property
     def effective_melee_attack_level(self) -> Level:
         astyle = self.active_style
-        if astyle is not None and astyle.combat_bonus is not None:
-            style_bonus = astyle.combat_bonus.melee_attack
+        if astyle is not None and astyle._combat_bonus is not None:
+            style_bonus = astyle._combat_bonus.melee_attack
         else:
             style_bonus = 0
 
@@ -1917,8 +1939,8 @@ class Monster(Character):
     @property
     def effective_melee_strength_level(self) -> Level:
         astyle = self.active_style
-        if astyle is not None and astyle.combat_bonus is not None:
-            style_bonus = astyle.combat_bonus.melee_strength
+        if astyle is not None and astyle._combat_bonus is not None:
+            style_bonus = astyle._combat_bonus.melee_strength
         else:
             style_bonus = 0
         return self.effective_level(self.levels.strength, style_bonus)
@@ -1926,8 +1948,8 @@ class Monster(Character):
     @property
     def effective_defence_level(self) -> Level:
         astyle = self.active_style
-        if astyle is not None and astyle.combat_bonus is not None:
-            style_bonus = astyle.combat_bonus.defence
+        if astyle is not None and astyle._combat_bonus is not None:
+            style_bonus = astyle._combat_bonus.defence
         else:
             style_bonus = 0
         return self.effective_level(self.levels.defence, style_bonus)
@@ -1935,8 +1957,8 @@ class Monster(Character):
     @property
     def effective_ranged_attack_level(self) -> Level:
         astyle = self.active_style
-        if astyle is not None and astyle.combat_bonus is not None:
-            style_bonus = astyle.combat_bonus.ranged_attack
+        if astyle is not None and astyle._combat_bonus is not None:
+            style_bonus = astyle._combat_bonus.ranged_attack
         else:
             style_bonus = 0
         return self.effective_level(self.levels.ranged, style_bonus)
@@ -1944,8 +1966,8 @@ class Monster(Character):
     @property
     def effective_ranged_strength_level(self) -> Level:
         astyle = self.active_style
-        if astyle is not None and astyle.combat_bonus is not None:
-            style_bonus = astyle.combat_bonus.ranged_strength
+        if astyle is not None and astyle._combat_bonus is not None:
+            style_bonus = astyle._combat_bonus.ranged_strength
         else:
             style_bonus = 0
         return self.effective_level(self.levels.ranged, style_bonus)
@@ -1953,8 +1975,8 @@ class Monster(Character):
     @property
     def effective_magic_attack_level(self) -> Level:
         astyle = self.active_style
-        if astyle is not None and astyle.combat_bonus is not None:
-            style_bonus = astyle.combat_bonus.magic_attack
+        if astyle is not None and astyle._combat_bonus is not None:
+            style_bonus = astyle._combat_bonus.magic_attack
         else:
             style_bonus = 0
 
@@ -1966,8 +1988,8 @@ class Monster(Character):
     def effective_magic_defence_level(self) -> Level:
         defensive_level = self.levels.magic
         astyle = self.active_style
-        if astyle is not None and astyle.combat_bonus is not None:
-            style_bonus = astyle.combat_bonus.magic_attack
+        if astyle is not None and astyle._combat_bonus is not None:
+            style_bonus = astyle._combat_bonus.magic_attack
         else:
             style_bonus = 0
 
@@ -2010,7 +2032,7 @@ class Monster(Character):
         accuracy = self.accuracy(att_roll, def_roll)
 
         max_hit = self.max_hit(other)
-        hitpoints_cap = other.levels.hitpoints
+        hitpoints_cap = other.hp
         attack_speed = self.active_style.attack_speed
 
         elysian_reduction_modifier = (
@@ -2025,7 +2047,7 @@ class Monster(Character):
         )
 
         justiciar_style_bonus = other.equipment.defensive_bonus.__getattribute__(
-            dt.name
+            dt.value
         )
         justiciar_style_bonus_cap = 3000
         justiciar_reduction_modifier = (
@@ -2124,7 +2146,7 @@ class Monster(Character):
                 continue
 
             styles.append(
-                NpcStyle(
+                MonsterStyle(
                     damage_type=dt,
                     name=dt,
                     attack_speed=mon_df["attack speed"].values[0],
@@ -2139,7 +2161,7 @@ class Monster(Character):
         if len(attack_styles.styles) > 0:
             active_style = attack_styles.styles[0]
         else:
-            active_style = NpcStyle.default_style()
+            active_style = MonsterStyle.default_style()
 
         # type parsing
         raw_type_value = mon_df["type"].values[0]
@@ -2417,7 +2439,7 @@ class CoxMonster(Monster):
 
     def points_per_room(self, **kwargs) -> int:
         count = self.count_per_room(**kwargs)
-        hp = self.base_levels.hitpoints
+        hp = self.base_hp
         assert isinstance(hp, Level)
 
         return math.floor(count * hp * self.points_per_hitpoint)
@@ -2495,7 +2517,7 @@ class IceDemon(CoxMonster):
     @property
     def effective_magic_defence_level(self) -> Level:
         defensive_level = self.levels.defence  # unique ice demon mechanic
-        style_bonus = self.active_style.combat_bonus.magic
+        style_bonus = self.active_style._combat_bonus.magic
         return self.effective_level(defensive_level, style_bonus)
 
     @classmethod
@@ -2530,7 +2552,7 @@ class DeathlyRanger(CoxMonster):
         )
         special_attributes = (MonsterTypes.XERICIAN,)
 
-        attack_style = NpcStyle(
+        attack_style = MonsterStyle(
             Styles.NPC_RANGED,
             DT.RANGED,
             Stances.NPC,
@@ -2575,7 +2597,7 @@ class DeathlyMage(CoxMonster):
         )
         special_attributes = (MonsterTypes.XERICIAN,)
 
-        attack_style = NpcStyle(
+        attack_style = MonsterStyle(
             Styles.NPC_MAGIC,
             DT.MAGIC,
             Stances.NPC,
@@ -2619,7 +2641,7 @@ class SkeletalMystic(CoxMonster):
         )
         special_attributes = (MonsterTypes.XERICIAN, MonsterTypes.UNDEAD)
 
-        magic_style = NpcStyle(
+        magic_style = MonsterStyle(
             Styles.NPC_MAGIC,
             DT.MAGIC,
             Stances.NPC,
@@ -2627,7 +2649,7 @@ class SkeletalMystic(CoxMonster):
             ignores_defence=False,
             ignores_prayer=True,
         )
-        melee_style = NpcStyle(
+        melee_style = MonsterStyle(
             Styles.NPC_MELEE,
             DT.CRUSH,
             Stances.NPC,
@@ -2676,7 +2698,7 @@ class LizardmanShaman(CoxMonster):
         )
         special_attributes = (MonsterTypes.XERICIAN,)
 
-        ranged_style = NpcStyle(
+        ranged_style = MonsterStyle(
             Styles.NPC_RANGED,
             DT.RANGED,
             Stances.NPC,
@@ -2684,7 +2706,7 @@ class LizardmanShaman(CoxMonster):
             ignores_defence=False,
             ignores_prayer=False,
         )
-        melee_style = NpcStyle(
+        melee_style = MonsterStyle(
             Styles.NPC_MELEE,
             DT.CRUSH,
             Stances.NPC,
@@ -2730,8 +2752,8 @@ class Guardian(CoxMonster):
         if other.equipment.pickaxe:
             return 0
         else:
-            damage_allowed = min([int(self.levels.hitpoints), amount])
-            self.levels.hitpoints -= damage_allowed
+            damage_allowed = min([int(self.hp), amount])
+            self.hp -= damage_allowed
             return damage_allowed
 
     @classmethod
@@ -2739,7 +2761,7 @@ class Guardian(CoxMonster):
         cls,
         party_size: int,
         challenge_mode: bool = False,
-        party_average_mining_level: float = None,
+        party_average_mining_level: float | None = None,
         **kwargs,
     ):
         name = "guardian"
@@ -2754,7 +2776,9 @@ class Guardian(CoxMonster):
             party_average_mining_level = PlayerLevels.max_skill_level()
 
         reduction = party_average_mining_level
-        base_levels.hitpoints -= 99 - reduction
+        assert isinstance(base_levels.hitpoints, Level)
+        assert isinstance(reduction, float)
+        base_levels.hitpoints -= Level(99 - int(reduction))
 
         guardian = cls(
             name=name,
@@ -2768,7 +2792,7 @@ class Guardian(CoxMonster):
             **kwargs,
         )
 
-        melee_style = NpcStyle(
+        melee_style = MonsterStyle(
             Styles.NPC_MELEE,
             DT.CRUSH,
             Stances.NPC,
@@ -2798,10 +2822,10 @@ class SmallMuttadile(CoxMonster):
         )
         special_attributes = (MonsterTypes.XERICIAN,)
 
-        ranged_style = NpcStyle(
+        ranged_style = MonsterStyle(
             Style.ranged, attack_speed=4, ignores_defence=False, ignores_prayer=True
         )
-        melee_style = NpcStyle(
+        melee_style = MonsterStyle(
             Style.crush, attack_speed=4, ignores_defence=False, ignores_prayer=False
         )
 
@@ -2828,7 +2852,7 @@ class SmallMuttadile(CoxMonster):
 
     def points_per_room(self, freeze: bool = True) -> int:
         count = self.count_per_room()
-        hp = self.base_levels.hitpoints
+        hp = self.base_hp
         assert isinstance(hp, Level)
 
         if freeze is False:
@@ -2852,13 +2876,13 @@ class BigMuttadile(CoxMonster):
         )
         special_attributes = (MonsterTypes.XERICIAN,)
 
-        ranged_style = NpcStyle(
+        ranged_style = MonsterStyle(
             Style.ranged, attack_speed=4, ignores_defence=False, ignores_prayer=True
         )
-        magic_style = NpcStyle(
+        magic_style = MonsterStyle(
             Style.magic, attack_speed=4, ignores_defence=False, ignores_prayer=True
         )
-        melee_style = NpcStyle(
+        melee_style = MonsterStyle(
             Style.crush, attack_speed=4, ignores_defence=False, ignores_prayer=False
         )
 
@@ -2885,7 +2909,7 @@ class BigMuttadile(CoxMonster):
 
     def points_per_room(self, freeze: bool = True) -> int:
         count = self.count_per_room()
-        hp = self.base_levels.hitpoints
+        hp = self.base_hp
         assert isinstance(hp, Level)
 
         if freeze is False:
@@ -3176,7 +3200,7 @@ class OlmHead(Olm):
         )
         special_attributes = (MonsterTypes.XERICIAN, MonsterTypes.DRACONIC)
 
-        ranged_style = NpcStyle(
+        ranged_style = MonsterStyle(
             Styles.NPC_RANGED,
             DT.RANGED,
             Stances.NPC,
@@ -3184,7 +3208,7 @@ class OlmHead(Olm):
             ignores_defence=False,
             ignores_prayer=True,
         )
-        magic_style = NpcStyle(
+        magic_style = MonsterStyle(
             Styles.NPC_MAGIC,
             DT.MAGIC,
             Stances.NPC,

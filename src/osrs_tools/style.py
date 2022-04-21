@@ -1,5 +1,4 @@
-import itertools
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from osrs_tools.exceptions import OsrsException
 from osrs_tools.modifier import (
@@ -10,6 +9,7 @@ from osrs_tools.modifier import (
     SpellStylesNames,
     Stances,
     Styles,
+    TrackedValue,
 )
 from osrs_tools.stats import StyleStats
 
@@ -21,9 +21,18 @@ class Style:
     name: Styles
     damage_type: DT
     stance: Stances
-    combat_bonus: StyleStats | None = None
-    attack_speed_modifier: int | None = None
-    attack_range_modifier: int | None = None
+    _combat_bonus: StyleStats | None = field(init=False, default=None)
+    attack_speed_modifier: int | None = field(init=False, default=None)
+    attack_range_modifier: int | None = field(init=False, default=None)
+
+    @property
+    def combat_bonus(self) -> StyleStats:
+        assert isinstance(self._combat_bonus, StyleStats)
+        return self._combat_bonus
+
+    @combat_bonus.setter
+    def combat_bonus(self, __value: StyleStats, /):
+        self._combat_bonus = __value
 
 
 @dataclass(eq=True)
@@ -32,43 +41,45 @@ class PlayerStyle(Style):
         attack_speed_modifier = 0
         attack_range_modifier = 0
 
-        if self.damage_type in MeleeDamageTypes:
-            if self.stance is Stances.ACCURATE:
-                self.combat_bonus = StyleStats.melee_accurate_bonuses()
-            elif self.stance is Stances.AGGRESSIVE:
-                self.combat_bonus = StyleStats.melee_strength_bonuses()
-            elif self.stance is Stances.DEFENSIVE:
-                self.combat_bonus = StyleStats.defensive_bonuses()
-            elif self.stance is Stances.CONTROLLED:
-                self.combat_bonus = StyleStats.melee_shared_bonus()
+        if (dt := self.damage_type) in MeleeDamageTypes:
+            if (st := self.stance) is Stances.ACCURATE:
+                cb = StyleStats.melee_accurate_bonuses()
+            elif st is Stances.AGGRESSIVE:
+                cb = StyleStats.melee_strength_bonuses()
+            elif st is Stances.DEFENSIVE:
+                cb = StyleStats.defensive_bonuses()
+            elif st is Stances.CONTROLLED:
+                cb = StyleStats.melee_shared_bonus()
             else:
                 raise NotImplementedError
 
-        elif self.damage_type in RangedDamageTypes:
-            if self.stance is Stances.ACCURATE:
-                self.combat_bonus = StyleStats.ranged_bonus()
-            elif self.stance is Stances.RAPID:
-                self.combat_bonus = StyleStats.no_style_bonus()
+        elif dt in RangedDamageTypes:
+            if (st := self.stance) is Stances.ACCURATE:
+                cb = StyleStats.ranged_bonus()
+            elif st is Stances.RAPID:
+                cb = StyleStats.no_style_bonus()
                 attack_speed_modifier -= 1
-            elif self.stance is Stances.LONGRANGE:
-                self.combat_bonus = StyleStats.defensive_bonuses()
+            elif st is Stances.LONGRANGE:
+                cb = StyleStats.defensive_bonuses()
                 attack_range_modifier += 2
             else:
                 raise NotImplementedError
 
-        elif self.damage_type in MagicDamageTypes:
-            if self.stance is Stances.ACCURATE:
-                self.combat_bonus = StyleStats.magic_bonus()
-            elif self.stance is Stances.LONGRANGE:
-                self.combat_bonus = StyleStats(defence=1)
+        elif dt in MagicDamageTypes:
+            if (st := self.stance) is Stances.ACCURATE:
+                cb = StyleStats.magic_bonus()
+            elif st is Stances.LONGRANGE:
+                cb = StyleStats(_defence=TrackedValue(1, "long range"))
                 attack_range_modifier += 2
-            elif self.stance is Stances.NO_STYLE:
-                self.combat_bonus = StyleStats.no_style_bonus()
+            elif st is Stances.NO_STYLE:
+                cb = StyleStats.no_style_bonus()
             else:
                 raise NotImplementedError
 
         else:
             raise NotImplementedError
+
+        self.combat_bonus = cb
 
     @property
     def is_spell_style(self) -> bool:
@@ -80,10 +91,19 @@ class PlayerStyle(Style):
 
 
 @dataclass(eq=True)
-class NpcStyle(Style):
-    attack_speed: int | None = None
+class MonsterStyle(Style):
+    _attack_speed: int | None = None
     ignores_defence: bool = False
     ignores_prayer: bool = False
+
+    @property
+    def attack_speed(self) -> int:
+        assert isinstance(self._attack_speed, int)
+        return self._attack_speed
+
+    @attack_speed.setter
+    def attack_speed(self, __value: int):
+        self._attack_speed = __value
 
 
 @dataclass(eq=True)
@@ -100,17 +120,17 @@ class StylesCollection:
             if instance_style.name is style:
                 return instance_style
 
-        raise StyleError(style)
+        raise ValueError(style)
 
-    def get_by_dt(self, dt: DT) -> Style:
-        matches = [s for s in self.styles if s.damage_type is dt]
+    def get_by_dt(self, damage_type: DT) -> Style:
+        matches = [s for s in self.styles if s.damage_type is damage_type]
 
         if (n := len(matches)) == 1:
             return matches[0]
         elif n == 0:
-            raise StyleError(f"No styles with {dt}")
+            raise ValueError(f"No styles with {damage_type}")
         else:
-            raise StyleError(f"More than one style with {dt}")
+            raise ValueError(f"More than one style with {damage_type}")
 
     def get_by_stance(self, stance: Stances) -> Style:
         matches = [s for s in self.styles if s.stance is stance]
@@ -118,9 +138,9 @@ class StylesCollection:
         if (n := len(matches)) == 1:
             return matches[0]
         elif n == 0:
-            raise StyleError(f"No style with {stance}")
+            raise ValueError(f"No style with {stance}")
         else:
-            raise StyleError(f"More than one style with {stance}")
+            raise ValueError(f"More than one style with {stance}")
 
     @classmethod
     def from_weapon_type(cls, weapon_type: str):
@@ -131,7 +151,53 @@ class StylesCollection:
         raise StyleError(weapon_type)
 
 
-TwoHandedStyles = StylesCollection(
+@dataclass(eq=True)
+class WeaponStyles(StylesCollection):
+    default: PlayerStyle
+
+    def get_by_style(self, style: Styles) -> PlayerStyle:
+        _style = super().get_by_style(style)
+        assert isinstance(_style, PlayerStyle)
+
+        return _style
+
+    def get_by_dt(self, damage_type: DT) -> PlayerStyle:
+        _style = super().get_by_dt(damage_type)
+        assert isinstance(_style, PlayerStyle)
+
+        return _style
+
+    def get_by_stance(self, stance: Stances) -> PlayerStyle:
+        _style = super().get_by_stance(stance)
+        assert isinstance(_style, PlayerStyle)
+
+        return _style
+
+
+@dataclass(eq=True)
+class NpcStyles(StylesCollection):
+    default: MonsterStyle
+
+    def get_by_style(self, style: Styles) -> MonsterStyle:
+        _style = super().get_by_style(style)
+        assert isinstance(_style, MonsterStyle)
+
+        return _style
+
+    def get_by_dt(self, damage_type: DT) -> MonsterStyle:
+        _style = super().get_by_dt(damage_type)
+        assert isinstance(_style, MonsterStyle)
+
+        return _style
+
+    def get_by_stance(self, stance: Stances) -> MonsterStyle:
+        _style = super().get_by_stance(stance)
+        assert isinstance(_style, MonsterStyle)
+
+        return _style
+
+
+TwoHandedStyles = WeaponStyles(
     "two-handed swords",
     (
         PlayerStyle(Styles.CHOP, DT.SLASH, Stances.ACCURATE),
@@ -142,7 +208,7 @@ TwoHandedStyles = StylesCollection(
     PlayerStyle(Styles.SLASH, DT.SLASH, Stances.AGGRESSIVE),
 )
 
-AxesStyles = StylesCollection(
+AxesStyles = WeaponStyles(
     "axes",
     (
         PlayerStyle(Styles.CHOP, DT.SLASH, Stances.ACCURATE),
@@ -153,7 +219,7 @@ AxesStyles = StylesCollection(
     PlayerStyle(Styles.HACK, DT.SLASH, Stances.AGGRESSIVE),
 )
 
-BluntStyles = StylesCollection(
+BluntStyles = WeaponStyles(
     "blunt weapons",
     (
         PlayerStyle(Styles.POUND, DT.CRUSH, Stances.ACCURATE),
@@ -163,13 +229,13 @@ BluntStyles = StylesCollection(
     PlayerStyle(Styles.POUND, DT.CRUSH, Stances.ACCURATE),
 )
 
-BludgeonStyles = StylesCollection(
+BludgeonStyles = WeaponStyles(
     "bludgeons",
     (PlayerStyle(Styles.PUMMEL, DT.CRUSH, Stances.AGGRESSIVE),),
     PlayerStyle(Styles.PUMMEL, DT.CRUSH, Stances.AGGRESSIVE),
 )
 
-BulwarkStyles = StylesCollection(
+BulwarkStyles = WeaponStyles(
     "bulwarks",
     (
         PlayerStyle(Styles.PUMMEL, DT.CRUSH, Stances.ACCURATE),
@@ -178,7 +244,7 @@ BulwarkStyles = StylesCollection(
     PlayerStyle(Styles.BLOCK, DT.CRUSH, Stances.DEFENSIVE),
 )
 
-ClawStyles = StylesCollection(
+ClawStyles = WeaponStyles(
     "claws",
     (
         PlayerStyle(Styles.CHOP, DT.SLASH, Stances.ACCURATE),
@@ -189,7 +255,7 @@ ClawStyles = StylesCollection(
     PlayerStyle(Styles.SLASH, DT.SLASH, Stances.AGGRESSIVE),
 )
 
-PickaxeStyles = StylesCollection(
+PickaxeStyles = WeaponStyles(
     "pickaxes",
     (
         PlayerStyle(Styles.SPIKE, DT.STAB, Stances.ACCURATE),
@@ -200,7 +266,7 @@ PickaxeStyles = StylesCollection(
     PlayerStyle(Styles.SMASH, DT.CRUSH, Stances.AGGRESSIVE),
 )
 
-PolearmStyles = StylesCollection(
+PolearmStyles = WeaponStyles(
     "polearms",
     (
         PlayerStyle(Styles.JAB, DT.STAB, Stances.CONTROLLED),
@@ -210,7 +276,7 @@ PolearmStyles = StylesCollection(
     PlayerStyle(Styles.SWIPE, DT.SLASH, Stances.AGGRESSIVE),
 )
 
-ScytheStyles = StylesCollection(
+ScytheStyles = WeaponStyles(
     "scythes",
     (
         PlayerStyle(Styles.REAP, DT.SLASH, Stances.ACCURATE),
@@ -221,7 +287,7 @@ ScytheStyles = StylesCollection(
     PlayerStyle(Styles.CHOP, DT.SLASH, Stances.AGGRESSIVE),
 )
 
-SlashSwordStyles = StylesCollection(
+SlashSwordStyles = WeaponStyles(
     "slash swords",
     (
         PlayerStyle(Styles.CHOP, DT.SLASH, Stances.ACCURATE),
@@ -232,7 +298,7 @@ SlashSwordStyles = StylesCollection(
     PlayerStyle(Styles.SLASH, DT.SLASH, Stances.AGGRESSIVE),
 )
 
-SpearStyles = StylesCollection(
+SpearStyles = WeaponStyles(
     "spears",
     (
         PlayerStyle(Styles.LUNGE, DT.STAB, Stances.CONTROLLED),
@@ -243,7 +309,7 @@ SpearStyles = StylesCollection(
     PlayerStyle(Styles.LUNGE, DT.STAB, Stances.CONTROLLED),
 )
 
-SpikedWeaponsStyles = StylesCollection(
+SpikedWeaponsStyles = WeaponStyles(
     "spiked weapons",
     (
         PlayerStyle(Styles.POUND, DT.CRUSH, Stances.ACCURATE),
@@ -254,7 +320,7 @@ SpikedWeaponsStyles = StylesCollection(
     PlayerStyle(Styles.PUMMEL, DT.CRUSH, Stances.AGGRESSIVE),
 )
 
-StabSwordStyles = StylesCollection(
+StabSwordStyles = WeaponStyles(
     "stab swords",
     (
         PlayerStyle(Styles.STAB, DT.STAB, Stances.ACCURATE),
@@ -265,7 +331,7 @@ StabSwordStyles = StylesCollection(
     PlayerStyle(Styles.LUNGE, DT.STAB, Stances.AGGRESSIVE),
 )
 
-UnarmedStyles = StylesCollection(
+UnarmedStyles = WeaponStyles(
     "unarmed weapons",
     (
         PlayerStyle(Styles.PUNCH, DT.CRUSH, Stances.ACCURATE),
@@ -275,7 +341,7 @@ UnarmedStyles = StylesCollection(
     PlayerStyle(Styles.KICK, DT.CRUSH, Stances.AGGRESSIVE),
 )
 
-WhipStyles = StylesCollection(
+WhipStyles = WeaponStyles(
     "whips",
     (
         PlayerStyle(Styles.FLICK, DT.SLASH, Stances.ACCURATE),
@@ -285,7 +351,7 @@ WhipStyles = StylesCollection(
     PlayerStyle(Styles.LASH, DT.SLASH, Stances.CONTROLLED),
 )
 
-BowStyles = StylesCollection(
+BowStyles = WeaponStyles(
     "bow",
     (
         PlayerStyle(Styles.ACCURATE, DT.RANGED, Stances.ACCURATE),
@@ -295,7 +361,7 @@ BowStyles = StylesCollection(
     PlayerStyle(Styles.RAPID, DT.RANGED, Stances.RAPID),
 )
 
-ChinchompaStyles = StylesCollection(
+ChinchompaStyles = WeaponStyles(
     "chinchompas",
     (
         PlayerStyle(Styles.SHORT_FUSE, DT.RANGED, Stances.ACCURATE),
@@ -305,7 +371,7 @@ ChinchompaStyles = StylesCollection(
     PlayerStyle(Styles.MEDIUM_FUSE, DT.RANGED, Stances.RAPID),
 )
 
-CrossbowStyles = StylesCollection(
+CrossbowStyles = WeaponStyles(
     "crossbow",
     (
         PlayerStyle(Styles.ACCURATE, DT.RANGED, Stances.ACCURATE),
@@ -315,7 +381,7 @@ CrossbowStyles = StylesCollection(
     PlayerStyle(Styles.RAPID, DT.RANGED, Stances.RAPID),
 )
 
-ThrownStyles = StylesCollection(
+ThrownStyles = WeaponStyles(
     "thrown",
     (
         PlayerStyle(Styles.ACCURATE, DT.RANGED, Stances.ACCURATE),
@@ -325,7 +391,7 @@ ThrownStyles = StylesCollection(
     PlayerStyle(Styles.RAPID, DT.RANGED, Stances.RAPID),
 )
 
-BladedStaffStyles = StylesCollection(
+BladedStaffStyles = WeaponStyles(
     "bladed staves",
     (
         PlayerStyle(Styles.JAB, DT.STAB, Stances.ACCURATE),
@@ -337,7 +403,7 @@ BladedStaffStyles = StylesCollection(
     PlayerStyle(Styles.SWIPE, DT.SLASH, Stances.AGGRESSIVE),
 )
 
-PoweredStaffStyles = StylesCollection(
+PoweredStaffStyles = WeaponStyles(
     "powered staves",
     (
         PlayerStyle(Styles.ACCURATE, DT.MAGIC, Stances.ACCURATE),
@@ -346,7 +412,7 @@ PoweredStaffStyles = StylesCollection(
     PlayerStyle(Styles.ACCURATE, DT.MAGIC, Stances.ACCURATE),
 )
 
-StaffStyles = StylesCollection(
+StaffStyles = WeaponStyles(
     "staves",
     (
         PlayerStyle(Styles.BASH, DT.CRUSH, Stances.ACCURATE),
