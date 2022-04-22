@@ -1,17 +1,39 @@
+"""The basis of all damage calculation.
+
+###############################################################################
+# email:    noahgill409@gmail.com                                             #
+# created:                                                                    #
+###############################################################################
+"""
+
 import functools
 
 import numpy as np
 from attrs import define, field
 
-from osrs_tools.data import DamageValue, Level
+from osrs_tools.data import (
+    TICKS_PER_HOUR,
+    TICKS_PER_MINUTE,
+    TICKS_PER_SECOND,
+    DamageValue,
+    Level,
+)
 from osrs_tools.exceptions import OsrsException
 
-# helpful constants
+###############################################################################
+# errors 'n such                                                              #
+###############################################################################
+
 HS_TOLERANCE = 1e-6
-SECONDS_PER_TICK = 0.6
-TICKS_PER_SECOND = 1 / SECONDS_PER_TICK
-TICKS_PER_MINUTE = 100
-TICKS_PER_HOUR = 6000
+
+
+class DamageError(OsrsException):
+    pass
+
+
+###############################################################################
+# Hitsplat & Damage classes                                                   #
+###############################################################################
 
 
 @define
@@ -190,7 +212,3 @@ class Damage:
         attack_speed = 4
         hs = Hitsplat.thrall()
         return cls(attack_speed, (hs,))
-
-
-class DamageError(OsrsException):
-    pass

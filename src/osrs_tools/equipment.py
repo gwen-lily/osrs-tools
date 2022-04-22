@@ -1,8 +1,18 @@
+"""Gear & its subclasses, and Equipment.
+
+Equipment is basically a very complicated and bloated Gear container, so it
+needs some work to say the least.
+
+###############################################################################
+# email:    noahgill409@gmail.com                                             #
+# created:                                                                    #
+###############################################################################
+"""
+
 from __future__ import annotations
 
 from collections import Counter
 from dataclasses import dataclass, field, fields
-from enum import Enum, unique
 from functools import reduce
 from typing import Any
 
@@ -16,6 +26,7 @@ from osrs_tools.data import (
     DamageModifier,
     Level,
     RollModifier,
+    Slots,
     TrackedFloat,
     TrackedInt,
 )
@@ -77,24 +88,7 @@ class TwoHandedError(EquipmentError):
 ###############################################################################
 
 
-@unique
-class Slots(Enum):
-    """Complete list of gear slots in order from top to bottom, left to right."""
-
-    HEAD = "head"
-    CAPE = "cape"
-    NECK = "neck"
-    AMMUNITION = "ammunition"
-    WEAPON = "weapon"
-    BODY = "body"
-    SHIELD = "shield"
-    LEGS = "legs"
-    HANDS = "hands"
-    FEET = "feet"
-    RING = "ring"
-
-
-Items = items_api.load()
+ITEMS = items_api.load()
 
 
 def special_defence_roll_validator(_: SpecialWeapon, attribute: str, value: DT):
@@ -286,9 +280,9 @@ class Gear:
     ):
 
         if name is not None and item_id is None:
-            item = Items.lookup_by_item_name(name)
+            item = ITEMS.lookup_by_item_name(name)
         elif name is None and item_id is not None:
-            item = Items.lookup_by_item_id(item_id)
+            item = ITEMS.lookup_by_item_id(item_id)
         else:
             raise GearNotFoundError(f"{name=}, {item_id=}")
 

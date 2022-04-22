@@ -1,6 +1,10 @@
+"""The basic exception for the osrs-tools module.
+
 ###############################################################################
-# errors n' such
+# email:    noahgill409@gmail.com                                             #
+# created:                                                                    #
 ###############################################################################
+"""
 
 
 class OsrsException(Exception):

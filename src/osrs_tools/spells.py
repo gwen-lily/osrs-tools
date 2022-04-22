@@ -1,3 +1,11 @@
+"""Spells and definition of all OSRS spells.
+
+###############################################################################
+# email:    noahgill409@gmail.com                                             #
+# created:                                                                    #
+###############################################################################
+"""
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum, unique
@@ -7,18 +15,40 @@ from osrs_tools.data import Level
 from osrs_tools.exceptions import OsrsException
 
 ###############################################################################
-# email:    noahgill409@gmail.com
-# created:  2022-03-28
+# errors 'n such                                                              #
 ###############################################################################
 
 
+class SpellError(OsrsException):
+    pass
+
+
 ###############################################################################
-# Main classes
+# Spell                                                                       #
 ###############################################################################
 
 
 @dataclass(frozen=True, kw_only=True)
 class Spell(ABC):
+    """An abstract Spell from which concrete spells inherit.
+
+    Attributes
+    ----------
+
+    name : str
+        The name of the spell.
+
+    base_max_hit : int
+        A parameter, check the wiki.
+
+    attack_speed : int
+        The time between casts (in ticks).
+
+    max_targets_hit : int
+        The maximum number of targets hit by a spell.
+
+    """
+
     name: str
     base_max_hit: int
     attack_speed: int = field(default=5, init=False)
@@ -67,8 +97,10 @@ class PoweredSpell(Spell):
 
 
 ###############################################################################
-# define standard library and member groups
+# define spells and member groups                                             #
 ###############################################################################
+
+# standard spells #############################################################
 
 
 @unique
@@ -127,6 +159,8 @@ GodSpells = (
     StandardSpells.FLAMES_OF_ZAMORAK,
 )
 
+# ancient spells ##############################################################
+
 
 @unique
 class AncientSpells(Enum):
@@ -154,12 +188,11 @@ class AncientSpells(Enum):
     ICE_BARRAGE = AncientSpell(name="ice barrage", base_max_hit=30, max_targets_hit=9)
 
 
+# powered spells ##############################################################
+
+
 @unique
 class PoweredSpells(Enum):
     TRIDENT_OF_THE_SEAS = PoweredSpell(name="trident of the seas", base_max_hit=20)
     TRIDENT_OF_THE_SWAMP = PoweredSpell(name="trident of the swamp", base_max_hit=23)
     SANGUINESTI_STAFF = PoweredSpell(name="sanguinesti staff", base_max_hit=24)
-
-
-class SpellError(OsrsException):
-    pass

@@ -1,3 +1,11 @@
+"""Styles & their containers, as well as definitions of all weapon styles.
+
+###############################################################################
+# email:    noahgill409@gmail.com                                             #
+# created:                                                                    #
+###############################################################################
+"""
+
 from dataclasses import dataclass, field
 from typing import Any
 

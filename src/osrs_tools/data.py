@@ -1,3 +1,11 @@
+"""Basic data & classes ubiquitious to the program and OSRS.
+
+###############################################################################
+# email:    noahgill409@gmail.com                                             #
+# created:                                                                    #
+###############################################################################
+"""
+
 from __future__ import annotations
 
 import math
@@ -11,6 +19,11 @@ from numpy import float64, int64
 ###############################################################################
 # enums 'n' such
 ###############################################################################
+
+SECONDS_PER_TICK = 0.6
+TICKS_PER_SECOND = 1 / SECONDS_PER_TICK
+TICKS_PER_MINUTE = 100
+TICKS_PER_HOUR = 6000
 
 # damage, stances, & styles ###################################################
 
@@ -189,6 +202,26 @@ class MonsterLocations(Enum):
     WILDERNESS = "wilderness"
     TOB = "tob"
     COX = "cox"
+
+
+# slots ######################################################################
+
+
+@unique
+class Slots(Enum):
+    """Complete list of gear slots in order from top to bottom, left to right."""
+
+    HEAD = "head"
+    CAPE = "cape"
+    NECK = "neck"
+    AMMUNITION = "ammunition"
+    WEAPON = "weapon"
+    BODY = "body"
+    SHIELD = "shield"
+    LEGS = "legs"
+    HANDS = "hands"
+    FEET = "feet"
+    RING = "ring"
 
 
 ###############################################################################

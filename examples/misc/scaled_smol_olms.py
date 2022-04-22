@@ -9,7 +9,7 @@ from osrs_tools.analysis_tools import (DataMode, bedevere_2d,
                                        tabulate_enhanced)
 from osrs_tools.character import *
 from osrs_tools.damage import TICKS_PER_HOUR, TICKS_PER_MINUTE
-from osrs_tools.equipment import Slots
+from osrs_tools.data import Slots
 from tabulate import tabulate
 
 avernic_defender = Gear.from_bb("avernic defender")

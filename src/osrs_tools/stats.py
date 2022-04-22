@@ -1,3 +1,11 @@
+"""Stats & its many subclasses.
+
+###############################################################################
+# email:    noahgill409@gmail.com                                             #
+# created:                                                                    #
+###############################################################################
+"""
+
 from __future__ import annotations
 
 from copy import copy

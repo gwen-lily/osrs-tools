@@ -8,8 +8,8 @@ from osrs_tools.character import (
     Player,
     SkeletalMystic,
 )
-from osrs_tools.data import Level, Styles
-from osrs_tools.equipment import Equipment, Gear, Slots
+from osrs_tools.data import Level, Slots, Styles
+from osrs_tools.equipment import Equipment, Gear
 from osrs_tools.prayer import Rigour
 from osrs_tools.stats import BastionPotion, Overload
 from osrs_tools.style import ChinchompaStyles
