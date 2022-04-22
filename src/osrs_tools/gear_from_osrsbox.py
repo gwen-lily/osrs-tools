@@ -76,12 +76,12 @@ def convert_all_equippable_items(*items: ItemProperties):
         for sl in Slots:
             # specific cases > general
             if eqp.slot == "ammo":
-                slot = Slots.ammunition
+                slot = Slots.AMMUNITION
             elif eqp.slot == "2h":
-                slot = Slots.weapon
+                slot = Slots.WEAPON
                 two_handed = True
-            elif eqp.slot == Slots.weapon.name:
-                slot = Slots.weapon
+            elif eqp.slot == Slots.WEAPON.name:
+                slot = Slots.WEAPON
                 two_handed = False
             elif eqp.slot == sl.name:
                 slot = sl
