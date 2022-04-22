@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from osrs_tools.character import DeathlyMage, DeathlyRanger
 from osrs_tools.cox_scaled.estimate import RoomEstimate
 from osrs_tools.cox_scaled.strategy import CombatStrategy, RedChinsStrategy
-from osrs_tools.modifier import Styles
+from osrs_tools.data import Styles
 from osrs_tools.style import ChinchompaStyles, PlayerStyle
 
 ###############################################################################

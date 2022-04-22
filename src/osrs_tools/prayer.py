@@ -1,18 +1,37 @@
+"""Prayer & PrayerCollection definition, along with all important prayers.
+
+###############################################################################
+# email:    noahgill409@gmail.com                                             #
+# created:                                                                    #
+###############################################################################
+"""
+
 from __future__ import annotations
 
-from attrs import define, field
-from cached_property import cached_property
-from osrsbox import prayers_api
-from osrsbox.prayers_api import prayer_properties
+from dataclasses import dataclass, field
 
+from osrsbox import prayers_api
+
+from osrs_tools.data import LevelModifier, Skills
 from osrs_tools.exceptions import OsrsException
-from osrs_tools.modifier import LevelModifier, Skills
+
+###############################################################################
+# errors 'n such                                                              #
+###############################################################################
 
 PRAYERS = prayers_api.load()
 
 
-# noinspection PyArgumentList
-@define(order=True, frozen=True)
+class PrayerError(OsrsException):
+    pass
+
+
+###############################################################################
+# prayer & prayer collection                                                  #
+###############################################################################
+
+
+@dataclass(order=True, frozen=True)
 class Prayer:
     name: str
     drain_effect: int
@@ -27,21 +46,29 @@ class Prayer:
 
     @classmethod
     def from_osrsbox(
-        cls, *, name: str = None, prayer_id: int = None, drain_effect: int, **kwargs
+        cls,
+        *,
+        name: str | None = None,
+        prayer_id: int | None = None,
+        drain_effect: int,
+        **kwargs,
     ):
-        """Generate Prayer object from osrsbox-db Prayers module.
+        """Get Prayer from osrsbox-db source.
 
-        Args:
-                drain_effect (int): Each prayer has an associated drain effect (see more at
-                https://oldschool.runescape.wiki/w/Prayer#Prayer_drain_mechanics).
-                name (str, optional): The name of the prayer in the osrsbox-db. Defaults to None.
-                prayer_id (int, optional): The id of the prayer in the osrsbox-db. Defaults to None.
+        Specify either name or id.
 
-        Raises:
-                PrayerError: Raised if the search parameters yield no info.
+        Parameters
+        ----------
+        drain_effect : int
+            The prayer's drain effect, check the wiki.
+        name : str | None, optional
+            The name of the prayer, by default None
+        prayer_id : int | None, optional
+            The id of the prayer, by default None
 
-        Returns:
-                Prayer:
+        Raises
+        ------
+        PrayerError
         """
         options = {
             Skills.ATTACK.value: None,
@@ -78,55 +105,29 @@ class Prayer:
         raise PrayerError(f"{name=}")
 
 
-Augury = Prayer.from_osrsbox(
-    prayer_id=29, defence=25, magic_defence=25, drain_effect=24
-)
-Rigour = Prayer.from_osrsbox(prayer_id=28, drain_effect=24)
-Piety = Prayer.from_osrsbox(prayer_id=27, drain_effect=24)
-Chivalry = Prayer.from_osrsbox(prayer_id=26, drain_effect=24)
-Preserve = Prayer.from_osrsbox(prayer_id=25, drain_effect=2)
-Smite = Prayer.from_osrsbox(prayer_id=24, drain_effect=18)
-Redemption = Prayer.from_osrsbox(prayer_id=23, drain_effect=6)
-Retribution = Prayer.from_osrsbox(prayer_id=22, drain_effect=3)
-MysticMight = Prayer.from_osrsbox(prayer_id=21, drain_effect=12)
-EagleEye = Prayer.from_osrsbox(prayer_id=20, drain_effect=12)
-ProtectFromMelee = Prayer.from_osrsbox(prayer_id=19, drain_effect=12)
-ProtectFromMissiles = Prayer.from_osrsbox(prayer_id=18, drain_effect=12)
-ProtectFromMagic = Prayer.from_osrsbox(prayer_id=17, drain_effect=12)
-IncredibleReflexes = Prayer.from_osrsbox(prayer_id=16, drain_effect=12)
-MysticLore = Prayer.from_osrsbox(prayer_id=13, drain_effect=6)
-
-
-def prayer_collection_validator(instance, attribute: str, value: tuple[Prayer, ...]):
-    pass  # TODO: Create validators that handle better than the current system.
-
-
-@define
+@dataclass
 class PrayerCollection:
-    name: str = field(factory=str, converter=str)
-    prayers: list[Prayer] = field(factory=list)
+    """Container class for prayers.
 
-    def pray(self, *prayers: Prayer | PrayerCollection):
-        prayers_list = []
+    Attributes
+    ----------
+    name : str
+        Name of the collection
+    prayers : list[Prayer], optional
+        A list of the active prayers.
 
-        for p in prayers:
-            if isinstance(p, Prayer):
-                prayers_list.append(p)
-            elif isinstance(p, PrayerCollection):
-                prayers_list.extend(p.prayers)
+    Raises
+    ------
+    PrayerError
+    """
 
-        self.prayers = prayers_list
+    name: str = field(default_factory=str)
+    prayers: list[Prayer] = field(default_factory=list)
 
-    def reset_prayers(self):
-        self.prayers = []
+    # dunder & utility methods
 
-    @property
-    def drain_effect(self):
-        return sum([p.drain_effect for p in self.prayers])
-
-    @classmethod
-    def no_prayers(cls):
-        return cls()
+    def __iter__(self):
+        yield from self.prayers
 
     def _get_prayer_collection_attribute(self, attribute: str) -> LevelModifier | None:
         relevant_prayers = [
@@ -138,6 +139,33 @@ class PrayerCollection:
             return relevant_prayers[0].__getattribute__(attribute)
         else:
             raise PrayerError(f"{attribute=} with {relevant_prayers=}")
+
+    # basic methods
+
+    def pray(self, *prayers: Prayer | PrayerCollection):
+        """Add any prayers to the current collection."""
+        for p in prayers:
+            if isinstance(p, Prayer):
+                self.prayers.append(p)
+            elif isinstance(p, PrayerCollection):
+                self.prayers.extend(p.prayers)
+
+    def reset_prayers(self):
+        """Remove all active prayers."""
+        self.prayers = []
+
+    # properties
+
+    @property
+    def drain_effect(self):
+        return sum([p.drain_effect for p in self.prayers])
+
+    # class methods
+
+    @classmethod
+    def no_prayers(cls):
+        raise DeprecationWarning
+        # return cls()
 
     @property
     def attack(self):
@@ -171,9 +199,25 @@ class PrayerCollection:
     def magic_defence(self):
         return self._get_prayer_collection_attribute("magic_defence")
 
-    def __iter__(self):
-        return iter(self.prayers)
 
+###############################################################################
+# prayer definition                                                           #
+###############################################################################
 
-class PrayerError(OsrsException):
-    pass
+Augury = Prayer.from_osrsbox(
+    prayer_id=29, defence=25, magic_defence=25, drain_effect=24
+)
+Rigour = Prayer.from_osrsbox(prayer_id=28, drain_effect=24)
+Piety = Prayer.from_osrsbox(prayer_id=27, drain_effect=24)
+Chivalry = Prayer.from_osrsbox(prayer_id=26, drain_effect=24)
+Preserve = Prayer.from_osrsbox(prayer_id=25, drain_effect=2)
+Smite = Prayer.from_osrsbox(prayer_id=24, drain_effect=18)
+Redemption = Prayer.from_osrsbox(prayer_id=23, drain_effect=6)
+Retribution = Prayer.from_osrsbox(prayer_id=22, drain_effect=3)
+MysticMight = Prayer.from_osrsbox(prayer_id=21, drain_effect=12)
+EagleEye = Prayer.from_osrsbox(prayer_id=20, drain_effect=12)
+ProtectFromMelee = Prayer.from_osrsbox(prayer_id=19, drain_effect=12)
+ProtectFromMissiles = Prayer.from_osrsbox(prayer_id=18, drain_effect=12)
+ProtectFromMagic = Prayer.from_osrsbox(prayer_id=17, drain_effect=12)
+IncredibleReflexes = Prayer.from_osrsbox(prayer_id=16, drain_effect=12)
+MysticLore = Prayer.from_osrsbox(prayer_id=13, drain_effect=6)

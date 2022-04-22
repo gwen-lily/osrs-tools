@@ -3,8 +3,8 @@ import functools
 import numpy as np
 from attrs import define, field
 
+from osrs_tools.data import DamageValue, Level
 from osrs_tools.exceptions import OsrsException
-from osrs_tools.modifier import DamageValue, Level
 
 # helpful constants
 HS_TOLERANCE = 1e-6
@@ -58,7 +58,7 @@ class Hitsplat:
         cls,
         max_hit: DamageValue | int,
         accuracy: float,
-        hitpoints_cap: int | Level = None,
+        hitpoints_cap: int | Level | None = None,
     ):
         """Basic constructor for a hit distribution with a uniform damage value from 0 to max_hit.
 
@@ -135,7 +135,7 @@ class Damage:
     def __iter__(self):
         return iter(self.hitsplats)
 
-    def random_hit(self, k: int = 1) -> int | np.ndarray:
+    def random_hits(self, k: int = 1) -> int | np.ndarray:
         """Return an integer or 1D array representing a random hit from the Damage object.
 
         Args:
@@ -147,13 +147,11 @@ class Damage:
         """
         n = len(self.hitsplats)
         hits = np.empty(shape=(k, n), dtype=int)
+
         for idx, hs in enumerate(self.hitsplats):
             hits[:, idx] = hs.random_hit(k)
 
-        if n == 1 and k == 1:
-            hits: int = int(hits[0, 0])
-        else:
-            hits: np.ndarray = hits.reshape((k * n,))
+        hits: np.ndarray = hits.reshape(k * n)
 
         return hits
 
@@ -163,7 +161,7 @@ class Damage:
         attack_speed: int,
         max_hit: DamageValue | int,
         accuracy: float,
-        hitpoints_cap: int = None,
+        hitpoints_cap: int | None = None,
     ):
         """Basic constructor for a hit distribution with a uniform damage value from 0 to max_hit.
 

@@ -9,13 +9,13 @@
 from dataclasses import dataclass, field
 
 from bedevere.markov import MarkovChain
+from osrs_tools.boosts import Overload
 from osrs_tools.character import CoxMonster, Player
 from osrs_tools.damage import Damage
+from osrs_tools.data import Boost, Styles
 from osrs_tools.equipment import Equipment, Gear
-from osrs_tools.modifier import Styles
 from osrs_tools.prayer import Augury, Piety, Prayer, PrayerCollection, Rigour
 from osrs_tools.spells import PoweredSpells, Spell
-from osrs_tools.stats import Boost, Overload
 from osrs_tools.style import (
     BluntStyles,
     PlayerStyle,
@@ -350,7 +350,7 @@ class SangStrategy(MagicStrategy):
     """
 
     _style: PlayerStyle = _ACCURATE_SANG_STYLE
-    autocast: Spell = PoweredSpells.sanguinesti_staff.value
+    autocast: Spell = PoweredSpells.SANGUINESTI_STAFF.value
 
     def equip_player(self) -> Self:
         # equip the sang

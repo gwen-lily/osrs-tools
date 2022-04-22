@@ -14,8 +14,8 @@ from dataclasses import dataclass, field
 from osrs_tools.character import IceDemon
 from osrs_tools.cox_scaled.estimate import RoomEstimate
 from osrs_tools.cox_scaled.strategy import CombatStrategy, MagicStrategy
+from osrs_tools.data import Stances
 from osrs_tools.equipment import Equipment, Gear, Weapon
-from osrs_tools.modifier import Stances
 from osrs_tools.spells import Spell, StandardSpells
 from osrs_tools.style import PlayerStyle, StaffStyles
 
@@ -63,7 +63,7 @@ _DEFENSIVE_CAST = StaffStyles.get_by_stance(Stances.DEFENSIVE)
 class KodaiSurgeIceDemon(MagicStrategy):
     gear = field(default_factory=lambda: _SURGER_GEAR)
     style: PlayerStyle = _DEFENSIVE_CAST
-    autocast: Spell = StandardSpells.fire_surge.value
+    autocast: Spell = StandardSpells.FIRE_SURGE.value
 
 
 @dataclass

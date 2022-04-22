@@ -1,8 +1,8 @@
 from osrs_tools import analysis_tools
 from osrs_tools.analysis_tools import DataMode, bedevere_2d, bedevere_the_wise
 from osrs_tools.character import AbyssalPortal, BigMuttadile, Player
+from osrs_tools.data import DT
 from osrs_tools.equipment import Gear
-from osrs_tools.modifier import DT
 from osrs_tools.prayer import (
     Augury,
     Prayer,

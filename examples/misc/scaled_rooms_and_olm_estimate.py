@@ -5,30 +5,18 @@ from random import random
 import numpy as np
 from matplotlib import pyplot as plt
 from osrs_tools.analysis_tools import tabulate_enhanced
-from osrs_tools.character import (
-    AbyssalPortal,
-    DeathlyMage,
-    DeathlyRanger,
-    Guardian,
-    LizardmanShaman,
-    Player,
-    PlayerError,
-    SkeletalMystic,
-)
+from osrs_tools.character import (AbyssalPortal, DeathlyMage, DeathlyRanger,
+                                  Guardian, LizardmanShaman, Player,
+                                  PlayerError, SkeletalMystic)
 from osrs_tools.damage import Damage
 from osrs_tools.equipment import Equipment, Gear
 from osrs_tools.modifier import Level, Styles
 from osrs_tools.prayer import Piety, ProtectFromMagic, Rigour
-from osrs_tools.stats import (
-    BastionPotion,
-    Boost,
-    Overload,
-    PlayerLevels,
-    SuperAttackPotion,
-    SuperCombatPotion,
-)
+from osrs_tools.stats import (BastionPotion, Boost, Overload, PlayerLevels,
+                              SuperAttackPotion, SuperCombatPotion)
 from osrs_tools.style import ChinchompaStyles, PlayerStyle
-from osrs_tools.unique_loot_calculator import individual_point_cap, zero_purple_chance
+from osrs_tools.unique_loot_calculator import (individual_point_cap,
+                                               zero_purple_chance)
 
 from scaled_smol_olms import solo_olm_ticks_and_points_estimate
 
@@ -242,7 +230,7 @@ def mystics_estimates(scale: int, mode: MysticModes, **kwargs) -> tuple[float, i
             trial_ticks = 0
 
             mystics = [
-                mystic.from_de0(ps) for ps in [scale_at_mystics_load] * mystics_per_room
+                mystic.from_de0(ps) for ps in [scale_at_load_time] * mystics_per_room
             ]
             st_alts = [
                 Player(name=f"spec transfer alt {num}")
@@ -276,12 +264,12 @@ def mystics_estimates(scale: int, mode: MysticModes, **kwargs) -> tuple[float, i
 
                     else:
                         if tc % ticks_per_lad_attack == 0:
-                            random_hs = cached_dam.random_hit()
+                            random_hs = cached_dam.random_hits()
                             assert isinstance(random_hs, int)
                             mys.damage(lad, random_hs)
 
                         if tc % int(thrall_dam.attack_speed) == 0:
-                            random_hs = thrall_dam.random_hit()
+                            random_hs = thrall_dam.random_hits()
                             assert isinstance(random_hs, int)
                             mys.damage(lad, random_hs)
 
@@ -647,6 +635,11 @@ def main(
 
     if options["leave"] is True:
         pt_data[0] -= individual_point_cap
+    row_labels = ["points"]
+    list_of_data = [pt_data]
+    points_table = tabulate_enhanced(
+        list_of_data, col_labels, row_labels, floatfmt=".0f"
+    )
 
     pt_data = [int(_pd) for _pd in pt_data]
 

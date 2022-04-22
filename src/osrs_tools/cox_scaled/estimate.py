@@ -12,7 +12,7 @@ from dataclasses import dataclass
 
 from osrs_tools.character import CoxMonster
 from osrs_tools.damage import Damage
-from osrs_tools.modifier import Level
+from osrs_tools.data import Level
 
 from .strategy import CombatStrategy, Strategy
 

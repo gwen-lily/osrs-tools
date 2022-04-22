@@ -11,8 +11,8 @@ from dataclasses import dataclass, field
 from osrs_tools.character import Guardian
 from osrs_tools.cox_scaled.estimate import RoomEstimate
 from osrs_tools.cox_scaled.strategy import CombatStrategy, MeleeStrategy
+from osrs_tools.data import Level
 from osrs_tools.equipment import Gear, SpecialWeapon
-from osrs_tools.modifier import Level
 
 ###############################################################################
 # default factory lists & extra info                                          #

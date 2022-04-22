@@ -2,16 +2,14 @@ import math
 from itertools import product
 from random import random
 
-import numpy as np
 import pandas as pd
 from osrs_tools import analysis_tools
-from osrs_tools.analysis_tools import DataMode, bedevere_2d, tabulate_enhanced
-from osrs_tools.character import OlmHead, OlmMageHand, OlmMeleeHand, Player
-from osrs_tools.damage import Damage
-from osrs_tools.equipment import Equipment, Gear, Slots, Weapon
-from osrs_tools.prayer import Augury, Piety, Prayer, Rigour
-from osrs_tools.stats import AggressiveStats, DefensiveStats, Overload, PlayerLevels
-from osrs_tools.style import MonsterStyle
+from osrs_tools.analysis_tools import (DataMode, bedevere_2d,
+                                       bedevere_the_wise, table_2d,
+                                       tabulate_enhanced)
+from osrs_tools.character import *
+from osrs_tools.damage import TICKS_PER_HOUR, TICKS_PER_MINUTE
+from osrs_tools.equipment import Slots
 from tabulate import tabulate
 
 avernic_defender = Gear.from_bb("avernic defender")
@@ -199,7 +197,7 @@ def duo_olm_ticks_and_points_estimate(scale: int, trials: int = 50, **kwargs):
             else:
                 dam = yuusuke.damage_distribution(
                     melee_hand, special_attack=True
-                ).random_hit()
+                ).random_hits()
 
                 assert isinstance(dam, int)
                 melee_hand.apply_bgs(dam)
@@ -219,7 +217,7 @@ def duo_olm_ticks_and_points_estimate(scale: int, trials: int = 50, **kwargs):
             else:
                 dam = kuwabara.damage_distribution(
                     melee_hand, special_attack=True
-                ).random_hit()
+                ).random_hits()
                 melee_hand.apply_bgs(dam)
                 melee_hand.damage(kuwabara, dam)
 
@@ -240,7 +238,7 @@ def duo_olm_ticks_and_points_estimate(scale: int, trials: int = 50, **kwargs):
                 for lad in lads:
                     dam = lad.damage_distribution(
                         melee_hand, special_attack=True
-                    ).random_hit()
+                    ).random_hits()
                     melee_hand.apply_bgs(dam)
                     melee_hand.damage(lad, dam)
 
@@ -255,14 +253,14 @@ def duo_olm_ticks_and_points_estimate(scale: int, trials: int = 50, **kwargs):
 
             # apply damage, all three lads
             if (simulated_ticks % yuusuke.attack_speed()) == 0:
-                yu_dv = yu_cached_dam.random_hit()
-                ku_dv = ku_cached_dam.random_hit()
+                yu_dv = yu_cached_dam.random_hits()
+                ku_dv = ku_cached_dam.random_hits()
 
                 melee_hand.damage(yuusuke, yu_dv)
                 melee_hand.damage(kuwabara, ku_dv)
 
             if (simulated_ticks % puusuke.attack_speed) == 0:
-                pu_dv = puusuke.random_hit()
+                pu_dv = puusuke.random_hits()
                 melee_hand.damage(yuusuke, pu_dv)
 
             last_olm_def = melee_hand.levels.defence
@@ -382,6 +380,7 @@ def magic_shield_comparison(**kwargs):
     table = tabulate(table_data, headers=headers, floatfmt=options["floatfmt"])
     print(table)
 
+        print(f"{scale}, {magic_mean_dmg}, {ranged_mean_dmg}, (praying ranged)")
 
 def olm_damage_estimate(**kwargs):
     options = {

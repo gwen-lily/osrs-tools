@@ -12,7 +12,7 @@ from typing import Callable
 
 from osrs_tools.cox_scaled.estimate import RoomEstimate
 from osrs_tools.cox_scaled.strategy import SkillingStrategy
-from osrs_tools.modifier import Level
+from osrs_tools.data import Level
 
 ###############################################################################
 # thieving data & helper functions                                            #

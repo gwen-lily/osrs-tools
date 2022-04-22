@@ -8,6 +8,7 @@
 
 from dataclasses import dataclass, field
 
+from osrs_tools.boosts import SuperAttackPotion
 from osrs_tools.character import SkeletalMystic
 from osrs_tools.cox_scaled.estimate import RoomEstimate
 from osrs_tools.cox_scaled.strategy import (
@@ -17,15 +18,14 @@ from osrs_tools.cox_scaled.strategy import (
     TbowStrategy,
 )
 from osrs_tools.damage import Damage
+from osrs_tools.data import Level
 from osrs_tools.equipment import Equipment, Gear, Weapon
-from osrs_tools.modifier import Level
 from osrs_tools.prayer import (
     IncredibleReflexes,
     PrayerCollection,
     ProtectFromMagic,
     Rigour,
 )
-from osrs_tools.stats import SuperAttackPotion
 from typing_extensions import Self
 
 ###############################################################################
