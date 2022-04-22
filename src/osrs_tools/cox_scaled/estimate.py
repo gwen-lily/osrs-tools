@@ -1,3 +1,11 @@
+"""Estimate classes which allow for re-usable room efficiency analysis.
+
+###############################################################################
+# email:    noahgill409@gmail.com                                             #
+# created:  2022-03-27                                                        #
+###############################################################################
+"""
+
 import math
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -7,11 +15,6 @@ from osrs_tools.damage import Damage
 from osrs_tools.modifier import Level
 
 from .strategy import CombatStrategy, Strategy
-
-###############################################################################
-# email:    noahgill409@gmail.com                                             #
-# created:  2022-03-27                                                        #
-###############################################################################
 
 
 @dataclass

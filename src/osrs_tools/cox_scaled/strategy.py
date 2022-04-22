@@ -7,7 +7,6 @@
 """
 
 from dataclasses import dataclass, field
-from typing import Protocol
 
 from bedevere.markov import MarkovChain
 from osrs_tools.character import CoxMonster, Player
