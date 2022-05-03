@@ -14,15 +14,10 @@ from functools import total_ordering, wraps
 from typing import Any, Callable
 
 import osrs_tools.resource_reader as rr
-from osrs_tools.data import (
-    Boost,
-    Level,
-    MonsterCombatSkills,
-    Skills,
-    StyleBonus,
-    TrackedFloat,
-    TrackedInt,
-)
+from osrs_tools.data import (DT, Boost, EquipmentStat, Level, MagicDamageTypes,
+                             MeleeDamageTypes, MonsterCombatSkills,
+                             RangedDamageTypes, Skills, StyleBonus,
+                             TrackedFloat)
 from osrs_tools.exceptions import OsrsException
 
 ###############################################################################
@@ -159,8 +154,64 @@ class StatsOptional(Stats):
 
 
 @dataclass
+class CombatStats(StatsOptional):
+    """The minimum stats required to simulate combat.
+
+    Players add more levels (including prayer), monsters don't.
+    """
+
+    @property
+    def attack(self) -> Level:
+        return self._level_getter(Skills.ATTACK)
+
+    @attack.setter
+    def attack(self, __value: Level):
+        return self._level_setter(Skills.ATTACK, __value)
+
+    @property
+    def strength(self) -> Level:
+        return self._level_getter(Skills.STRENGTH)
+
+    @strength.setter
+    def strength(self, __value: Level):
+        return self._level_setter(Skills.STRENGTH, __value)
+
+    @property
+    def defence(self) -> Level:
+        return self._level_getter(Skills.DEFENCE)
+
+    @defence.setter
+    def defence(self, __value: Level):
+        return self._level_setter(Skills.DEFENCE, __value)
+
+    @property
+    def ranged(self) -> Level:
+        return self._level_getter(Skills.RANGED)
+
+    @ranged.setter
+    def ranged(self, __value: Level):
+        return self._level_setter(Skills.RANGED, __value)
+
+    @property
+    def magic(self) -> Level:
+        return self._level_getter(Skills.MAGIC)
+
+    @magic.setter
+    def magic(self, __value: Level):
+        return self._level_setter(Skills.MAGIC, __value)
+
+    @property
+    def hitpoints(self) -> Level:
+        return self._level_getter(Skills.HITPOINTS)
+
+    @hitpoints.setter
+    def hitpoints(self, __value: Level):
+        return self._level_setter(Skills.HITPOINTS, __value)
+
+
+@dataclass
 @total_ordering
-class PlayerLevels(StatsOptional):
+class PlayerLevels(CombatStats):
     _attack: Level | None = None
     _strength: Level | None = None
     _defence: Level | None = None
@@ -187,12 +238,20 @@ class PlayerLevels(StatsOptional):
 
     # dunder methods
 
+    def __getitem__(self, __value: Skills) -> Level:
+        return self.__getattribute__(__value.value)
+
+    def __iter__(self):
+        lvl_dict = {sk: self[sk] for sk in Skills}
+        yield from lvl_dict.items()
+
     def __add__(self, other: PlayerLevels | Boost) -> PlayerLevels:
         if isinstance(other, PlayerLevels):
             val = super().__add__(other)
         elif isinstance(other, Boost):
             val = copy(self)
 
+            # create a copy, then modify levels in place
             for modifier in other.modifiers:
                 old_lvl = getattr(val, modifier.skill.value)
                 new_lvl = modifier.value(old_lvl)
@@ -246,6 +305,10 @@ class PlayerLevels(StatsOptional):
         return cls(*(Level(0) for _ in Skills))
 
     @classmethod
+    def max_levels(cls):
+        return cls(*(Level(120) for _ in Skills))
+
+    @classmethod
     def from_rsn(cls, rsn: str):
         _hs = rr.lookup_player_highscores(rsn)
         levels = [
@@ -255,37 +318,7 @@ class PlayerLevels(StatsOptional):
         return cls(*levels)
 
     # type validation properties
-    @property
-    def attack(self) -> Level:
-        return self._level_getter(Skills.ATTACK)
-
-    @attack.setter
-    def attack(self, __value: Level):
-        return self._level_setter(Skills.ATTACK, __value)
-
-    @property
-    def strength(self) -> Level:
-        return self._level_getter(Skills.STRENGTH)
-
-    @strength.setter
-    def strength(self, __value: Level):
-        return self._level_setter(Skills.STRENGTH, __value)
-
-    @property
-    def defence(self) -> Level:
-        return self._level_getter(Skills.DEFENCE)
-
-    @defence.setter
-    def defence(self, __value: Level):
-        return self._level_setter(Skills.DEFENCE, __value)
-
-    @property
-    def ranged(self) -> Level:
-        return self._level_getter(Skills.RANGED)
-
-    @ranged.setter
-    def ranged(self, __value: Level):
-        return self._level_setter(Skills.RANGED, __value)
+    # attack, strength, defence, ranged, magic, & hitpoints in super.
 
     @property
     def prayer(self) -> Level:
@@ -296,28 +329,12 @@ class PlayerLevels(StatsOptional):
         return self._level_setter(Skills.PRAYER, __value)
 
     @property
-    def magic(self) -> Level:
-        return self._level_getter(Skills.MAGIC)
-
-    @magic.setter
-    def magic(self, __value: Level):
-        return self._level_setter(Skills.MAGIC, __value)
-
-    @property
     def runecraft(self) -> Level:
         return self._level_getter(Skills.RUNECRAFT)
 
     @runecraft.setter
     def runecraft(self, __value: Level):
         return self._level_setter(Skills.RUNECRAFT, __value)
-
-    @property
-    def hitpoints(self) -> Level:
-        return self._level_getter(Skills.HITPOINTS)
-
-    @hitpoints.setter
-    def hitpoints(self, __value: Level):
-        return self._level_setter(Skills.HITPOINTS, __value)
 
     @property
     def crafting(self) -> Level:
@@ -610,6 +627,11 @@ class StyleStats(Stats):
         raise DeprecationWarning
 
 
+StatBonusPair = tuple[EquipmentStat, EquipmentStat | TrackedFloat]
+NormalStatBonusPair = tuple[EquipmentStat, EquipmentStat]
+MagicStatBonusPair = tuple[EquipmentStat, TrackedFloat]
+
+
 @dataclass
 class AggressiveStats(Stats):
     """Class with information relevant to offensive damage calculation.
@@ -640,14 +662,32 @@ class AggressiveStats(Stats):
         as opposed to a straight bonus. Defaults to 0.
     """
 
-    stab: TrackedInt = field(default_factory=TrackedInt.zero)
-    slash: TrackedInt = field(default_factory=TrackedInt.zero)
-    crush: TrackedInt = field(default_factory=TrackedInt.zero)
-    magic_attack: TrackedInt = field(default_factory=TrackedInt.zero)
-    ranged_attack: TrackedInt = field(default_factory=TrackedInt.zero)
-    melee_strength: TrackedInt = field(default_factory=TrackedInt.zero)
-    ranged_strength: TrackedInt = field(default_factory=TrackedInt.zero)
+    stab: EquipmentStat = field(default_factory=EquipmentStat.zero)
+    slash: EquipmentStat = field(default_factory=EquipmentStat.zero)
+    crush: EquipmentStat = field(default_factory=EquipmentStat.zero)
+    magic_attack: EquipmentStat = field(default_factory=EquipmentStat.zero)
+    ranged_attack: EquipmentStat = field(default_factory=EquipmentStat.zero)
+    melee_strength: EquipmentStat = field(default_factory=EquipmentStat.zero)
+    ranged_strength: EquipmentStat = field(default_factory=EquipmentStat.zero)
     magic_strength: TrackedFloat = field(default_factory=TrackedFloat.zero)
+
+    # dunder and helper methods
+
+    def __getitem__(self, __value: DT, /) -> StatBonusPair:
+        if __value in MeleeDamageTypes:
+            _atk = self.__getattribute__(__value.value)
+            assert isinstance(_atk, EquipmentStat)
+            _str = self.melee_strength
+        elif __value in RangedDamageTypes:
+            _atk = self.ranged_attack
+            _str = self.ranged_strength
+        elif __value in MagicDamageTypes:
+            _atk = self.magic_attack
+            _str = self.magic_strength
+        else:
+            raise ValueError(__value)
+
+        return _atk, _str
 
     def __add__(self, other: int | AggressiveStats) -> AggressiveStats:
         if isinstance(other, int):
@@ -722,11 +762,19 @@ class DefensiveStats(Stats):
         Defence bonus for ranged damage type.
     """
 
-    stab: TrackedInt = field(default_factory=TrackedInt.zero)
-    slash: TrackedInt = field(default_factory=TrackedInt.zero)
-    crush: TrackedInt = field(default_factory=TrackedInt.zero)
-    magic: TrackedInt = field(default_factory=TrackedInt.zero)
-    ranged: TrackedInt = field(default_factory=TrackedInt.zero)
+    stab: EquipmentStat = field(default_factory=EquipmentStat.zero)
+    slash: EquipmentStat = field(default_factory=EquipmentStat.zero)
+    crush: EquipmentStat = field(default_factory=EquipmentStat.zero)
+    magic: EquipmentStat = field(default_factory=EquipmentStat.zero)
+    ranged: EquipmentStat = field(default_factory=EquipmentStat.zero)
+
+    # dunder and helper methods
+
+    def __getitem__(self, __value: DT, /) -> EquipmentStat:
+        _def = self.__getattribute__(__value.value)
+        assert isinstance(_def, EquipmentStat)
+
+        return _def
 
     def __add__(self, other: int | DefensiveStats) -> DefensiveStats:
         if isinstance(other, int):

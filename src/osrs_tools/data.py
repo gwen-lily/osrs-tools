@@ -1,5 +1,7 @@
 """Basic data & classes ubiquitious to the program and OSRS.
 
+All time values are in ticks unless otherwise noted.
+
 ###############################################################################
 # email:    noahgill409@gmail.com                                             #
 # created:                                                                    #
@@ -11,21 +13,91 @@ from __future__ import annotations
 import math
 from copy import copy
 from dataclasses import dataclass, field, fields
-from enum import Enum, unique
+from enum import Enum, auto, unique
 from typing import Any, Callable
 
 from numpy import float64, int64
+from osrsbox import items_api, monsters_api, prayers_api
 
 ###############################################################################
 # enums 'n' such
 ###############################################################################
+
+# osrsbox-db load
+ITEMS = items_api.load()
+PRAYERS = prayers_api.load()
+MONSTERS = monsters_api.load()
+
+# misc ########################################################################
+
+PLAYER_MAX_COMBAT_LEVEL = 126
+PLAYER_MAX_SKILL_LEVEL = 99
+
+# made these up
+PARTY_AVERAGE_MINING_LEVEL = 42
+PARTY_AVERAGE_THIEVING_LEVEL = 42
+COX_POINTS_PER_HITPOINT = 4.15
+
+
+CRYSTAL_PIECE_ARM = 0.06
+CRYSTAL_PIECE_DM = 0.03
+CRYSTAL_SET_ARM = 0.12
+CRYSTAL_SET_DM = 0.06
+
+INQUISITOR_PIECE_BONUS = 0.005
+INQUISITOR_SET_BONUS = 0.01
+
+ABYSSAL_BLUDGEON_DMG_MOD = 0.005
+
+PVM_MAX_TARGETS = 11
+PVP_MAX_TARGETS = 9
+
+MUTTA_HP_RATIO_HEALED_PER_EAT = 0.60
+MUTTA_EATS_PER_ROOM = 3
+
+# made this up completely, #not true
+TEKTON_HP_HEALED_PER_ANVIL_RATIO = 0.10
+
+# time ########################################################################
 
 SECONDS_PER_TICK = 0.6
 TICKS_PER_SECOND = 1 / SECONDS_PER_TICK
 TICKS_PER_MINUTE = 100
 TICKS_PER_HOUR = 6000
 
-# damage, stances, & styles ###################################################
+HOURS_PER_SESSION = 6
+TICKS_PER_SESSION = TICKS_PER_HOUR * HOURS_PER_SESSION
+
+DEFAULT_EFFECT_INTERVAL = 25
+UPDATE_STATS_INTERVAL = TICKS_PER_MINUTE
+UPDATE_STATS_INTERVAL_PRESERVE = 150
+
+OVERLOAD_DURATION = 500
+DIVINE_DURATION = 500
+
+# energy ######################################################################
+
+RUN_ENERGY_MIN = 0
+RUN_ENERGY_MAX = 10000
+
+SPECIAL_ENERGY_MIN = 0
+SPECIAL_ENERGY_MAX = 100
+SPECIAL_ENERGY_INCREMENT = 10
+SPECIAL_ENERGY_UPDATE_INTERVAL = 50
+SPECIAL_ENERGY_DAMAGE = 10
+
+# ammunition ##################################################################
+
+BOLT_PROC = "bolt proc"
+
+DIAMOND_BOLTS_PROC = 0.10
+DIAMOND_BOLTS_DMG = 1.15
+
+RUBY_BOLTS_PROC = 0.06
+RUBY_BOLTS_HP_CAP = 500
+RUBY_BOLTS_HP_RATIO = 0.20
+
+# damage types ################################################################
 
 
 @unique
@@ -58,6 +130,8 @@ RangedDamageTypes = (DT.RANGED,)
 MagicDamageTypes = (DT.MAGIC,)
 TypelessDamageTypes = (DT.TYPELESS,)
 
+# stance names ################################################################
+
 
 @unique
 class Stances(Enum):
@@ -75,6 +149,9 @@ class Stances(Enum):
     STANDARD = "standard"
     # npc stance
     NPC = "npc"
+
+
+# style names #################################################################
 
 
 @unique
@@ -131,7 +208,7 @@ SpellStylesNames = [Styles.STANDARD_SPELL, Styles.DEFENSIVE_SPELL]
 ChinchompaStylesNames = [Styles.SHORT_FUSE, Styles.MEDIUM_FUSE, Styles.LONG_FUSE]
 
 
-# skills & monsters ###########################################################
+# skills & monster combat skills ##############################################
 
 
 @unique
@@ -170,6 +247,8 @@ MonsterCombatSkills = (
     Skills.HITPOINTS,
 )
 
+# monster types & locations ###################################################
+
 
 @unique
 class MonsterTypes(Enum):
@@ -199,9 +278,75 @@ VampyreMonsterTypes = (
 
 @unique
 class MonsterLocations(Enum):
+    NONE = ""
     WILDERNESS = "wilderness"
     TOB = "tob"
     COX = "cox"
+
+
+@unique
+class Slayer(Enum):
+    """An incomplete list of slayer assignment categories."""
+
+    NONE = auto()
+
+    ABERRANT_SPECTRES = auto()
+    ABYSSAL_DEMONS = auto()
+    ADAMANT_DRAGONS = auto()
+    ANKOUS = auto()
+    AVIANSIE = auto()
+    BANDITS = auto()
+    BANSHEES = auto()
+    BASILISKS = auto()
+    BATS = auto()
+    BEARS = auto()
+    BIRDS = auto()
+    BLACK_DEMONS = auto()
+    BLACK_DRAGONS = auto()
+    BLACK_KNIGHTS = auto()
+    BLOODVELDS = auto()
+    BLUE_DRAGONS = auto()
+    BRINE_RATS = auto()
+    BRONZE_DRAGONS = auto()
+    CATABLEPON = auto()
+    CAVE_BUGS = auto()
+    CAVE_CRAWLERS = auto()
+    CAVE_HORRORS = auto()
+    CAVE_SLIMES = auto()
+    CAVE_KRAKEN = auto()
+    CHAOS_DRUIDS = auto()
+    COCKATRICES = auto()
+    COWS = auto()
+    DAGANNOTHS = auto()
+
+    # done doing the bs ones for now
+
+    DUST_DEVILS = auto()
+    FOSSIL_ISLAND_WYVERNS = auto()
+    GOBLINS = auto()
+    GREATER_DEMONS = auto()
+    GREEN_DRAGONS = auto()
+    HELLHOUNDS = auto()
+    HYDRAS = auto()
+    JELLIES = auto()
+    KALPHITES = auto()
+    KURASKS = auto()
+    LAVA_DRAGONS = auto()
+    LIZARDMEN = auto()
+    MITHRIL_DRAGONS = auto()
+    NECHRYAEL = auto()
+    RED_DRAGONS = auto()
+    REVENANTS = auto()
+    RUNE_DRAGONS = auto()
+    SCORPIONS = auto()
+    SHADES = auto()
+    SKELETAL_WYVERNS = auto()
+    SKELETONS = auto()
+    SMOKE_DEVILS = auto()
+    SUQAHS = auto()
+    TROLLS = auto()
+    VAMPYRES = auto()
+    WYRMS = auto()
 
 
 # slots ######################################################################
@@ -224,8 +369,38 @@ class Slots(Enum):
     RING = "ring"
 
 
+# effects #####################################################################
+
+
+class Effect(Enum):
+    """Enumerator of timed effect classifications."""
+
+    # weapons
+    STAFF_OF_THE_DEAD = auto()
+
+    # potions
+    STAMINA_POTION = auto()
+    DIVINE_POTION = auto()
+    OVERLOAD = auto()
+
+    # character
+    REGEN_SPECIAL_ENERGY = auto()
+    UPDATE_STATS = auto()
+
+    # olm phase specific effects
+    OLM_BURN = auto()
+    OLM_ACID = auto()
+    OLM_FALLING_CRYSTAL = auto()
+
+    # prayer
+    PRAYER_DRAIN = auto()
+
+    # misc
+    FROZEN = auto()
+
+
 ###############################################################################
-# tracked values
+# tracked values                                                              #
 ###############################################################################
 
 
@@ -292,6 +467,11 @@ class TrackedValue:
 
         return new_val
 
+    def _assert_subclass(self, __value: TrackedValue, /) -> TrackedValue:
+        """"""
+        assert isinstance(__value, self.__class__)
+        return __value
+
     # I know that @totalordering exists but I was getting strange errors with
     # comparisons so I decided to manually define them all.
 
@@ -331,8 +511,6 @@ class TrackedValue:
 
     def __radd__(self, other) -> TrackedValue:
         val = self.__add__(other)
-        assert isinstance(val, self.__class__)
-
         return val
 
     def __sub__(self, other) -> TrackedValue:
@@ -340,12 +518,18 @@ class TrackedValue:
         new_com = f"({self} - {other})"
         return self.__class__(new_val, new_com)
 
-    def __mul__(self, other) -> TrackedValue:
+    def __mul__(self, other) -> Any:
+        if isinstance(other, bool):
+            if other is True:
+                return self
+            else:
+                return 0
+
         new_val = self._dunder_helper(other, lambda x, y: x * y)
         new_com = f"({self} · {other})"
-        return self.__class__(new_val, new_com)
+        return TrackedFloat(new_val, new_com)
 
-    def __rmul__(self, other) -> TrackedValue:
+    def __rmul__(self, other) -> Any:
         return self.__mul__(other)
 
     def __truediv__(self, other) -> float:
@@ -409,6 +593,9 @@ class TrackedInt(TrackedValue):
         assert isinstance(new_tracked_int, self.__class__)
         return new_tracked_int
 
+    def __rmul__(self, other) -> TrackedInt:
+        return self.__mul__(other)
+
     # class methods
 
     @classmethod
@@ -430,17 +617,35 @@ class TrackedFloat(TrackedValue):
     def value(self) -> float | float64:
         return self._value
 
-    def __float__(self):
+    def __float__(self) -> float:
         return float(self.value)
+
+    # operations
+
+    def _assert_subclass(self, __value: TrackedValue, /) -> TrackedFloat:
+        val = super()._assert_subclass(__value)
+        assert isinstance(val, self.__class__)
+
+        return val
+
+    def __add__(self, other) -> TrackedFloat:
+        new_com = f"({self} + {other})"
+        new_val = self._dunder_helper(other, lambda x, y: math.floor(x + y))
+
+        val = self.__class__(new_val, new_com)
+        return val
+
+    def __radd__(self, other) -> TrackedFloat:
+        return self._assert_subclass(super().__radd__(other))
 
     # class methods
 
     @classmethod
-    def zero(cls):
+    def zero(cls) -> TrackedFloat:
         return cls(0.0)
 
     @classmethod
-    def one(cls):
+    def one(cls) -> TrackedFloat:
         return cls(1.0)
 
 
@@ -450,13 +655,17 @@ class TrackedFloat(TrackedValue):
 
 
 class Level(TrackedInt):
-    @staticmethod
-    def _assert_subclass(__value: TrackedInt, /) -> Level:
-        assert isinstance(__value, Level)
-        return __value
+    def _assert_subclass(self, __value: TrackedValue, /) -> Level:
+        val = super()._assert_subclass(__value)
+        assert isinstance(val, self.__class__)
+
+        return val
 
     def __add__(self, other) -> Level:
         return self._assert_subclass(super().__add__(other))
+
+    def __radd__(self, other) -> Level:
+        return self._assert_subclass(super().__radd__(other))
 
     def __sub__(self, other) -> Level:
         return self._assert_subclass(super().__sub__(other))
@@ -464,13 +673,26 @@ class Level(TrackedInt):
     def __mul__(self, other) -> Level:
         return self._assert_subclass(super().__mul__(other))
 
+    def __rmul__(self, other) -> Level:
+        return self._assert_subclass(super().__rmul__(other))
+
 
 class LevelModifier(TrackedFloat):
     ...
 
 
 class Roll(TrackedInt):
-    ...
+    def _assert_subclass(self, __value: TrackedValue, /) -> Roll:
+        val = super()._assert_subclass(__value)
+        assert isinstance(val, self.__class__)
+
+        return val
+
+    def __sub__(self, other) -> Roll:
+        return self._assert_subclass(super().__sub__(other))
+
+    def __mul__(self, other) -> Roll:
+        return self._assert_subclass(super().__mul__(other))
 
 
 class RollModifier(TrackedFloat):
@@ -478,11 +700,34 @@ class RollModifier(TrackedFloat):
 
 
 class DamageValue(TrackedInt):
-    ...
+    def _assert_subclass(self, __value: TrackedValue, /) -> DamageValue:
+        val = super()._assert_subclass(__value)
+        assert isinstance(val, self.__class__)
+
+        return val
+
+    def __add__(self, other) -> DamageValue:
+        return self._assert_subclass(super().__add__(other))
+
+    def __radd__(self, other) -> DamageValue:
+        return self._assert_subclass(super().__radd__(other))
+
+    def __mul__(self, other) -> DamageValue:
+        return self._assert_subclass(super().__mul__(other))
+
+    def __rmul__(self, other) -> DamageValue:
+        return self._assert_subclass(super().__rmul__(other))
 
 
 class DamageModifier(TrackedFloat):
-    ...
+    def _assert_subclass(self, __value: TrackedValue, /) -> DamageModifier:
+        val = super()._assert_subclass(__value)
+        assert isinstance(val, self.__class__)
+
+        return val
+
+    def __add__(self, other) -> DamageModifier:
+        return self._assert_subclass(super().__add__(other))
 
 
 class StyleBonus(TrackedInt):
@@ -490,130 +735,25 @@ class StyleBonus(TrackedInt):
 
 
 class EquipmentStat(TrackedInt):
-    ...
-
-
-###############################################################################
-# skill modifiers                                                             #
-###############################################################################
-
-SkillModifierCallableType = Callable[[Level], Level]
-
-
-@dataclass
-class SkillModifier:
-    """Container for one-value callables that act on Levels.
-
-    Attributes
-    ----------
-
-    skill : Skills
-        The skill enum.
-
-    value : SkillModifierCallableType
-        The actual modifier function.
-
-    comment : str, optional
-        A comment about the modifier. Defaults to None.
-    """
-
-    skill: Skills
-    value: SkillModifierCallableType
-
-
-###############################################################################
-# boost                                                                       #
-###############################################################################
-
-
-@dataclass
-class Boost:
-    name: str
-    modifiers: list[SkillModifier]
-
-    def __str__(self):
-        _s = f"{self.__class__.__name__}({self.name})"
-        return _s
-
-    # class methods
-
-    @classmethod
-    def uniform_boost(
-        cls, name: str, skills: list[Skills], skill_modifier: SkillModifierCallableType
-    ):
-        _modifiers: list[SkillModifier] = []
-
-        for skill in skills:
-            _modifiers.append(SkillModifier(skill, skill_modifier))
-
-        return cls(name, _modifiers)
-
-
-class BoostBuilder:
-    """Builder for Boost, SkillModifier, etc.
-
-    OSRS boosts tend to have the form:
-        boost(level) = base_boost + math.floor(ratio_boost*level)
-
-    This builder class simplifies definition to one line of the form:
-        [f: (int, float, bool | None)] -> [f': (int,) -> int].
-
-
-    Raises
-    ------
-    TypeError
-    """
+    """Stats for Equipment and related fields"""
 
     @staticmethod
-    def create_callable(
-        base: int,
-        ratio: float,
-        negative: bool | None = None,
-        comment: str | None = None,
-    ) -> SkillModifierCallableType:
-        """Create and return a CallableLevelsModifier.
+    def _assert_subclass(__value: TrackedInt, /) -> EquipmentStat:
+        assert isinstance(__value, EquipmentStat)
+        return __value
 
-        This documentation was written in a questionable state to say the
-        least, if you by some chance are reading this, please open an issue
-        on github.
+    def __add__(self, other) -> EquipmentStat:
+        return self._assert_subclass(super().__add__(other))
 
-        Parameters
-        ----------
-        base : int
-            Note that's "base boost", not to be confused with the "bass boost"
-            you might find on your speaker.
-        ratio : float
-            Get ratio'd nerd.
-        negative : bool | None, optional
-            No positive vibes allowed. Listen to gy!be., by default None.
-        comment : str | None, optional
-            A note on the source or operations of the modifier. Defaults to
-            None.
+    def __sub__(self, other) -> EquipmentStat:
+        return self._assert_subclass(super().__sub__(other))
 
-        Returns
-        -------
-        CallableLevelsModifierType
-        """
 
-        def inner_builder(lvl: Level) -> Level:
-            ratio_mod = LevelModifier(float(ratio), comment)
-            diffval = (lvl * ratio_mod) + base
+ModifierPair = tuple[RollModifier, TrackedFloat]
+VoidModifiers = tuple[LevelModifier, LevelModifier]
 
-            new_lvl = lvl - diffval if negative is True else lvl + diffval
-            return new_lvl
-
-        return inner_builder
-
-    def create_skill_modifier(
-        self,
-        skill: Skills,
-        base: int,
-        ratio: float,
-        negative: bool | None = None,
-        comment: str | None = None,
-    ) -> SkillModifier:
-        callable = self.create_callable(base, ratio, negative, comment)
-        return SkillModifier(skill, callable)
+MinimumVisibleLevel = Level(0, "min visible lvl")
+MaximumVisibleLevel = Level(120, "max visible lvl")
 
 
 ###############################################################################

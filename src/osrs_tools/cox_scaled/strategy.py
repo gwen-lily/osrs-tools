@@ -82,11 +82,7 @@ class CombatStrategy(Strategy):
     gear: list[Gear] = field(default_factory=list)
     _style: PlayerStyle | None = None
 
-    @property
-    def style(self) -> PlayerStyle:
-        """Type validation for style."""
-        assert isinstance(self._style, PlayerStyle)
-        return self._style
+    # methods
 
     def equip_player(self, **kwargs) -> Self:
         """Modify equipment."""
@@ -144,6 +140,14 @@ class CombatStrategy(Strategy):
 
     def get_markov(self, target: CoxMonster, **kwargs) -> MarkovChain:
         raise NotImplementedError
+
+    # properties
+
+    @property
+    def style(self) -> PlayerStyle:
+        """Type validation for style."""
+        assert isinstance(self._style, PlayerStyle)
+        return self._style
 
 
 @dataclass

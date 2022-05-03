@@ -2,13 +2,17 @@
 
 ###############################################################################
 # email:    noahgill409@gmail.com                                             #
-# created:  2022-04-22                                                        #
+# created:  2022-05-02                                                        #
 ###############################################################################
 """
 
 from copy import copy
 
-from .data import Boost, BoostBuilder, SkillModifier, Skills
+from osrs_tools.data import Skills
+
+from .boost import Boost, DivineBoost, OverloadBoost
+from .boost_builder import BoostBuilder
+from .skill_modifier import SkillModifier
 
 ###############################################################################
 # data 'n such                                                                #
@@ -233,6 +237,8 @@ for modifiers, modifier in appenderonis:
 # skill modifiers and boosts                                                  #
 ###############################################################################
 
+# normal boosts ###############################################################
+
 SuperAttackPotion = Boost("super attack potion", [super_attack_skillmod])
 SuperStrengthPotion = Boost("super strength potion", [super_strength_skillmod])
 SuperDefencePotion = Boost("super defence potion", [super_defence_skillmod])
@@ -270,3 +276,20 @@ ZamorakBrew = Boost("zamorak brew", zamorak_brew_modifiers)
 AncientBrew = Boost("ancient brew", ancient_brew_modifiers)
 
 Overload = Boost("overload (+)", overload_modifiers)
+
+# divine boosts ###############################################################
+
+DivineSuperAttack = DivineBoost.from_boost(SuperAttackPotion)
+DivineSuperStrength = DivineBoost.from_boost(SuperStrengthPotion)
+DivineSuperDefence = DivineBoost.from_boost(SuperDefencePotion)
+DivineSuperCombat = DivineBoost.from_boost(SuperCombatPotion)
+
+DivineRanging = DivineBoost.from_boost(RangingPotion)
+DivineBastion = DivineBoost.from_boost(BastionPotion)
+
+DivineMagic = DivineBoost.from_boost(MagicPotion)
+DivineBattlemage = DivineBoost.from_boost(BattlemagePotion)
+
+# overloads ###################################################################
+
+Overload = OverloadBoost("overload (+)", overload_modifiers)

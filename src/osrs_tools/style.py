@@ -197,12 +197,40 @@ class MonsterStyle(Style):
 
 @dataclass
 class StylesCollection:
+    """_summary_
+
+    Returns
+    -------
+    _type_
+        _description_
+
+    Yields
+    ------
+    _type_
+        _description_
+
+    Raises
+    ------
+    AttributeError
+        _description_
+    ValueError
+    TypeError
+    DeprecationWarning
+    StyleError
+    """
+
     name: str
     styles: list[Style]
     default: Style
 
     def __iter__(self):
         yield from self.styles
+
+    def __getitem__(self, __value: Styles | DT | Stances) -> Style:
+        val = self.__getattribute__(__value)
+        assert isinstance(val, Style)
+
+        return val
 
     def __getattribute__(self, __name: str | Styles | DT | Stances) -> Any:
         """Direct lookup for Style, DT, & Stances.
@@ -251,36 +279,12 @@ class StylesCollection:
             raise TypeError(__name)
 
     def get_by_style(self, style: Styles) -> Style:
-
-        # for instance_style in self.styles:
-        #     if instance_style.name is style:
-        #         return instance_style
-        #
-        # raise ValueError(style)
         raise DeprecationWarning
 
     def get_by_dt(self, damage_type: DT) -> Style:
-
-        # matches = [s for s in self.styles if s.damage_type is damage_type]
-        #
-        # if (n := len(matches)) == 1:
-        #     return matches[0]
-        # elif n == 0:
-        #     raise ValueError(f"No styles with {damage_type}")
-        # else:
-        #     raise ValueError(f"More than one style with {damage_type}")
         raise DeprecationWarning
 
     def get_by_stance(self, stance: Stances) -> Style:
-
-        # matches = [s for s in self.styles if s.stance is stance]
-        #
-        # if (n := len(matches)) == 1:
-        #     return matches[0]
-        # elif n == 0:
-        #     raise ValueError(f"No style with {stance}")
-        # else:
-        #     raise ValueError(f"More than one style with {stance}")
         raise DeprecationWarning
 
     @classmethod
@@ -296,46 +300,40 @@ class StylesCollection:
 class WeaponStyles(StylesCollection):
     default: PlayerStyle
 
-    def get_by_style(self, style: Styles) -> PlayerStyle:
-        _style = self.__getattribute__(style)
-        assert isinstance(_style, PlayerStyle)
+    def __getitem__(self, __value: Styles | DT | Stances, /) -> PlayerStyle:
+        val = super().__getitem__(__value)
+        assert isinstance(val, PlayerStyle)
 
-        return _style
+        return val
+
+    def get_by_style(self, style: Styles) -> PlayerStyle:
+        raise DeprecationWarning
 
     def get_by_dt(self, damage_type: DT) -> PlayerStyle:
-        _style = self.__getattribute__(damage_type)
-        assert isinstance(_style, PlayerStyle)
-
-        return _style
+        raise DeprecationWarning
 
     def get_by_stance(self, stance: Stances) -> PlayerStyle:
-        _style = self.__getattribute__(stance)
-        assert isinstance(_style, PlayerStyle)
-
-        return _style
+        raise DeprecationWarning
 
 
 @dataclass(eq=True)
-class NpcStyles(StylesCollection):
+class MonsterStyles(StylesCollection):
     default: MonsterStyle
 
-    def get_by_style(self, style: Styles) -> MonsterStyle:
-        _style = self.__getattribute__(style)
-        assert isinstance(_style, MonsterStyle)
+    def __getitem__(self, __value: Styles | DT | Stances, /) -> MonsterStyle:
+        val = super().__getitem__(__value)
+        assert isinstance(val, MonsterStyle)
 
-        return _style
+        return val
+
+    def get_by_style(self, style: Styles) -> MonsterStyle:
+        raise DeprecationWarning
 
     def get_by_dt(self, damage_type: DT) -> MonsterStyle:
-        _style = self.__getattribute__(damage_type)
-        assert isinstance(_style, MonsterStyle)
-
-        return _style
+        raise DeprecationWarning
 
     def get_by_stance(self, stance: Stances) -> MonsterStyle:
-        _style = self.__getattribute__(stance)
-        assert isinstance(_style, MonsterStyle)
-
-        return _style
+        raise DeprecationWarning
 
 
 # complete weapon styles definition ###########################################

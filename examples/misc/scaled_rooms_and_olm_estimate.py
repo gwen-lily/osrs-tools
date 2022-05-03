@@ -269,7 +269,7 @@ def mystics_estimates(scale: int, mode: MysticModes, **kwargs) -> tuple[float, i
                             mys.damage(lad, random_hs)
 
                         if tc % int(thrall_dam.attack_speed) == 0:
-                            random_hs = thrall_dam.random_hits()
+                            random_hs = thrall_dam.random_hit()
                             assert isinstance(random_hs, int)
                             mys.damage(lad, random_hs)
 
