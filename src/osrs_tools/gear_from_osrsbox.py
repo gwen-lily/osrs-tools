@@ -27,11 +27,10 @@ from osrs_tools.equipment import (
     Weapon,
     WeaponError,
 )
-from osrs_tools.resource_reader import RESOURCES_DIR
-from osrs_tools.stats import AggressiveStats, DefensiveStats, PlayerLevels
+from osrs_tools.stats.stats import AggressiveStats, DefensiveStats, PlayerLevels
 
 # TODO: submodule for style imports
-from osrs_tools.style import (
+from osrs_tools.style.style import (
     AxesStyles,
     BladedStaffStyles,
     BludgeonStyles,
@@ -58,6 +57,7 @@ from osrs_tools.style import (
     UnarmedStyles,
     WhipStyles,
 )
+from osrs_tools.utils import RESOURCES_DIR
 
 
 def convert_all_equippable_items(*items: ItemProperties):

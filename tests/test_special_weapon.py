@@ -1,4 +1,4 @@
-"""Tests
+"""Test the SpecialWeapon class
 
 ###############################################################################
 # email:    noahgill409@gmail.com                                             #

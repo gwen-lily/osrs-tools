@@ -37,8 +37,8 @@ from osrs_tools.data import (
 from osrs_tools.gear import common_gear as cg
 from osrs_tools.spells.spell import Spell
 from osrs_tools.spells.spells import BoltSpells, FireSpells, StandardSpell
-from osrs_tools.stats import AggressiveStats
-from osrs_tools.style import BulwarkStyles, ChinchompaStyles
+from osrs_tools.stats.stats import AggressiveStats
+from osrs_tools.style.style import BulwarkStyles, ChinchompaStyles
 
 ###########################################################################
 # main classes                                                            #

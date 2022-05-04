@@ -22,3 +22,4 @@ src/osrs_tools/gear_from_osrsbox.py
 src/osrs_tools/gear_from_osrsbox.py
 scratch.py
 _character.py
+.pytest_cache

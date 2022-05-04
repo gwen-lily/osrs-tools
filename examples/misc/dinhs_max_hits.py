@@ -6,8 +6,8 @@ from osrs_tools.character import Dummy, Player
 from osrs_tools.data import Styles
 from osrs_tools.equipment import Equipment, Gear, Slots
 from osrs_tools.prayer import Piety
-from osrs_tools.stats import Overload
-from osrs_tools.style import BulwarkStyles, PlayerStyle
+from osrs_tools.stats.stats import Overload
+from osrs_tools.style.style import BulwarkStyles, PlayerStyle
 
 
 def generate_equipment_axis(*gear: Gear | Equipment) -> list[Equipment]:

@@ -15,10 +15,10 @@ from osrs_tools.damage import Damage
 from osrs_tools.equipment import Equipment, Gear
 from osrs_tools.exceptions import OsrsException
 from osrs_tools.prayer import Piety, Prayer, PrayerCollection
-from osrs_tools.stats import Boost, Overload, PlayerLevels
+from osrs_tools.stats.stats import Boost, Overload, PlayerLevels
 
 # throwaway imports
-from osrs_tools.style import PlayerStyle
+from osrs_tools.style.style import PlayerStyle
 
 P = ParamSpec("P")
 R = TypeVar("R")

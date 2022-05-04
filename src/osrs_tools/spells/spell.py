@@ -9,7 +9,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 
-from osrs_tools.character.player import Player
 from osrs_tools.data import DamageValue, Level, MaximumVisibleLevel
 
 ###############################################################################
@@ -44,8 +43,8 @@ class Spell(ABC):
     max_targets_hit: int = field(default=1, init=False)
 
     @abstractmethod
-    def max_hit(self, lad: Player, /) -> DamageValue:
-        pass
+    def max_hit(self, **kwargs) -> DamageValue:
+        """Define the max hit of a concrete spell class"""
 
 
 ###############################################################################

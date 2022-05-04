@@ -10,7 +10,7 @@ from __future__ import annotations
 import math
 
 from osrs_tools.data import COX_POINTS_PER_HITPOINT, DT, LevelModifier, Stances, Styles
-from osrs_tools.style import MonsterStyle, MonsterStyles
+from osrs_tools.style.style import MonsterStyle, MonsterStyles
 
 from .cox_monster import CoxMonster, get_base_levels_and_stats
 

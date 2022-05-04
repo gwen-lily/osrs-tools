@@ -1,4 +1,4 @@
-"""Tests
+"""Test the SanguinestiStaff and its spell
 
 ###############################################################################
 # email:    noahgill409@gmail.com                                             #

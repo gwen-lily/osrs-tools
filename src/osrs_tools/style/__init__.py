@@ -1,7 +1,10 @@
-"""Tests
+"""Style on 'em.
 
 ###############################################################################
 # email:    noahgill409@gmail.com                                             #
-# created: 2022-05-02                                                         #
+# created:                                                                    #
 ###############################################################################
 """
+
+from .style import MonsterStyle, PlayerStyle, Style
+from .styles_collection import MonsterStyles, StylesCollection, WeaponStyles

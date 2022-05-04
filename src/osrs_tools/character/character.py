@@ -15,7 +15,6 @@ from osrs_tools.combat import combat as cmb
 from osrs_tools.data import (
     DT,
     TICKS_PER_SESSION,
-    Boost,
     DamageValue,
     Effect,
     EquipmentStat,
@@ -26,11 +25,10 @@ from osrs_tools.data import (
     Roll,
 )
 from osrs_tools.exceptions import OsrsException
-from osrs_tools.stats import AggressiveStats, CombatStats, DefensiveStats
-from osrs_tools.timers import RepeatedEffect, Timer
+from osrs_tools.stats.stats import AggressiveStats, CombatStats, DefensiveStats
+from osrs_tools.style.style import Style, StylesCollection
+from osrs_tools.timers.timers import RepeatedEffect, Timer
 from typing_extensions import Self
-
-from ..style import Style, StylesCollection
 
 ###############################################################################
 # exceptions                                                                  #
@@ -59,7 +57,7 @@ class Character(ABC):
     def __post_init__(self) -> None:
         self.reset_stats()
 
-    def __copy__(self) -> Player:
+    def __copy__(self) -> Character:
         unpacked = {
             field.name: copy(getattr(self, field.name))
             for field in fields(self)
@@ -200,11 +198,6 @@ class Character(ABC):
     @property
     @abstractmethod
     def styles(self) -> StylesCollection:
-        ...
-
-    @styles.setter
-    @abstractmethod
-    def styles(self, __value: Style, /) -> None:
         ...
 
     @property

@@ -16,7 +16,7 @@ from osrs_tools.data import Boost, Styles
 from osrs_tools.equipment import Equipment, Gear
 from osrs_tools.prayer import Augury, Piety, Prayer, PrayerCollection, Rigour
 from osrs_tools.spells import PoweredSpells, Spell
-from osrs_tools.style import (
+from osrs_tools.style.style import (
     BluntStyles,
     PlayerStyle,
     PoweredStaffStyles,

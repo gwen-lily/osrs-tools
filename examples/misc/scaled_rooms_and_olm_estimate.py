@@ -5,18 +5,33 @@ from random import random
 import numpy as np
 from matplotlib import pyplot as plt
 from osrs_tools.analysis_tools import tabulate_enhanced
-from osrs_tools.character import (AbyssalPortal, DeathlyMage, DeathlyRanger,
-                                  Guardian, LizardmanShaman, Player,
-                                  PlayerError, SkeletalMystic)
+from osrs_tools.character import (
+    AbyssalPortal,
+    DeathlyMage,
+    DeathlyRanger,
+    Guardian,
+    LizardmanShaman,
+    Player,
+    PlayerError,
+    SkeletalMystic,
+)
+from osrs_tools.cox_scaled.utils.unique_loot_calculator import (
+    individual_point_cap,
+    zero_purple_chance,
+)
 from osrs_tools.damage import Damage
 from osrs_tools.equipment import Equipment, Gear
 from osrs_tools.modifier import Level, Styles
 from osrs_tools.prayer import Piety, ProtectFromMagic, Rigour
-from osrs_tools.stats import (BastionPotion, Boost, Overload, PlayerLevels,
-                              SuperAttackPotion, SuperCombatPotion)
-from osrs_tools.style import ChinchompaStyles, PlayerStyle
-from osrs_tools.unique_loot_calculator import (individual_point_cap,
-                                               zero_purple_chance)
+from osrs_tools.stats.stats import (
+    BastionPotion,
+    Boost,
+    Overload,
+    PlayerLevels,
+    SuperAttackPotion,
+    SuperCombatPotion,
+)
+from osrs_tools.style.style import ChinchompaStyles, PlayerStyle
 
 from scaled_smol_olms import solo_olm_ticks_and_points_estimate
 

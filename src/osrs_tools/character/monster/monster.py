@@ -11,9 +11,9 @@ from dataclasses import dataclass, field
 
 from osrs_tools.combat import combat as cmb
 from osrs_tools.data import Level, MonsterLocations, MonsterTypes, Slayer, StyleBonus
-from osrs_tools.stats import AggressiveStats, DefensiveStats, MonsterLevels
-from osrs_tools.style import MonsterStyle, MonsterStyles
-from osrs_tools.timers import Timer
+from osrs_tools.stats.stats import AggressiveStats, DefensiveStats, MonsterLevels
+from osrs_tools.style.style import MonsterStyle, MonsterStyles
+from osrs_tools.timers.timers import Timer
 
 from ..character import Character, CharacterError
 
@@ -45,7 +45,7 @@ class Monster(Character):
     _min_levels: MonsterLevels = field(repr=False, default_factory=MonsterLevels.zeros)
     slayer_category: Slayer = Slayer.NONE
     special_attributes: list[MonsterTypes] = field(default_factory=list)
-    styles: MonsterStyles | None = None
+    _styles: MonsterStyles | None = None
     _timers: list[Timer] = field(init=False, default_factory=list)
 
     # dunder and helper methods ###############################################
@@ -53,7 +53,7 @@ class Monster(Character):
     def __post_init__(self):
         self.reset_stats()
 
-        if self.styles is not None:
+        if self._styles is not None:
             self._active_style = self.styles.default
 
     def __copy__(self) -> Monster:
@@ -65,6 +65,15 @@ class Monster(Character):
     # event and effect methods ################################################
 
     # properties ##############################################################
+
+    @property
+    def styles(self) -> MonsterStyles:
+        assert isinstance(self._styles, MonsterStyles)
+        return self._styles
+
+    @styles.setter
+    def styles(self, __value: MonsterStyles, /) -> None:
+        self._styles = __value
 
     @property
     def effective_melee_attack_level(self) -> Level:

@@ -13,7 +13,7 @@ from abc import ABC, abstractmethod
 from copy import copy
 from dataclasses import dataclass, field
 
-from osrs_tools import resource_reader as rr
+from osrs_tools import utils as rr
 from osrs_tools.character.player import Player
 from osrs_tools.data import (
     COX_POINTS_PER_HITPOINT,
@@ -23,7 +23,7 @@ from osrs_tools.data import (
     MonsterLocations,
     MonsterTypes,
 )
-from osrs_tools.stats import (
+from osrs_tools.stats.stats import (
     AggressiveStats,
     DefensiveStats,
     MonsterLevels,

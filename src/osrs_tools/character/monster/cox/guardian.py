@@ -10,7 +10,7 @@ from __future__ import annotations
 from osrs_tools.character.character import Character
 from osrs_tools.character.player import Player
 from osrs_tools.data import DT, DamageValue, Level, Stances, Styles
-from osrs_tools.style import MonsterStyle, MonsterStyles
+from osrs_tools.style.style import MonsterStyle, MonsterStyles
 
 from .cox_monster import CoxMonster, get_base_levels_and_stats
 

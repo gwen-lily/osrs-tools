@@ -14,8 +14,8 @@ from osrs_tools.gear.utils import (
     lookup_gear_bb_by_name,
     lookup_weapon_attrib_bb_by_name,
 )
-from osrs_tools.stats import AggressiveStats, DefensiveStats, PlayerLevels
-from osrs_tools.style import PlayerStyle, UnarmedStyles, WeaponStyles
+from osrs_tools.stats.stats import AggressiveStats, DefensiveStats, PlayerLevels
+from osrs_tools.style.style import PlayerStyle, UnarmedStyles, WeaponStyles
 
 from .gear import Gear, GearError
 

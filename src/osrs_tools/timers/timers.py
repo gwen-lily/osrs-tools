@@ -9,8 +9,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum, auto
+from typing import Callable
 
-from osrs_tools.data import DEFAULT_EFFECT_INTERVAL, Boost, Effect
+from osrs_tools.boost.boost import Boost
+from osrs_tools.data import DEFAULT_EFFECT_INTERVAL, Effect
 from osrs_tools.exceptions import OsrsException
 
 ###############################################################################
@@ -146,7 +148,7 @@ class Timer:
         self.count += ticks
 
         if self._is_expired():
-            raise TimerExpired
+            raise TimerExpired(self)
 
 
 @dataclass
@@ -215,3 +217,7 @@ class RepeatedEffect(TimedEffect):
 
         except TimedEffectExpired as exc:
             raise RepeatedEffectExpired(self) from exc
+
+
+# misc
+GET_UPDATE_CALLABLE = Callable[[bool], RepeatedEffect | None]

@@ -19,7 +19,7 @@ from osrs_tools.cox_scaled.strategy import (
 from osrs_tools.damage import Damage
 from osrs_tools.data import Styles
 from osrs_tools.equipment import Equipment, Gear, SpecialWeapon
-from osrs_tools.style import BowStyles, CrossbowStyles, PoweredStaffStyles
+from osrs_tools.style.style import BowStyles, CrossbowStyles, PoweredStaffStyles
 
 ###############################################################################
 # default factory lists                                                       #

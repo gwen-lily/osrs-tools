@@ -7,20 +7,19 @@ This code is a little old and jank, but it gets the job done.
 # created: 2022-05-02                                                         #
 ###############################################################################
 """
-from osrs_tools import resource_reader as rr
+from osrs_tools import utils as rr
 from osrs_tools.data import DT, DamageModifier, Level, RollModifier, Slots
-from osrs_tools.gear.equipment import Gear
-from osrs_tools.stats import AggressiveStats, DefensiveStats, PlayerLevels
-from osrs_tools.style import AllWeaponStylesCollections, WeaponStyles
-
-from .gear import GearError
+from osrs_tools.stats.stats import AggressiveStats, DefensiveStats, PlayerLevels
+from osrs_tools.style.style import AllWeaponStylesCollections, WeaponStyles
 
 ###############################################################################
 # utilities                                                                   #
 ###############################################################################
 
 
-def lookup_gear_bb_by_name(__name: str) -> tuple[str, Slots, AggressiveStats, DefensiveStats, int, PlayerLevels]:
+def lookup_gear_bb_by_name(
+    __name: str,
+) -> tuple[str, Slots, AggressiveStats, DefensiveStats, int, PlayerLevels]:
     """Return a tuple of attributes of a gear item.
 
     Parameters
@@ -41,7 +40,7 @@ def lookup_gear_bb_by_name(__name: str) -> tuple[str, Slots, AggressiveStats, De
 
     if len(item_df) > 1:
         matching_names = tuple(item_df["name"].values)
-        raise GearError(matching_names)
+        raise ValueError(matching_names)
     elif len(item_df) == 0:
         raise ValueError(__name)
 
@@ -77,7 +76,7 @@ def lookup_gear_bb_by_name(__name: str) -> tuple[str, Slots, AggressiveStats, De
     slot_enum = None
 
     for slot_e in Slots:
-        if slot_e.name == slot_src:
+        if slot_e.value == slot_src:
             slot_enum = slot_e
             break
 
@@ -93,12 +92,13 @@ def lookup_gear_bb_by_name(__name: str) -> tuple[str, Slots, AggressiveStats, De
         level_requirements,
     )
 
+
 def _get_weapon_styles(__wpn_type: str, /) -> WeaponStyles:
     """"""
     for _styles_col in AllWeaponStylesCollections:
-        if _styles_col.name ==  __wpn_type:
+        if _styles_col.name == __wpn_type:
             return _styles_col
-    
+
     raise ValueError(__wpn_type)
 
 
@@ -109,7 +109,7 @@ def lookup_weapon_attrib_bb_by_name(name: str):
 
     if len(item_df) > 1:
         matching_names = tuple(item_df["name"].values)
-        raise GearError(matching_names)
+        raise ValueError(matching_names)
     elif len(item_df) == 0:
         raise ValueError(name)
 
@@ -117,7 +117,7 @@ def lookup_weapon_attrib_bb_by_name(name: str):
     attack_range = default_attack_range
     two_handed = item_df["two handed"].values[0]
 
-    weapon_type = item_df["weapon type"].values[0])
+    weapon_type = item_df["weapon type"].values[0]
     weapon_styles = _get_weapon_styles(weapon_type)
 
     special_accuracy_modifiers = []

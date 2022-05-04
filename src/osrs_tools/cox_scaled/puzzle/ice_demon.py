@@ -17,7 +17,7 @@ from osrs_tools.cox_scaled.strategy import CombatStrategy, MagicStrategy
 from osrs_tools.data import Stances
 from osrs_tools.equipment import Equipment, Gear, Weapon
 from osrs_tools.spells import Spell, StandardSpells
-from osrs_tools.style import PlayerStyle, StaffStyles
+from osrs_tools.style.style import PlayerStyle, StaffStyles
 
 ###############################################################################
 # default factory lists & data                                                #

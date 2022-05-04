@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from osrs_tools.data import ITEMS, EquipmentStat, Level, Slots, TrackedFloat
 from osrs_tools.exceptions import OsrsException
 from osrs_tools.gear.utils import lookup_gear_bb_by_name
-from osrs_tools.stats import AggressiveStats, DefensiveStats, PlayerLevels
+from osrs_tools.stats.stats import AggressiveStats, DefensiveStats, PlayerLevels
 from osrsbox.items_api.item_equipment import ItemEquipment
 
 ###############################################################################

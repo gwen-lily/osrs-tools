@@ -10,9 +10,8 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
-from typing import Callable
 
-import osrs_tools.common_gear as cg
+from osrs_tools.boost.boost import Boost, DivineBoost, OverloadBoost
 from osrs_tools.character.character import Character, CharacterError
 from osrs_tools.combat import combat as cmb
 from osrs_tools.data import (
@@ -28,39 +27,44 @@ from osrs_tools.data import (
     SPECIAL_ENERGY_MIN,
     UPDATE_STATS_INTERVAL,
     UPDATE_STATS_INTERVAL_PRESERVE,
-    Boost,
     DamageModifier,
     DamageValue,
-    DivineBoost,
     Level,
     LevelModifier,
     MagicDamageTypes,
     MaximumVisibleLevel,
     MeleeDamageTypes,
     MinimumVisibleLevel,
-    OverloadBoost,
     RangedDamageTypes,
     Skills,
     Slayer,
     VoidModifiers,
 )
-from osrs_tools.equipment import Equipment, Weapon
-from osrs_tools.prayer import Prayer, PrayerCollection, Preserve
-from osrs_tools.spells import (
+from osrs_tools.gear import common_gear as cg
+from osrs_tools.gear.equipment import Equipment
+from osrs_tools.gear.weapon import Weapon
+from osrs_tools.prayers.prayer import Prayer
+from osrs_tools.prayers.prayer_collection import PrayerCollection
+from osrs_tools.prayers.prayers import Preserve
+from osrs_tools.spells.spell import Spell
+from osrs_tools.spells.spells import (
     AncientSpell,
     GodSpell,
     PoweredSpell,
     PoweredSpells,
-    Spell,
     StandardSpell,
     StandardSpells,
 )
-from osrs_tools.stats import AggressiveStats, DefensiveStats, PlayerLevels
-from osrs_tools.style import PlayerStyle, UnarmedStyles
-from osrs_tools.timers import Effect, RepeatedEffect, TimedEffect, Timer
+from osrs_tools.stats.stats import AggressiveStats, DefensiveStats, PlayerLevels
+from osrs_tools.style.style import PlayerStyle, UnarmedStyles, WeaponStyles
+from osrs_tools.timers.timers import (
+    GET_UPDATE_CALLABLE,
+    Effect,
+    RepeatedEffect,
+    TimedEffect,
+    Timer,
+)
 from typing_extensions import Self
-
-from ..combat import combat as cmb
 
 ###############################################################################
 # exceptions                                                                  #
@@ -86,7 +90,7 @@ class AutocastError(PlayerError):
 
 @dataclass
 class Player(Character):
-    _levels: PlayerLevels = field(repr=False)
+    _levels: PlayerLevels = field(default_factory=PlayerLevels.maxed_player, repr=False)
     _attack_delay: int = field(init=False, default=0)
     _active_style: PlayerStyle | None = None
     _autocast: Spell | None = field(init=False, default=None)
@@ -133,9 +137,8 @@ class Player(Character):
             Set to True to overwrite existing timers, defaults to True
 
         """
-        _get_update_callable = Callable[[bool], RepeatedEffect | None]
 
-        def get_timer(*tups: tuple[Effect, _get_update_callable]) -> list:
+        def get_timer(*tups: tuple[Effect, GET_UPDATE_CALLABLE]) -> list:
             timers: list[RepeatedEffect] = []
 
             for efct, func in tups:
@@ -407,6 +410,13 @@ class Player(Character):
     @style.setter
     def style(self, __value: PlayerStyle) -> None:
         super().style = __value
+
+    @property
+    def styles(self) -> WeaponStyles:
+        val = super().style
+        assert isinstance(val, WeaponStyles)
+
+        return val
 
     @property
     def eqp(self) -> Equipment:

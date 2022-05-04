@@ -23,7 +23,7 @@ EliteVoidRobe = Gear.from_bb("elite void robe")
 # misc ########################################################################
 
 SanguinestiStaff = Weapon.from_bb("sanguinesti staff")
-HarmonisedStaff = Weapon.from_bb("harmonised staff")
+HarmonisedStaff = Weapon.from_bb("harmonised nightmare staff")
 
 BlessedCoif = Gear.from_bb("god coif")
 BlessedBody = Gear.from_bb("god d'hide body")
@@ -31,7 +31,7 @@ BlessedChaps = Gear.from_bb("god d'hide chaps")
 BlessedBracers = Gear.from_bb("god bracers")
 BlessedBoots = Gear.from_bb("blessed d'hide boots")
 
-ZaryteVambraces = Gear.from_bb("zaryte vambraces")
+ZaryteVambraces = Gear.from_osrsbox("zaryte vambraces")
 BarrowsGloves = Gear.from_bb("barrows gloves")
 
 SalveAmuletI = Gear.from_bb("salve amulet (i)")
@@ -84,12 +84,12 @@ Bowfa = BowOfFaerdhinen
 MysticSmokeStaff = Weapon.from_bb("mystic smoke staff")
 SmokeBattlestaff = Weapon.from_bb("smoke battlestaff")
 
-GracefulHood = Gear.from_bb("graceful hood")
-GracefulTop = Gear.from_bb("graceful top")
-GracefulLegs = Gear.from_bb("graceful legs")
-GracefulGloves = Gear.from_bb("graceful gloves")
-GracefulBoots = Gear.from_bb("graceful boots")
-GracefulCape = Gear.from_bb("graceful cape")
+GracefulHood = Gear.from_osrsbox("graceful hood")
+GracefulTop = Gear.from_osrsbox("graceful top")
+GracefulLegs = Gear.from_osrsbox("graceful legs")
+GracefulGloves = Gear.from_osrsbox("graceful gloves")
+GracefulBoots = Gear.from_osrsbox("graceful boots")
+GracefulCape = Gear.from_osrsbox("graceful cape")
 
 ArmadylCrossbow = weapon = SpecialWeapon.from_bb("armadyl crossbow")
 ZaryteCrossbow = weapon = SpecialWeapon.from_bb("zaryte crossbow")
@@ -174,7 +174,7 @@ BerserkerRingI = Gear.from_bb("berserker (i)")
 AvasAssembler = Gear.from_bb("ava's assembler")
 NecklaceOfAnguish = Gear.from_bb("necklace of anguish")
 PegasianBoots = Gear.from_bb("pegasian boots")
-ArchersRingI = Gear.from_bb("archers (i)")
+ArchersRingI = Gear.from_bb("archer (i)")
 
 # basic magic
 GodCapeI = Gear.from_bb("god cape (i)")
@@ -192,7 +192,7 @@ DragonPickaxe = SpecialWeapon.from_bb("dragon pickaxe")
 DragonArrows = Gear.from_bb("dragon arrow")
 
 ToxicBlowpipe = SpecialWeapon.from_bb("toxic blowpipe")
-DragonDarts = Gear.from_bb("dragon darts")
+DragonDarts = Gear.from_bb("dragon dart")
 TwistedBuckler = Gear.from_bb("twisted buckler")
 BoneBolts = Gear.from_bb("bone bolts")
 

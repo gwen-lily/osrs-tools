@@ -15,14 +15,15 @@ from functools import reduce
 from itertools import compress
 from typing import Any
 
-import osrs_tools.common_gear as cg
 from osrs_tools.data import Slots
 from osrs_tools.exceptions import OsrsException
-from osrs_tools.gear.gear import Gear
-from osrs_tools.gear.weapon import Weapon
-from osrs_tools.stats import AggressiveStats, DefensiveStats, PlayerLevels
-from osrs_tools.style import BowStyles, CrossbowStyles, ThrownStyles
+from osrs_tools.stats.stats import AggressiveStats, DefensiveStats, PlayerLevels
+from osrs_tools.style.style import BowStyles, CrossbowStyles, ThrownStyles
 from typing_extensions import Self
+
+from . import common_gear as cg
+from .gear import Gear
+from .weapon import Weapon
 
 ###############################################################################
 # errors 'n such                                                              #
