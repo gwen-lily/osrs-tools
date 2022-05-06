@@ -11,13 +11,14 @@ you are able.
 
 from dataclasses import dataclass, field
 
-from osrs_tools.character import IceDemon
+from osrs_tools import gear
+from osrs_tools.character.monster import IceDemon
 from osrs_tools.cox_scaled.estimate import RoomEstimate
-from osrs_tools.cox_scaled.strategy import CombatStrategy, MagicStrategy
 from osrs_tools.data import Stances
-from osrs_tools.equipment import Equipment, Gear, Weapon
-from osrs_tools.spells import Spell, StandardSpells
-from osrs_tools.style.style import PlayerStyle, StaffStyles
+from osrs_tools.spell import Spell, StandardSpells
+from osrs_tools.strategy import CombatStrategy, MagicStrategy
+from osrs_tools.style import PlayerStyle, StaffStyles
+from osrs_tools.tracked_value.tracked_values import Level
 
 ###############################################################################
 # default factory lists & data                                                #
@@ -29,31 +30,17 @@ KINDLING_POINT_CAP = int(15e3)
 
 # default factory lists
 
-_SURGER_EXTRA_GEAR = [
-    Gear.from_bb("amulet of fury"),
-    Weapon.from_bb("kodai wand"),
-    Gear.from_bb("tome of fire"),
-    Gear.from_bb("ring of suffering (i)"),
+_SURGER_GEAR = gear.AncestralSet + [
+    gear.GodCapeI,
+    gear.AmuletofFury,
+    gear.KodaiWand,
+    gear.TomeOfFire,
+    gear.TormentedBracelet,
+    gear.EternalBoots,
+    gear.RingOfSufferingI,
 ]
 
 _SURGER_RSN = "SirNargeth"
-_SURGER_GEAR = (
-    Equipment()
-    .equip_basic_magic_gear(
-        ancestral_set=True,
-        god_cape=True,
-        occult=False,
-        arcane=False,
-        tormented=True,
-        eternal=True,
-        brimstone=False,
-        seers=False,
-    )
-    .equip(*_SURGER_EXTRA_GEAR)
-    .equipped_gear
-)
-
-_DEFENSIVE_CAST = StaffStyles.get_by_stance(Stances.DEFENSIVE)
 
 ###############################################################################
 # protocols
@@ -62,7 +49,7 @@ _DEFENSIVE_CAST = StaffStyles.get_by_stance(Stances.DEFENSIVE)
 
 class KodaiSurgeIceDemon(MagicStrategy):
     gear = field(default_factory=lambda: _SURGER_GEAR)
-    style: PlayerStyle = _DEFENSIVE_CAST
+    style: PlayerStyle = StaffStyles[Stances.DEFENSIVE]
     autocast: Spell = StandardSpells.FIRE_SURGE.value
 
 
@@ -74,10 +61,10 @@ class IceDemonEstimate(RoomEstimate):
     setup_ticks = 500
 
     def room_estimates(self) -> tuple[int, int]:
-        target = IceDemon.from_de0(self.scale)
+        target = IceDemon.simple(self.scale)
 
         if self.zero_defence:
-            target.defence = 0
+            target.lvl.defence = Level.zero()
 
         dam = self.strategy.activate().damage_distribution(target)
 

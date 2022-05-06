@@ -8,3 +8,9 @@ worst offender). Now, it looks like this.
 # created:  2022-05-02                                                        #
 ###############################################################################
 """
+
+from .common_gear import *
+from .equipment import Equipment
+from .gear import Gear
+from .special_weapon import SpecialWeapon, SpecialWeaponError
+from .weapon import Weapon

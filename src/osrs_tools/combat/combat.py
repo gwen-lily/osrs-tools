@@ -1,6 +1,6 @@
 import math
 
-from osrs_tools.data import (
+from osrs_tools.tracked_value import (
     DamageModifier,
     DamageValue,
     EquipmentStat,

@@ -17,3 +17,6 @@ will come to find out eventually.
 # created:  2022-04-29                                                        #
 ###############################################################################
 """
+
+from .damage import Damage, Hitsplat
+from .player import PvMCalc

@@ -12,9 +12,12 @@ at all times on melee. (#TODO: Test that claim)
 
 from dataclasses import dataclass, field
 
-from osrs_tools.character import Olm, OlmHead, OlmMageHand, OlmMeleeHand
+from osrs_tools import gear
+from osrs_tools.character.monster.cox import OlmHead, OlmMageHand, OlmMeleeHand
+from osrs_tools.character.monster.cox.olm import OlmABC
+from osrs_tools.cox_scaled.data import MeleeAttackPattern, RangedAttackPattern
 from osrs_tools.cox_scaled.estimate import MonsterEstimate, RoomEstimate
-from osrs_tools.cox_scaled.strategy import (
+from osrs_tools.strategy import (
     BgsStrategy,
     CombatStrategy,
     DwhStrategy,
@@ -22,45 +25,38 @@ from osrs_tools.cox_scaled.strategy import (
     SangStrategy,
     TbowStrategy,
 )
-from osrs_tools.equipment import Gear, SpecialWeapon, Weapon
 
 ###############################################################################
 # default factory lists                                                       #
 ###############################################################################
 
-_RING_OF_ENDURANCE = Gear.from_bb("ring of endurance")
-
 _MAGE_GEAR = [
-    Gear.from_bb("book of the dead"),
-    _RING_OF_ENDURANCE,
+    gear.BookOfTheDead,
+    gear.RingOfEndurance,
 ]
 
 _RANGED_GEAR = [
-    Gear.from_bb("torva full helm"),
-    Gear.from_bb("primordial boots"),
-    _RING_OF_ENDURANCE,
+    gear.TorvaFullHelm,
+    gear.PrimordialBoots,
+    gear.RingOfEndurance,
 ]
 
 _MELEE_GEAR = [
-    Gear.from_bb("amulet of blood fury"),
-    Gear.from_bb("bandos chestplate"),
-    Gear.from_bb("bandos tassets"),
-    _RING_OF_ENDURANCE,
+    gear.AmuletofBloodFury,
+    gear.BandosChestplate,
+    gear.BandosTassets,
+    gear.RingOfEndurance,
 ]
 
-_DHLANCE_GEAR = _MELEE_GEAR[:] + [
-    Weapon.from_bb("dragon hunter lance"),
-    Gear.from_bb("avernic defender"),
-]
+
+_DHLANCE_GEAR = _MELEE_GEAR[:] + [gear.DragonHunterLance, gear.AvernicDefender]
 
 _DWH_GEAR = _MELEE_GEAR[:] + [
-    SpecialWeapon.from_bb("dragon warhammer"),
-    Gear.from_bb("avernic defender"),
+    gear.DragonWarhammer,
+    gear.AvernicDefender,
 ]
 
-_BGS_GEAR = _MELEE_GEAR[:] + [
-    SpecialWeapon.from_bb("bandos godsword"),
-]
+_BGS_GEAR = _MELEE_GEAR[:] + [gear.BandosGodsword]
 
 ###############################################################################
 # strategies                                                                  #
@@ -101,7 +97,7 @@ class DHLanceOlm(MeleeStrategy):
 class OlmEstimate(MonsterEstimate):
     """Functionally an ABC."""
 
-    monster: Olm
+    monster: OlmABC
     thralls = True
 
 
@@ -109,17 +105,16 @@ class OlmEstimate(MonsterEstimate):
 class OlmHeadEstimate(OlmEstimate):
     monster: OlmHead
     vulnerability: bool = False
-    four_to_one: bool = True
-    two_to_zero: bool = False
+    head_strategy: RangedAttackPattern = RangedAttackPattern.FOUR_TO_ONE
 
     def ticks_per_unit(self, **kwargs) -> int:
         """Find the ticks to kill olm head."""
 
         dam = self._get_dam(**kwargs)
 
-        if self.four_to_one:
+        if (_hs := self.head_strategy) is RangedAttackPattern.FOUR_TO_ONE:
             dpt_fraction = 15 / 16
-        elif self.two_to_zero:
+        elif _hs is RangedAttackPattern.TWO_TO_ZERO:
             dpt_fraction = (2 * dam.attack_speed) / 16
         else:
             raise NotImplementedError
@@ -170,8 +165,7 @@ class OlmMeleeHandEstimate(MonsterEstimate):
     zero_defence: bool = True
     dwh_strategy: DwhStrategy | None = None
     bgs_strategy: BgsStrategy | None = None
-    four_to_one: bool = True
-    one_to_zero: bool = False
+    attack_pattern: MeleeAttackPattern = MeleeAttackPattern.FOUR_TO_ONE
 
     def ticks_per_unit(self, **kwargs) -> int:
         """Get the ticks to kill an olm melee hand.
@@ -185,10 +179,12 @@ class OlmMeleeHandEstimate(MonsterEstimate):
 
         dam = self._get_dam(**kwargs)
 
-        if self.four_to_one:
-            dpt_fraction = 16 / 16
-        elif self.one_to_zero:
+        if (_ap := self.attack_pattern) is MeleeAttackPattern.FOUR_TO_ONE:
+            dpt_fraction = 1.0
+        elif _ap is MeleeAttackPattern.ONE_TO_ZERO:
             dpt_fraction = dam.attack_speed / 8
+        elif _ap is MeleeAttackPattern.CHAD_FACETANK:
+            dpt_fraction = 1.0  # fix later, less than 1.0
         else:
             raise NotImplementedError
 

@@ -7,10 +7,38 @@ This code is a little old and jank, but it gets the job done.
 # created: 2022-05-02                                                         #
 ###############################################################################
 """
-from osrs_tools import utils as rr
-from osrs_tools.data import DT, DamageModifier, Level, RollModifier, Slots
-from osrs_tools.stats.stats import AggressiveStats, DefensiveStats, PlayerLevels
-from osrs_tools.style.style import AllWeaponStylesCollections, WeaponStyles
+from functools import reduce
+
+from osrs_tools import utils
+from osrs_tools.data import DT, Slots
+from osrs_tools.gear import Gear
+from osrs_tools.stats import AggressiveStats, DefensiveStats, PlayerLevels
+from osrs_tools.style import WeaponStyles
+from osrs_tools.style.all_weapon_styles import (
+    AxesStyles,
+    BladedStaffStyles,
+    BludgeonStyles,
+    BluntStyles,
+    BowStyles,
+    BulwarkStyles,
+    ChinchompaStyles,
+    ClawStyles,
+    CrossbowStyles,
+    PickaxeStyles,
+    PolearmStyles,
+    PoweredStaffStyles,
+    ScytheStyles,
+    SlashSwordStyles,
+    SpearStyles,
+    SpikedWeaponsStyles,
+    StabSwordStyles,
+    StaffStyles,
+    ThrownStyles,
+    TwoHandedStyles,
+    UnarmedStyles,
+    WhipStyles,
+)
+from osrs_tools.tracked_value import DamageModifier, Level, RollModifier
 
 ###############################################################################
 # utilities                                                                   #
@@ -36,7 +64,7 @@ def lookup_gear_bb_by_name(
     ValueError
     TypeError
     """
-    item_df = rr.lookup_gear(__name)
+    item_df = utils.lookup_gear(__name)
 
     if len(item_df) > 1:
         matching_names = tuple(item_df["name"].values)
@@ -95,15 +123,40 @@ def lookup_gear_bb_by_name(
 
 def _get_weapon_styles(__wpn_type: str, /) -> WeaponStyles:
     """"""
-    for _styles_col in AllWeaponStylesCollections:
-        if _styles_col.name == __wpn_type:
-            return _styles_col
+    _allstyles = [
+        TwoHandedStyles,
+        AxesStyles,
+        BluntStyles,
+        BludgeonStyles,
+        BulwarkStyles,
+        ClawStyles,
+        PickaxeStyles,
+        PolearmStyles,
+        ScytheStyles,
+        SlashSwordStyles,
+        SpearStyles,
+        SpikedWeaponsStyles,
+        StabSwordStyles,
+        UnarmedStyles,
+        WhipStyles,
+        BowStyles,
+        ChinchompaStyles,
+        CrossbowStyles,
+        ThrownStyles,
+        BladedStaffStyles,
+        PoweredStaffStyles,
+        StaffStyles,
+    ]
+
+    for _style in _allstyles:
+        if _style.name == __wpn_type:
+            return _style
 
     raise ValueError(__wpn_type)
 
 
 def lookup_weapon_attrib_bb_by_name(name: str):
-    item_df = rr.lookup_gear(name)
+    item_df = utils.lookup_gear(name)
     default_attack_range = 0
     comment = "bitter"
 
@@ -118,6 +171,7 @@ def lookup_weapon_attrib_bb_by_name(name: str):
     two_handed = item_df["two handed"].values[0]
 
     weapon_type = item_df["weapon type"].values[0]
+    assert isinstance(weapon_type, str)
     weapon_styles = _get_weapon_styles(weapon_type)
 
     special_accuracy_modifiers = []
@@ -151,3 +205,8 @@ def lookup_weapon_attrib_bb_by_name(name: str):
         special_damage_modifiers,
         sdr_enum,
     )
+
+
+def get_minimum_reqs(*_gear: Gear) -> PlayerLevels:
+    reqs = [_g.level_requirements for _g in _gear]
+    return reduce(lambda x, y: x.max_levels_per_skill(y), reqs)

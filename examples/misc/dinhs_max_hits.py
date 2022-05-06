@@ -1,7 +1,7 @@
 from copy import copy
 from itertools import product
 
-from osrs_tools.analysis_tools import DataMode, bedevere_2d
+from osrs_tools.analysis.utils import DataMode, bedevere_2d
 from osrs_tools.character import Dummy, Player
 from osrs_tools.data import Styles
 from osrs_tools.equipment import Equipment, Gear, Slots

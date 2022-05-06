@@ -8,11 +8,11 @@
 
 from dataclasses import dataclass, field
 
-from osrs_tools.character import Guardian
+from osrs_tools import gear
+from osrs_tools.character.monster import Guardian
 from osrs_tools.cox_scaled.estimate import RoomEstimate
-from osrs_tools.cox_scaled.strategy import CombatStrategy, MeleeStrategy
-from osrs_tools.data import Level
-from osrs_tools.equipment import Gear, SpecialWeapon
+from osrs_tools.strategy import CombatStrategy, MeleeStrategy
+from osrs_tools.tracked_value import Level
 
 ###############################################################################
 # default factory lists & extra info                                          #
@@ -23,23 +23,23 @@ HYBRID_RSN = "decihybrid"
 
 # additional gear handled
 _MAIN_GEAR = [
-    Gear.from_bb("amulet of blood fury"),
-    SpecialWeapon.from_bb("dragon pickaxe"),
-    Gear.from_bb("bandos chestplate"),
-    Gear.from_bb("avernic defender"),
-    Gear.from_bb("bandos tassets"),
-    Gear.from_bb("brimstone ring"),
+    gear.AmuletofBloodFury,
+    gear.DragonPickaxe,
+    gear.BandosChestplate,
+    gear.AvernicDefender,
+    gear.BandosTassets,
+    gear.BerserkerRingI,
 ]
 
 _HYBRID_GEAR = [
-    Gear.from_bb("neitiznot helm"),
-    Gear.from_bb("fire cape"),
-    SpecialWeapon.from_bb("dragon pickaxe"),
-    Gear.from_bb("god d'hide body"),
-    Gear.from_bb("dragon defender"),
-    Gear.from_bb("god d'hide legs"),
-    Gear.from_bb("regen bracelet"),
-    Gear.from_bb("dragon boots"),
+    gear.NeitiznotHelm,
+    gear.FireCape,
+    gear.DragonPickaxe,
+    gear.BlessedBody,
+    gear.DragonDefender,
+    gear.BlessedChaps,
+    gear.RegenBracelet,
+    gear.DragonBoots,
 ]
 
 ###############################################################################
@@ -68,8 +68,8 @@ class GuardiansEstimate(RoomEstimate):
     setup_ticks = 300
 
     def room_estimates(self) -> tuple[int, int]:
-        target = Guardian.from_de0(self.scale)
-        target.defence = self.defence_estimate
+        target = Guardian.simple(self.scale)
+        target.lvl.defence = self.defence_estimate
 
         main_dam = self.strategy.activate().damage_distribution(target)
         alt_dam = self.alt_strategy.activate().damage_distribution(target)

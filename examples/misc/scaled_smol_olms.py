@@ -3,12 +3,12 @@ from itertools import product
 from random import random
 
 import pandas as pd
-from osrs_tools import analysis_tools
-from osrs_tools.analysis_tools import (DataMode, bedevere_2d,
+from osrs_tools.analysis import utils
+from osrs_tools.analysis.utils import (DataMode, bedevere_2d,
                                        bedevere_the_wise, table_2d,
                                        tabulate_enhanced)
 from osrs_tools.character import *
-from osrs_tools.damage import TICKS_PER_HOUR, TICKS_PER_MINUTE
+from osrs_tools.combat.damage import TICKS_PER_HOUR, TICKS_PER_MINUTE
 from osrs_tools.data import Slots
 from tabulate import tabulate
 
@@ -359,7 +359,7 @@ def magic_shield_comparison(**kwargs):
 
     olms = [OlmMageHand.from_de0(ps) for ps in range(15, 32, 8)]
 
-    indices, axes, data_ary = analysis_tools.bedevere_the_wise(
+    indices, axes, data_ary = utils.bedevere_the_wise(
         players=lad,
         equipment=equipment,
         target=olms,

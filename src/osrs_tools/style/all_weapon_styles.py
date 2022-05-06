@@ -237,28 +237,3 @@ StaffStyles = WeaponStyles(
     ],
     PlayerStyle(Styles.STANDARD_SPELL, DT.MAGIC, Stances.NO_STYLE),
 )
-
-AllWeaponStylesCollections = (
-    TwoHandedStyles,
-    AxesStyles,
-    BluntStyles,
-    BludgeonStyles,
-    BulwarkStyles,
-    ClawStyles,
-    PickaxeStyles,
-    PolearmStyles,
-    ScytheStyles,
-    SlashSwordStyles,
-    SpearStyles,
-    SpikedWeaponsStyles,
-    StabSwordStyles,
-    UnarmedStyles,
-    WhipStyles,
-    BowStyles,
-    ChinchompaStyles,
-    CrossbowStyles,
-    ThrownStyles,
-    BladedStaffStyles,
-    PoweredStaffStyles,
-    StaffStyles,
-)

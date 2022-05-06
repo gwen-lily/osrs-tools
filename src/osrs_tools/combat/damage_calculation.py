@@ -8,8 +8,8 @@
 
 from abc import ABC, abstractmethod
 
-from osrs_tools.character.character import Character
-from osrs_tools.damage import Damage
+from osrs_tools.character import Character
+from osrs_tools.combat import Damage
 
 
 class DamageCalculation(ABC):

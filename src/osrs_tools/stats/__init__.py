@@ -6,4 +6,5 @@
 ###############################################################################
 """
 
-from .additional_stats import StyleStats
+from .additional_stats import AggressiveStats, DefensiveStats, StyleStats
+from .combat_stats import CombatStats, MonsterLevels, PlayerLevels

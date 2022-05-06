@@ -9,11 +9,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from osrs_tools.data import ITEMS, EquipmentStat, Level, Slots, TrackedFloat
+from osrs_tools.data import ITEMS, Slots
 from osrs_tools.exceptions import OsrsException
-from osrs_tools.gear.utils import lookup_gear_bb_by_name
-from osrs_tools.stats.stats import AggressiveStats, DefensiveStats, PlayerLevels
+from osrs_tools.stats import AggressiveStats, DefensiveStats, PlayerLevels
+from osrs_tools.tracked_value import EquipmentStat, Level, TrackedFloat
 from osrsbox.items_api.item_equipment import ItemEquipment
+
+from .utils import lookup_gear_bb_by_name
 
 ###############################################################################
 # errors 'n such                                                              #
@@ -129,7 +131,7 @@ class Gear:
                 break
 
         if slot is None:
-            raise GearError(f"{eqp.slot}")
+            raise ValueError(eqp.slot)
 
         aggressive_bonus = AggressiveStats(
             stab=EquipmentStat(eqp.attack_stab),
@@ -167,8 +169,19 @@ class Gear:
         return cls(
             name=_name,
             slot=slot,
-            aggressive_bonus=AggressiveStats.no_bonus(),
-            defensive_bonus=DefensiveStats.no_bonus(),
+            aggressive_bonus=AggressiveStats(),
+            defensive_bonus=DefensiveStats(),
             prayer_bonus=0,
             level_requirements=PlayerLevels.no_requirements(),
+        )
+
+    @classmethod
+    def no_stats(cls, name: str, slot: Slots) -> Gear:
+        return cls(
+            name,
+            slot,
+            AggressiveStats(),
+            DefensiveStats(),
+            0,
+            PlayerLevels.starting_stats(),
         )

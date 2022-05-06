@@ -14,11 +14,11 @@ from osrs_tools.data import (
     DT,
     MUTTA_EATS_PER_ROOM,
     MUTTA_HP_RATIO_HEALED_PER_EAT,
-    LevelModifier,
     Stances,
     Styles,
 )
-from osrs_tools.style.style import MonsterStyle, MonsterStyles
+from osrs_tools.style import MonsterStyle, MonsterStyles
+from osrs_tools.tracked_value import LevelModifier
 
 from .cox_monster import CoxMonster, get_base_levels_and_stats
 

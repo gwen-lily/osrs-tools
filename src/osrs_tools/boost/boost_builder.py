@@ -5,13 +5,12 @@
 # created:  2022-05-02                                                        #
 ###############################################################################
 """
-
-from osrs_tools.data import (
+from osrs_tools.data import Skills
+from osrs_tools.tracked_value import (
     Level,
     LevelModifier,
     MaximumVisibleLevel,
     MinimumVisibleLevel,
-    Skills,
 )
 
 from .skill_modifier import SkillModifier, SkillModifierCallableType

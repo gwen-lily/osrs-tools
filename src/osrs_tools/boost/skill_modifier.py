@@ -7,15 +7,10 @@
 """
 
 from dataclasses import dataclass
-from typing import Callable
 
-from osrs_tools.data import Level, Skills
+from osrs_tools.data import Skills
 
-###############################################################################
-# type definition                                                             #
-###############################################################################
-
-SkillModifierCallableType = Callable[[Level], Level]
+from .data import SkillModifierCallableType
 
 ###############################################################################
 # main class                                                                  #

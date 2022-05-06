@@ -13,7 +13,8 @@ from dataclasses import dataclass, fields
 
 from osrs_tools.data import Skills
 
-from .skill_modifier import SkillModifier, SkillModifierCallableType
+from .data import SkillModifierCallableType
+from .skill_modifier import SkillModifier
 
 ###############################################################################
 # main classes                                                                #

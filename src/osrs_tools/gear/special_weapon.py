@@ -10,11 +10,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from osrs_tools.data import DT, DamageModifier, RollModifier, Slots
+from osrs_tools.data import DT, Slots
 from osrs_tools.gear.utils import (
     lookup_gear_bb_by_name,
     lookup_weapon_attrib_bb_by_name,
 )
+from osrs_tools.tracked_value import DamageModifier, RollModifier
 
 from .weapon import Weapon, WeaponError
 

@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from itertools import product
 
 import matplotlib.pyplot as plt
-from osrs_tools.analysis_tools import DataMode, bedevere_the_wise, tabulate_enhanced
+from osrs_tools.analysis.utils import DataMode, bedevere_the_wise, tabulate_enhanced
 from osrs_tools.character import *
 
 

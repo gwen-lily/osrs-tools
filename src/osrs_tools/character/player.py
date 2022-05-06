@@ -11,8 +11,9 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass, field
 
-from osrs_tools.boost.boost import Boost, DivineBoost, OverloadBoost
-from osrs_tools.character.character import Character, CharacterError
+from osrs_tools import gear
+from osrs_tools.boost import Boost, DivineBoost, OverloadBoost
+from osrs_tools.character import Character, CharacterError
 from osrs_tools.combat import combat as cmb
 from osrs_tools.data import (
     DIVINE_DURATION,
@@ -27,42 +28,40 @@ from osrs_tools.data import (
     SPECIAL_ENERGY_MIN,
     UPDATE_STATS_INTERVAL,
     UPDATE_STATS_INTERVAL_PRESERVE,
-    DamageModifier,
-    DamageValue,
-    Level,
-    LevelModifier,
     MagicDamageTypes,
-    MaximumVisibleLevel,
     MeleeDamageTypes,
-    MinimumVisibleLevel,
     RangedDamageTypes,
     Skills,
     Slayer,
-    VoidModifiers,
 )
-from osrs_tools.gear import common_gear as cg
-from osrs_tools.gear.equipment import Equipment
-from osrs_tools.gear.weapon import Weapon
-from osrs_tools.prayers.prayer import Prayer
-from osrs_tools.prayers.prayer_collection import PrayerCollection
-from osrs_tools.prayers.prayers import Preserve
-from osrs_tools.spells.spell import Spell
-from osrs_tools.spells.spells import (
+from osrs_tools.gear import Equipment, Weapon
+from osrs_tools.prayer import Prayer, Prayers, Preserve
+from osrs_tools.spell import (
     AncientSpell,
     GodSpell,
     PoweredSpell,
     PoweredSpells,
+    Spell,
     StandardSpell,
     StandardSpells,
 )
-from osrs_tools.stats.stats import AggressiveStats, DefensiveStats, PlayerLevels
-from osrs_tools.style.style import PlayerStyle, UnarmedStyles, WeaponStyles
-from osrs_tools.timers.timers import (
+from osrs_tools.stats import AggressiveStats, DefensiveStats, PlayerLevels
+from osrs_tools.style import PlayerStyle, UnarmedStyles, WeaponStyles
+from osrs_tools.timers import (
     GET_UPDATE_CALLABLE,
     Effect,
     RepeatedEffect,
     TimedEffect,
     Timer,
+)
+from osrs_tools.tracked_value import (
+    DamageModifier,
+    DamageValue,
+    Level,
+    LevelModifier,
+    MaximumVisibleLevel,
+    MinimumVisibleLevel,
+    VoidModifiers,
 )
 from typing_extensions import Self
 
@@ -102,7 +101,7 @@ class Player(Character):
     _max_levels: PlayerLevels = field(
         repr=False, default_factory=PlayerLevels.max_levels
     )
-    _prayers: PrayerCollection = field(default_factory=PrayerCollection)
+    _prayers: Prayers = field(default_factory=Prayers)
     _run_energy: int = field(init=False, default=RUN_ENERGY_MAX)
     slayer_task: Slayer = Slayer.NONE
     _special_energy: int = field(init=False, default=SPECIAL_ENERGY_MAX)
@@ -275,7 +274,7 @@ class Player(Character):
 
         return super().boost(*boosts)
 
-    def pray(self, *prayers: Prayer | PrayerCollection):
+    def pray(self, *prayers: Prayer | Prayers):
         self.prayers.pray(*prayers)
 
         if Effect.PRAYER_DRAIN not in self.effects:
@@ -448,29 +447,27 @@ class Player(Character):
         self._autocast = __value
 
     @property
-    def prayers(self) -> PrayerCollection:
+    def prayers(self) -> Prayers:
         return self._prayers
 
     @prayers.setter
-    def prayers(self, __value: PrayerCollection) -> None:
+    def prayers(self, __value: Prayers) -> None:
         self._prayers = __value
 
     # proper properties #######################################################
 
     @property
     def aggressive_bonus(self) -> AggressiveStats:
-        """Simple wrapper for Equipment.aggressive_bonus which accounts for edge cases.
-
-        Dinh's Bulwark melee strength bonus and Smoke Staff's magic damage gear bonus are
-        unique mechanics that don't fit into the usual DPS scheme.
+        """Simple wrapper for Equipment which accounts for edge cases.
 
         Returns
         -------
-            AggressiveStats
+
+        AggressiveStats
         """
         ab = self.eqp.aggressive_bonus
 
-        if self.wpn in cg.Chinchompas:
+        if self.wpn in gear.Chinchompas:
             # don't account for ammo if using chinchompas or thrown weapons
             # TODO: Thrown weapons
             ammo = self.eqp.ammunition

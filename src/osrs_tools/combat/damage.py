@@ -11,7 +11,6 @@ from dataclasses import dataclass, field
 
 import numpy as np
 from numpy.typing import NDArray
-
 from osrs_tools.data import TICKS_PER_HOUR, TICKS_PER_MINUTE, TICKS_PER_SECOND
 from osrs_tools.exceptions import OsrsException
 from osrs_tools.tracked_value import DamageValue, Level
@@ -220,3 +219,7 @@ class Damage:
         attack_speed = 4
         hs = Hitsplat.thrall()
         return cls(attack_speed, [hs])
+
+
+# for clean reference
+ThrallDamage = Damage.thrall()

@@ -9,7 +9,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 
-from osrs_tools.data import DamageValue, Level, MaximumVisibleLevel
+from osrs_tools.tracked_value import DamageValue, Level, MaximumVisibleLevel
 
 ###############################################################################
 # abstract class                                                              #

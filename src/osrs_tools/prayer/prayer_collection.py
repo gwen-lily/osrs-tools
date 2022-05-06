@@ -10,13 +10,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from osrs_tools.data import LevelModifier, Skills
+from osrs_tools.data import Skills
+from osrs_tools.tracked_value import LevelModifier
 
 from .prayer import Prayer, PrayerError
 
 
 @dataclass
-class PrayerCollection:
+class Prayers:
     """Container class for prayers.
 
     Attributes
@@ -55,12 +56,12 @@ class PrayerCollection:
 
     # basic methods
 
-    def pray(self, *prayers: Prayer | PrayerCollection):
+    def pray(self, *prayers: Prayer | Prayers):
         """Add any prayers to the current collection."""
         for p in prayers:
             if isinstance(p, Prayer):
                 self.prayers.append(p)
-            elif isinstance(p, PrayerCollection):
+            elif isinstance(p, Prayers):
                 self.prayers.extend(p.prayers)
 
     def reset_prayers(self):

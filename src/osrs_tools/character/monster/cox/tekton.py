@@ -9,8 +9,9 @@ from __future__ import annotations
 
 import math
 
-from osrs_tools.data import COX_POINTS_PER_HITPOINT, DT, LevelModifier, Stances, Styles
-from osrs_tools.style.style import MonsterStyle, MonsterStyles
+from osrs_tools.data import COX_POINTS_PER_HITPOINT, DT, Stances, Styles
+from osrs_tools.style import MonsterStyle, MonsterStyles
+from osrs_tools.tracked_value import LevelModifier
 
 from .cox_monster import CoxMonster, get_base_levels_and_stats
 
@@ -74,7 +75,7 @@ class Tekton(TektonABC):
             _aggressive_bonus=_AGG_SMOL,
             combat_level=None,
             _defensive_bonus=_DEF_SMOL,
-            styles=_styles,
+            _styles=_styles,
             party_size=party_size,
             challenge_mode=challenge_mode,
         )
@@ -85,11 +86,11 @@ class Tekton(TektonABC):
 ###############################################################################
 
 
-class BigMuttadile(TektonABC):
+class TektonEnraged(TektonABC):
     """The big muttadile from the Chambers of Xeric."""
 
     @classmethod
-    def simple(cls, party_size: int, challenge_mode: bool = False) -> BigMuttadile:
+    def simple(cls, party_size: int, challenge_mode: bool = False) -> TektonEnraged:
         _rng_style = MonsterStyle(
             Styles.NPC_RANGED,
             DT.RANGED,
@@ -121,7 +122,7 @@ class BigMuttadile(TektonABC):
             _aggressive_bonus=_AGG_BIG,
             combat_level=None,
             _defensive_bonus=_DEF_BIG,
-            styles=_styles,
+            _styles=_styles,
             party_size=party_size,
             challenge_mode=challenge_mode,
         )

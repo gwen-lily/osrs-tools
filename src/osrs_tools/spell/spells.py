@@ -8,7 +8,7 @@
 
 from enum import Enum, unique
 
-from osrs_tools.data import DamageValue
+from osrs_tools.tracked_value import DamageValue
 
 from .spell import AncientSpell, GodSpell, PoweredSpell, StandardSpell
 

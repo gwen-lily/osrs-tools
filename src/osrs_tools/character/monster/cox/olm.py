@@ -9,7 +9,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from osrs_tools.data import LevelModifier, MonsterTypes
+from osrs_tools.data import OLM_HAND_MAX_HP, OLM_HEAD_MAX_HP, MonsterTypes
+from osrs_tools.tracked_value import Level, LevelModifier
+from typing_extensions import Self
 
 from .cox_monster import CoxMonster, get_base_levels_and_stats
 
@@ -39,6 +41,8 @@ class OlmABC(CoxMonster):
         init=False,
         default_factory=lambda: [MonsterTypes.XERICIAN, MonsterTypes.DRACONIC],
     )
+
+    # properties
 
     @property
     def player_hp_scaling_factor(self) -> LevelModifier:
@@ -70,6 +74,18 @@ class OlmABC(CoxMonster):
 class OlmHandABC(OlmABC):
     """Abstract Olm hand from which Mage hand and Melee hand inherit"""
 
+    # dunder and helper methods
+
+    def _scale_levels(self) -> Self:
+        super()._scale_levels()
+
+        _HP = Level(OLM_HAND_MAX_HP)
+
+        if self._levels.hitpoints > _HP:
+            self._levels.hitpoints = _HP
+
+        return self
+
     def count_per_room(self) -> int:
         return self.phases
 
@@ -80,6 +96,19 @@ class OlmHandABC(OlmABC):
 
 
 class OlmHead(OlmABC):
+
+    # dunder and helper methods
+
+    def _scale_levels(self) -> Self:
+        super()._scale_levels()
+
+        _HP = Level(OLM_HEAD_MAX_HP)
+
+        if self._levels.hitpoints > _HP:
+            self._levels.hitpoints = _HP
+
+        return self
+
     @staticmethod
     def count_per_room() -> int:
         return 1

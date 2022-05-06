@@ -7,13 +7,13 @@
 """
 
 import math
+from dataclasses import dataclass
 
 import numpy as np
-from osrs_tools import common_gear as cg
-from osrs_tools.character.character import Character
-from osrs_tools.character.monster.monster import Monster
-from osrs_tools.character.player import AutocastError, Player
-from osrs_tools.damage import Damage, Hitsplat
+from osrs_tools import gear
+from osrs_tools.character import AutocastError, Character, Player
+from osrs_tools.character.monster import Monster
+from osrs_tools.combat import Damage, Hitsplat
 from osrs_tools.data import (
     ABYSSAL_BLUDGEON_DMG_MOD,
     BOLT_PROC,
@@ -23,21 +23,20 @@ from osrs_tools.data import (
     PVM_MAX_TARGETS,
     RUBY_BOLTS_HP_CAP,
     RUBY_BOLTS_HP_RATIO,
-    DamageModifier,
-    EquipmentStat,
     MagicDamageTypes,
     MeleeDamageTypes,
     RangedDamageTypes,
-    TrackedFloat,
 )
-from osrs_tools.gear.special_weapon import SpecialWeapon, SpecialWeaponError
-from osrs_tools.modifiers.player import PlayerModifiers
-from osrs_tools.spells.spell import Spell
+from osrs_tools.gear import SpecialWeapon, SpecialWeaponError
+from osrs_tools.modifiers import PlayerModifiers
+from osrs_tools.spell import Spell
+from osrs_tools.tracked_value import DamageModifier, EquipmentStat, TrackedFloat
 
 from . import combat as cmb
 from .damage_calculation import DamageCalculation
 
 
+@dataclass
 class PvMCalc(DamageCalculation):
     attacker: Player
     defender: Monster
@@ -172,7 +171,7 @@ class PvMCalc(DamageCalculation):
                 if lad.kandardin_hard_diary:
                     _proc_chance += (1 / 10) * base_activation_chance
 
-                if wpn == cg.ArmadylCrossbow and special_attack:
+                if wpn == gear.ArmadylCrossbow and special_attack:
                     _proc_chance *= 2
 
                 return _proc_chance
@@ -181,7 +180,7 @@ class PvMCalc(DamageCalculation):
                 proc_chance = __proc_chance(DIAMOND_BOLTS_PROC)
                 dmg_mod = DamageModifier(DIAMOND_BOLTS_DMG, f"diamond {BOLT_PROC}")
 
-                if wpn == cg.ZaryteCrossbow:
+                if wpn == gear.ZaryteCrossbow:
                     dmg_mod += dmg_mod / 10
 
                 effect_max_hit = max_hit * dmg_mod
@@ -211,7 +210,7 @@ class PvMCalc(DamageCalculation):
                 hp_ratio = RUBY_BOLTS_HP_RATIO
                 hp_cap = RUBY_BOLTS_HP_CAP
 
-                if wpn == cg.ZaryteCrossbow:
+                if wpn == gear.ZaryteCrossbow:
                     hp_ratio *= 0.10
 
                 actual = self.defender.hp * hp_ratio
@@ -261,7 +260,7 @@ class PvMCalc(DamageCalculation):
                 _accuracy = 1.0
 
             # seercull
-            elif wpn == cg.Seercull:
+            elif wpn == gear.Seercull:
                 _pry = lad.prayers
                 if not (_pry.ranged_attack is None and _pry.ranged_strength is None):
                     raise SpecialWeaponError(f"{wpn} cannot have active prayers")
@@ -269,7 +268,7 @@ class PvMCalc(DamageCalculation):
                 _accuracy = 1.0
 
             # abyssal bludgeon
-            elif lad.wearing(cg.AbyssalBludgeon):
+            elif lad.wearing(gear.AbyssalBludgeon):
                 pp_missing = min([0, int(lad._levels.prayer - lad.lvl.prayer)])
                 value = 1 + (ABYSSAL_BLUDGEON_DMG_MOD * pp_missing)
                 comment = "Abyssal bludgeon: Penance"
@@ -278,7 +277,7 @@ class PvMCalc(DamageCalculation):
                 _max_hit = lad.max_hit(*full_dms, spell=spell)
 
             # Dragon Claws: Slice and Dice
-            elif lad.wearing(cg.DragonClaws):
+            elif lad.wearing(gear.DragonClaws):
                 # scenario A: first attack is successful (4-2-1-1)
                 p_A = accuracy
                 min_hit_A = math.floor(int(max_hit) / 2)
@@ -398,11 +397,11 @@ class PvMCalc(DamageCalculation):
                 ]
 
             # Abyssal Dagger: # TODO: Name
-            elif lad.wearing(cg.AbyssalDagger):
+            elif lad.wearing(gear.AbyssalDagger):
                 raise NotImplementedError
 
             # Dragon Dagger: # TODO: Name
-            elif lad.wearing(cg.DragonDagger):
+            elif lad.wearing(gear.DragonDagger):
                 raise NotImplementedError
 
             else:
@@ -428,8 +427,10 @@ class PvMCalc(DamageCalculation):
                 lad.attack_speed(), _max_hit, _accuracy, target.hp
             )
 
-        def __get_normal_distribution() -> Damage:
+        def __get_standard_distribution() -> Damage:
             """Return a normal distribution from accuracy and max hit.
+
+            This is not to be confused in any way with a normal distribution.
 
             Returns
             -------
@@ -439,7 +440,7 @@ class PvMCalc(DamageCalculation):
             hs: list[Hitsplat] = []
             damage = None
 
-            if lad.wpn == cg.ScytheOfVitur:
+            if lad.wpn == gear.ScytheOfVitur:
                 # hits with 100%, 50%, and 25% max hit.
                 for mod_power in range(0, -3, -1):
                     _mh = max_hit * (2**mod_power)
@@ -496,4 +497,4 @@ class PvMCalc(DamageCalculation):
         if special_attack:
             return __get_special_distribution()
 
-        return __get_normal_distribution()
+        return __get_standard_distribution()

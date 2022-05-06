@@ -10,8 +10,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from osrs_tools.data import PRAYERS, LevelModifier, Skills
+from osrs_tools.data import PRAYERS, Skills
 from osrs_tools.exceptions import OsrsException
+from osrs_tools.tracked_value import LevelModifier
 
 ###############################################################################
 # errors 'n such                                                              #

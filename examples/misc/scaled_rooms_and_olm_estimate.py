@@ -4,7 +4,7 @@ from random import random
 
 import numpy as np
 from matplotlib import pyplot as plt
-from osrs_tools.analysis_tools import tabulate_enhanced
+from osrs_tools.analysis.utils import tabulate_enhanced
 from osrs_tools.character import (
     AbyssalPortal,
     DeathlyMage,
@@ -15,11 +15,11 @@ from osrs_tools.character import (
     PlayerError,
     SkeletalMystic,
 )
+from osrs_tools.combat.damage import Damage
 from osrs_tools.cox_scaled.utils.unique_loot_calculator import (
     individual_point_cap,
     zero_purple_chance,
 )
-from osrs_tools.damage import Damage
 from osrs_tools.equipment import Equipment, Gear
 from osrs_tools.modifier import Level, Styles
 from osrs_tools.prayer import Piety, ProtectFromMagic, Rigour

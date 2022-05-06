@@ -11,17 +11,17 @@ from __future__ import annotations
 from collections import Counter
 from copy import copy
 from dataclasses import dataclass, field, fields
-from functools import reduce
 from itertools import compress
 from typing import Any
 
 from osrs_tools.data import Slots
 from osrs_tools.exceptions import OsrsException
-from osrs_tools.stats.stats import AggressiveStats, DefensiveStats, PlayerLevels
-from osrs_tools.style.style import BowStyles, CrossbowStyles, ThrownStyles
+from osrs_tools.stats import AggressiveStats, DefensiveStats, PlayerLevels
+from osrs_tools.style import BowStyles, CrossbowStyles, ThrownStyles
 from typing_extensions import Self
 
-from . import common_gear as cg
+from . import common_gear as gear
+from . import utils
 from .gear import Gear
 from .weapon import Weapon
 
@@ -88,13 +88,16 @@ class Equipment:
     def __iter__(self):
         yield from self.equipped_gear
 
+    def __bool__(self) -> bool:
+        return len(self.equipped_gear) > 0
+
     def __getattribute__(self, __name: str | Slots, /) -> Any:
         if isinstance(__name, str):
             return super().__getattribute__(__name)
         elif isinstance(__name, Slots):
-            gear = super().__getattribute__(__name.value)
-            assert isinstance(gear, Gear)
-            return gear
+            _gear = super().__getattribute__(__name.value)
+            assert isinstance(_gear, Gear)
+            return _gear
         else:
             raise TypeError(__name)
 
@@ -111,18 +114,21 @@ class Equipment:
 
         return
 
-    def __getitem__(self, __value: Slots, /) -> Gear:
-        gear = super().__getattribute__(__value.value)
-        assert isinstance(gear, Gear)
-        return gear
+    def __getitem__(self, __key: Slots, /) -> Gear:
+        _gear = super().__getattribute__(__key.value)
+        assert isinstance(_gear, Gear)
+        return _gear
+
+    def __setitem__(self, __key: Slots, __value: Gear, /) -> None:
+        self.__setattr__(__key, __value)
 
     def _slot_getter(self, __slot: Slots, /) -> Gear:
         """Get a protected slot attribute and return the Gear object."""
         attribute_name = f"_{__slot.value}"
-        gear = getattr(self, attribute_name)
-        assert isinstance(gear, Gear)
+        _gear = getattr(self, attribute_name)
+        assert isinstance(_gear, Gear)
 
-        return gear
+        return _gear
 
     def _slot_setter(self, __slot: Slots, __value: Gear, /):
         """Validate slot membership and set protected slot attribute."""
@@ -130,7 +136,7 @@ class Equipment:
         attribute_name = f"_{__slot.value}"
         setattr(self, attribute_name, __value)
 
-    def __add__(self, other: Gear | Equipment) -> Equipment:
+    def __add__(self, other: Gear | list[Gear] | Equipment) -> Equipment:
         """
         Directional addition, right-hand operand has priority except in the
         case of empty slots.
@@ -273,20 +279,30 @@ class Equipment:
     def aggressive_bonus(self) -> AggressiveStats:
         """Find the equipment set's aggressive bonus.
 
-        The one edge case to look out for is the Dinh's Bulwark, which is
-        handled via the Player class. Honestly, just use that one whenever
-        able.
+        This is the value before any relevant player modifiers are applied.
 
         Returns
         -------
         AggressiveStats
         """
-        val = sum(g.aggressive_bonus for g in self.equipped_gear)
 
-        if isinstance(val, int) and val == 0:
-            return AggressiveStats.no_bonus()
+        _val = sum(g.aggressive_bonus for g in self.equipped_gear)
+        assert isinstance(_val, AggressiveStats)
 
-        return val
+        # Hey reader, it's me Joe from Family Guy here to explain why this
+        # is necessary. See, the sum function starts with 0 and performs
+        # successive sums on all the elements of an iterable. But, by the
+        # definition of AggressiveStats, ...
+
+        # Hey :b:eader, it's me Family Guy Peter Griffin to interrupt Joe,
+        # see I actually consulted the documentation and it turns out I
+        # retconned that, it's a much smarter system so this extra
+        # coupling is completely unnecessary, carry on!
+
+        # if isinstance(val, int) and val == 0:
+        #     return AggressiveStats().no_bonus()
+
+        return _val
 
     @property
     def defensive_bonus(self) -> DefensiveStats:
@@ -296,12 +312,10 @@ class Equipment:
         -------
         DefensiveStats
         """
-        val = sum(g.defensive_bonus for g in self.equipped_gear)
+        _val = sum(g.defensive_bonus for g in self.equipped_gear)
+        assert isinstance(_val, DefensiveStats)
 
-        if isinstance(val, int) and val == 0:
-            return DefensiveStats.no_bonus()
-
-        return val
+        return _val
 
     @property
     def prayer_bonus(self) -> int:
@@ -314,11 +328,9 @@ class Equipment:
         indiv_reqs = [g.level_requirements for g in self.equipped_gear]
 
         if len(indiv_reqs) > 0:
-            reqs = reduce(lambda x, y: x.max_levels_per_skill(y), indiv_reqs)
+            reqs = utils.get_minimum_reqs(*self.equipped_gear)
         else:
-            reqs = PlayerLevels.no_requirements()
-
-        return reqs
+            reqs = PlayerLevels.starting_stats()
 
         return reqs
 
@@ -339,12 +351,12 @@ class Equipment:
 
     # basic methods
 
-    def equip(self, *gear: Gear, duplicates_allowed: bool = False) -> Self:
+    def equip(self, *_gear: Gear, duplicates_allowed: bool = False) -> Self:
         """Equip the provided gear, also supports weapons."""
 
         # Catch duplicate error specification.
         if duplicates_allowed is False:
-            slots_list = [g.slot for g in gear]
+            slots_list = [g.slot for g in _gear]
             slots_set = set(slots_list)
 
             if len(slots_list) != len(slots_set):
@@ -355,11 +367,11 @@ class Equipment:
                     if not count > 1:
                         continue
 
-                    dupe_gear.append([g for g in gear if g.slot is slot])
+                    dupe_gear.append([g for g in _gear if g.slot is slot])
 
                 raise ValueError(f"Duplicate gear: {', '.join(dupe_gear)}")
 
-        for g in gear:
+        for g in _gear:
 
             # type checking
             if not isinstance(g, Gear):
@@ -457,134 +469,134 @@ class Equipment:
     @property
     def normal_void_set(self) -> bool:
         return self.wearing(
-            cg.VoidKnightHelm,
-            cg.VoidKnightTop,
-            cg.VoidKnightRobe,
-            cg.VoidKnightGloves,
+            gear.VoidKnightHelm,
+            gear.VoidKnightTop,
+            gear.VoidKnightRobe,
+            gear.VoidKnightGloves,
         )
 
     @property
     def elite_void_set(self) -> bool:
         return self.wearing(
-            cg.VoidKnightHelm,
-            cg.EliteVoidTop,
-            cg.EliteVoidRobe,
-            cg.VoidKnightGloves,
+            gear.VoidKnightHelm,
+            gear.EliteVoidTop,
+            gear.EliteVoidRobe,
+            gear.VoidKnightGloves,
         )
 
     @property
     def dharok_set(self) -> bool:
         return self.wearing(
-            cg.DharoksGreataxe,
-            cg.DharoksPlatebody,
-            cg.DharoksPlatelegs,
-            cg.DharoksGreataxe,
+            gear.DharoksGreataxe,
+            gear.DharoksPlatebody,
+            gear.DharoksPlatelegs,
+            gear.DharoksGreataxe,
         )
 
     @property
     def bandos_set(self) -> bool:
         return self.wearing(
-            cg.NeitiznotFaceguard,
-            cg.BandosChestplate,
-            cg.BandosTassets,
+            gear.NeitiznotFaceguard,
+            gear.BandosChestplate,
+            gear.BandosTassets,
         )
 
     @property
     def inquisitor_set(self) -> bool:
         return self.wearing(
-            cg.InquisitorsGreatHelm,
-            cg.InquisitorsHauberk,
-            cg.InquisitorsPlateskirt,
+            gear.InquisitorsGreatHelm,
+            gear.InquisitorsHauberk,
+            gear.InquisitorsPlateskirt,
         )
 
     @property
     def torva_set(self) -> bool:
         return self.wearing(
-            cg.TorvaFullHelm,
-            cg.TorvaPlatebody,
-            cg.TorvaPlatelegs,
+            gear.TorvaFullHelm,
+            gear.TorvaPlatebody,
+            gear.TorvaPlatelegs,
         )
 
     @property
     def justiciar_set(self) -> bool:
         return self.wearing(
-            cg.JusticiarFaceguard,
-            cg.JusticiarChestguard,
-            cg.JusticiarLegguard,
+            gear.JusticiarFaceguard,
+            gear.JusticiarChestguard,
+            gear.JusticiarLegguard,
         )
 
     @property
     def obsidian_armor_set(self) -> bool:
         return self.wearing(
-            cg.ObsidianHelm,
-            cg.ObsidianPlatebody,
-            cg.ObsidianPlatelegs,
+            gear.ObsidianHelm,
+            gear.ObsidianPlatebody,
+            gear.ObsidianPlatelegs,
         )
 
     @property
     def obsidian_weapon(self) -> bool:
         qualifying_weapons = [
-            cg.ObsidianDagger,
-            cg.ObsidianMace,
-            cg.ObsidianMaul,
-            cg.ObsidianSword,
+            gear.ObsidianDagger,
+            gear.ObsidianMace,
+            gear.ObsidianMaul,
+            gear.ObsidianSword,
         ]
         return self.weapon in qualifying_weapons
 
     @property
     def leafy_weapon(self) -> bool:
         qualifying_weapons = [
-            cg.LeafBladedSpear,
-            cg.LeafBladedSword,
-            cg.LeafBladedBattleaxe,
+            gear.LeafBladedSpear,
+            gear.LeafBladedSword,
+            gear.LeafBladedBattleaxe,
         ]
         return self.weapon in qualifying_weapons
 
     @property
     def keris(self) -> bool:
         qualifying_weapons = [
-            cg.Keris,
+            gear.Keris,
         ]
         return self.weapon in qualifying_weapons
 
     @property
     def crystal_armor_set(self) -> bool:
         return self.wearing(
-            cg.CrystalHelm,
-            cg.CrystalBody,
-            cg.CrystalLegs,
+            gear.CrystalHelm,
+            gear.CrystalBody,
+            gear.CrystalLegs,
         )
 
     @property
     def crystal_weapon(self) -> bool:
         qualifying_weapons = [
-            cg.CrystalBow,
-            cg.BowOfFaerdhinen,
+            gear.CrystalBow,
+            gear.BowOfFaerdhinen,
         ]
         return self.weapon in qualifying_weapons
 
     @property
     def smoke_staff(self) -> bool:
-        qualifying_weapons = [cg.MysticSmokeStaff, cg.SmokeBattlestaff]
+        qualifying_weapons = [gear.MysticSmokeStaff, gear.SmokeBattlestaff]
         return self.weapon in qualifying_weapons
 
     @property
     def graceful_set(self) -> bool:
         return self.wearing(
-            cg.GracefulHood,
-            cg.GracefulTop,
-            cg.GracefulLegs,
-            cg.GracefulGloves,
-            cg.GracefulBoots,
-            cg.GracefulCape,
+            gear.GracefulHood,
+            gear.GracefulTop,
+            gear.GracefulLegs,
+            gear.GracefulGloves,
+            gear.GracefulBoots,
+            gear.GracefulCape,
         )
 
     @property
     def staff_of_the_dead(self) -> bool:
         qualifying_weapons = [
-            cg.StaffOfLight,
-            cg.StaffOfTheDead,
-            cg.ToxicStaffOfTheDead,
+            gear.StaffOfLight,
+            gear.StaffOfTheDead,
+            gear.ToxicStaffOfTheDead,
         ]
         return self.weapon in qualifying_weapons
 
@@ -625,8 +637,8 @@ class Equipment:
         bool
         """
         qualifying_weapons = [
-            cg.DragonHunterCrossbow,
-            cg.DragonHunterLance,
+            gear.DragonHunterCrossbow,
+            gear.DragonHunterLance,
         ]
         return self.weapon in qualifying_weapons
 
@@ -639,8 +651,8 @@ class Equipment:
         bool
         """
         qualifying_items = [
-            cg.SalveAmuletI,
-            cg.SalveAmuletEI,
+            gear.SalveAmuletI,
+            gear.SalveAmuletEI,
         ]
         return self.neck in qualifying_items
 
@@ -654,9 +666,9 @@ class Equipment:
         bool
         """
         qualifying_weapons = [
-            cg.CrawsBow,
-            cg.ViggorasChainmace,
-            cg.ThammaronsSceptre,
+            gear.CrawsBow,
+            gear.ViggorasChainmace,
+            gear.ThammaronsSceptre,
         ]
         return self.weapon in qualifying_weapons
 
@@ -682,7 +694,7 @@ class Equipment:
         bool
         """
         qualifying_weapons = [
-            cg.AbyssalDagger,
+            gear.AbyssalDagger,
         ]
         return self.weapon in qualifying_weapons
 
@@ -695,7 +707,7 @@ class Equipment:
         bool
         """
         qualifying_weapons = [
-            cg.DragonDagger,
+            gear.DragonDagger,
         ]
         return self.weapon in qualifying_weapons
 
@@ -728,25 +740,25 @@ class Equipment:
     @property
     def enchanted_ruby_bolts(self) -> bool:
         """True if enchanted ruby bolts are equipped."""
-        matching_ammunition = [cg.RubyDragonBoltsE, cg.RubyBoltsE]
+        matching_ammunition = [gear.RubyDragonBoltsE, gear.RubyBoltsE]
         return self.ammunition in matching_ammunition
 
     @property
     def enchanted_diamond_bolts(self) -> bool:
         """True if enchanted diamond bolts are equipped."""
-        matching_ammunition = [cg.DiamondDragonBoltsE, cg.DiamondBoltsE]
+        matching_ammunition = [gear.DiamondDragonBoltsE, gear.DiamondBoltsE]
         return self.ammunition in matching_ammunition
 
     @property
     def enchanted_dragonstone_bolts(self) -> bool:
         """True if enchanted dragonstone bolts are equipped."""
-        matching_ammunition = [cg.DragonstoneDragonBoltsE, cg.DragonstoneBoltsE]
+        matching_ammunition = [gear.DragonstoneDragonBoltsE, gear.DragonstoneBoltsE]
         return self.ammunition in matching_ammunition
 
     @property
     def enchanted_onyx_bolts(self) -> bool:
         """True if enchanted onyx bolts are equipped."""
-        matching_ammunition = [cg.OnyxDragonBoltsE, cg.OnyxBoltsE]
+        matching_ammunition = [gear.OnyxDragonBoltsE, gear.OnyxBoltsE]
         return self.ammunition in matching_ammunition
 
     @property
@@ -811,23 +823,23 @@ class Equipment:
         Self
         """
 
-        gear: list[Gear] = []
+        _gear: list[Gear] = []
 
         if torva_set:
-            gear.extend(cg.TorvaSet)
+            _gear.extend(gear.TorvaSet)
 
         gear_options = [
-            cg.InfernalCape,
-            cg.AmuletOfTorture,
-            cg.FerociousGloves,
-            cg.PrimordialBoots,
-            cg.BerserkerRingI,
+            gear.InfernalCape,
+            gear.AmuletOfTorture,
+            gear.FerociousGloves,
+            gear.PrimordialBoots,
+            gear.BerserkerRingI,
         ]
         gear_bools = [infernal, torture, ferocious, primordial, berserker]
 
-        gear.extend(compress(gear_options, gear_bools))
+        _gear.extend(compress(gear_options, gear_bools))
 
-        return self.equip(*gear)
+        return self.equip(*_gear)
 
     def equip_bis_ranged(
         self,
@@ -857,21 +869,21 @@ class Equipment:
         Self
         """
 
-        gear: list[Gear] = []
+        _gear: list[Gear] = []
 
         if arma_set:
-            gear.extend(cg.ArmadylSet)
+            _gear.extend(gear.ArmadylSet)
 
         gear_options = [
-            cg.AvasAssembler,
-            cg.NecklaceOfAnguish,
-            cg.ZaryteVambraces,
-            cg.PegasianBoots,
+            gear.AvasAssembler,
+            gear.NecklaceOfAnguish,
+            gear.ZaryteVambraces,
+            gear.PegasianBoots,
         ]
         gear_bools = [avas, anguish, zaryte, pegasian]
-        gear.extend(compress(gear_options, gear_bools))
+        _gear.extend(compress(gear_options, gear_bools))
 
-        return self.equip(*gear)
+        return self.equip(*_gear)
 
     def equip_bis_mage(
         self,
@@ -904,19 +916,19 @@ class Equipment:
         Self
         """
 
-        gear: list[Gear] = []
+        _gear: list[Gear] = []
 
         if ancestral_set:
-            gear.extend(cg.AncestralSet)
+            _gear.extend(gear.AncestralSet)
 
         gear_options = (
-            cg.GodCapeI,
-            cg.OccultNecklace,
-            cg.ArcaneSpiritShield,
-            cg.TormentedBracelet,
-            cg.EternalBoots,
+            gear.GodCapeI,
+            gear.OccultNecklace,
+            gear.ArcaneSpiritShield,
+            gear.TormentedBracelet,
+            gear.EternalBoots,
         )
         gear_bools = [god_cape, occult, arcane, tormented, eternal]
-        gear.extend(compress(gear_options, gear_bools))
+        _gear.extend(compress(gear_options, gear_bools))
 
-        return self.equip(*gear)
+        return self.equip(*_gear)

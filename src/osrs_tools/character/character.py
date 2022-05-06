@@ -9,25 +9,32 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from copy import copy
-from dataclasses import dataclass, field, fields
+from dataclasses import dataclass, field
 
+from osrs_tools import gear
+from osrs_tools.boost.boost import Boost
 from osrs_tools.combat import combat as cmb
 from osrs_tools.data import (
+    ARCLIGHT_FLAT_REDUCTION,
     DT,
+    DWH_MODIFIER,
     TICKS_PER_SESSION,
-    DamageValue,
+    VULNERABILITY_MODIFIER,
+    VULNERABILITY_MODIFIER_TOME_OF_WATER,
+    ArclightReducedSkills,
+    BgsReducedSkills,
     Effect,
-    EquipmentStat,
-    Level,
     MagicDamageTypes,
     MeleeDamageTypes,
     RangedDamageTypes,
-    Roll,
+    Skills,
 )
 from osrs_tools.exceptions import OsrsException
-from osrs_tools.stats.stats import AggressiveStats, CombatStats, DefensiveStats
-from osrs_tools.style.style import Style, StylesCollection
-from osrs_tools.timers.timers import RepeatedEffect, Timer
+from osrs_tools.stats import AggressiveStats, CombatStats, DefensiveStats
+from osrs_tools.style import Style, StylesCollection
+from osrs_tools.timers import RepeatedEffect, TimedEffect, Timer
+from osrs_tools.tracked_value import DamageValue, EquipmentStat, Level, Roll
+from osrs_tools.tracked_value.tracked_values import LevelModifier
 from typing_extensions import Self
 
 ###############################################################################
@@ -54,17 +61,13 @@ class Character(ABC):
     name: str = field(default_factory=str)
     _timers: list[Timer] = field(default_factory=list)
 
+    # dunder and helper methods
+
     def __post_init__(self) -> None:
         self.reset_stats()
 
-    def __copy__(self) -> Character:
-        unpacked = {
-            field.name: copy(getattr(self, field.name))
-            for field in fields(self)
-            if field.init is True
-        }
-
-        return self.__class__(**unpacked)
+    def __str__(self):
+        return self.name
 
     # event and effect methods ################################################
 
@@ -298,7 +301,7 @@ class Character(ABC):
 
         Returns
         -------
-            Roll
+        Roll
         """
         # Basic definitions and error handling
         db = self.defensive_bonus
@@ -316,15 +319,82 @@ class Character(ABC):
         assert isinstance(defensive_bonus, (int, EquipmentStat))
         defensive_roll = cmb.maximum_roll(defensive_stat, defensive_bonus)
 
-        # TODO: Use inheritance you absolute dingo. This is why you suck.
-        # if isinstance(other, Player):
-        #     if other.eqp.brimstone_ring and dt in MagicDamageTypes:
-        #         reduction = math.floor(int(defensive_roll) / 10) / 4
-        #         defensive_roll = defensive_roll - reduction
-
         return defensive_roll
 
-    # dunder methods ##########################################################
+    def apply_dwh(self, success: bool = True) -> Self:
+        """Reduce a character's defence level on a non-zero DWH attack
 
-    def __str__(self):
-        return self.name
+        The Dragon Warhammer uniquely requires that a successful attack deal
+        damage in order to proc the defence reduction
+
+        Parameters
+        ----------
+        success : bool, optional
+            True if the attack dealt damage, by default True
+
+        Returns
+        -------
+        Self
+
+        """
+        if success:
+            self.lvl.defence *= LevelModifier(DWH_MODIFIER)
+
+        return self
+
+    def apply_bgs(self, amount: DamageValue) -> Self:
+        """Reduce a character's stats in order
+
+        BGS reduces the following stats, in order: defence, strength, attack,
+        magic, & ranged.
+
+        Parameters
+        ----------
+        amount : DamageValue
+            The amount of damage dealt by the special attack
+
+        Returns
+        -------
+        Self
+        """
+        possible_reduction = amount
+
+        for skill in BgsReducedSkills:
+            if not possible_reduction > 0:
+                continue
+
+            level = self.lvl[skill]
+            reduction = int(min([level, possible_reduction]))
+            possible_reduction -= reduction
+            self.lvl[skill] -= reduction
+
+        return self
+
+    def apply_arclight(self, success: bool = True) -> Self:
+        if success:
+            _mod = LevelModifier(ARCLIGHT_FLAT_REDUCTION, gear.Arclight.name)
+
+            for skill in ArclightReducedSkills:
+                base_level = self._levels[skill]
+                level = self.lvl[skill]
+                reduction = int(min([level, base_level * _mod]))
+                self.lvl[skill] -= reduction
+
+        return self
+
+    def apply_vulnerability(
+        self, success: bool = True, tome_of_water: bool = True
+    ) -> Self:
+        if success:
+            if tome_of_water:
+                _mod_val = VULNERABILITY_MODIFIER_TOME_OF_WATER
+            else:
+                _mod_val = VULNERABILITY_MODIFIER
+
+            _mod = LevelModifier(_mod_val, "vulnerability")
+
+            self.lvl[Skills.DEFENCE] *= _mod
+
+        return self
+
+    # dunder methods ##########################################################

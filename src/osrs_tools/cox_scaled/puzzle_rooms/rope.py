@@ -8,28 +8,22 @@
 
 from dataclasses import dataclass
 
-from osrs_tools.character import DeathlyMage, DeathlyRanger
+from osrs_tools.character.monster import DeathlyMage, DeathlyRanger
 from osrs_tools.cox_scaled.estimate import RoomEstimate
-from osrs_tools.cox_scaled.strategy import CombatStrategy, RedChinsStrategy
 from osrs_tools.data import Styles
-from osrs_tools.style.style import ChinchompaStyles, PlayerStyle
+from osrs_tools.strategy import CombatStrategy, RedChinsVoidStrategy
+from osrs_tools.style import ChinchompaStyles, PlayerStyle
 
 ###############################################################################
 # roppa gangnam style                                                        #
 ###############################################################################
 
-_LONG_FUSE = ChinchompaStyles.get_by_style(Styles.LONG_FUSE)
-
-###############################################################################
-# strategy & estimate                                                         #
-###############################################################################
-
 
 @dataclass
-class ChinRope(RedChinsStrategy):
+class ChinRope(RedChinsVoidStrategy):
     """Elite void red chin strategy with long range."""
 
-    style: PlayerStyle = _LONG_FUSE
+    style: PlayerStyle = ChinchompaStyles[Styles.LONG_FUSE]
 
 
 @dataclass
@@ -39,8 +33,8 @@ class RopeEstimate(RoomEstimate):
     setup_ticks: int = 200
 
     def room_estimates(self) -> tuple[int, int]:
-        mage = DeathlyMage.from_de0(self.scale)
-        ranger = DeathlyRanger.from_de0(self.scale)
+        mage = DeathlyMage.simple(self.scale)
+        ranger = DeathlyRanger.simple(self.scale)
 
         if self.vulnerability:
             mage.apply_vulnerability()

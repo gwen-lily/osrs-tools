@@ -7,7 +7,8 @@
 """
 from __future__ import annotations
 
-from osrs_tools.data import LevelModifier, MonsterTypes
+from osrs_tools.data import MonsterTypes
+from osrs_tools.tracked_value import LevelModifier
 
 from .cox_monster import CoxMonster, get_base_levels_and_stats
 

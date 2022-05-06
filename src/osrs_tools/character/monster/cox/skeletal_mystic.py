@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 from osrs_tools.data import DT, MonsterTypes, Stances, Styles
-from osrs_tools.style.style import MonsterStyle, MonsterStyles
+from osrs_tools.style import MonsterStyle, MonsterStyles
 
 from .cox_monster import CoxMonster, get_base_levels_and_stats
 
@@ -60,7 +60,7 @@ class SkeletalMystic(CoxMonster):
             combat_level=None,
             _defensive_bonus=_DEF,
             special_attributes=[MonsterTypes.XERICIAN, MonsterTypes.UNDEAD],
-            styles=_styles,
+            _styles=_styles,
             party_size=party_size,
             challenge_mode=challenge_mode,
         )

@@ -10,11 +10,11 @@ import math
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
-from osrs_tools.character import CoxMonster
-from osrs_tools.damage import Damage
-from osrs_tools.data import Level
-
-from .strategy import CombatStrategy, Strategy
+from osrs_tools.character.monster import CoxMonster
+from osrs_tools.combat import Damage
+from osrs_tools.data import COX_POINTS_PER_HITPOINT
+from osrs_tools.strategy import CombatStrategy, Strategy
+from osrs_tools.tracked_value import Level
 
 
 @dataclass
@@ -94,7 +94,7 @@ class MonsterEstimate(CoxEstimate):
         strat = self.main_strategy
 
         if self.zero_defence:
-            self.monster.defence = Level(0, "zero defence")
+            self.monster.lvl.defence = Level(0, "zero defence")
         elif self.vulnerability:
             self.monster.apply_vulnerability()
 
@@ -126,9 +126,7 @@ class MonsterEstimate(CoxEstimate):
 
     def points_per_unit(self, **kwargs) -> int:
         """Find the points yielded by killing a unit."""
+        base_hp = self.monster.base_hp
 
-        base_hp = self.monster.base_hp.value
-        pphp = self.monster.points_per_hitpoint
-
-        _points_per_unit = math.floor(base_hp * pphp)
+        _points_per_unit = math.floor(int(base_hp) * COX_POINTS_PER_HITPOINT)
         return _points_per_unit

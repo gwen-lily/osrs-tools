@@ -14,8 +14,8 @@ from osrs_tools.gear.utils import (
     lookup_gear_bb_by_name,
     lookup_weapon_attrib_bb_by_name,
 )
-from osrs_tools.stats.stats import AggressiveStats, DefensiveStats, PlayerLevels
-from osrs_tools.style.style import PlayerStyle, UnarmedStyles, WeaponStyles
+from osrs_tools.stats import AggressiveStats, DefensiveStats, PlayerLevels
+from osrs_tools.style import PlayerStyle, UnarmedStyles, WeaponStyles
 
 from .gear import Gear, GearError
 
@@ -96,8 +96,8 @@ class Weapon(Gear):
         name = f"empty {Slots.WEAPON.name}"
         return cls(
             name=name,
-            aggressive_bonus=AggressiveStats.no_bonus(),
-            defensive_bonus=DefensiveStats.no_bonus(),
+            aggressive_bonus=AggressiveStats(),
+            defensive_bonus=DefensiveStats(),
             prayer_bonus=0,
             level_requirements=PlayerLevels.no_requirements(),
             styles=UnarmedStyles,

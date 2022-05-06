@@ -10,6 +10,7 @@ All time values are in ticks unless otherwise noted.
 
 from __future__ import annotations
 
+from collections import namedtuple
 from enum import Enum, auto, unique
 from pathlib import Path
 
@@ -42,6 +43,20 @@ MONSTERS = monsters_api.load()
 
 # misc ########################################################################
 
+DEFAULT_FLOAT_FMT = ".1f"
+DEFAULT_TABLE_FMT = "fancy"
+
+DWH_MODIFIER = 0.70
+DWH_MODIFIER_TEKTON_MISS = 0.95
+
+ARCLIGHT_FLAT_REDUCTION = 0.05
+ARCLIGHT_FLAT_REDUCTION_DEMON = 0.10
+
+BGS_FLAT_REDUCTION_TEKTON_MISS = 10
+
+VULNERABILITY_MODIFIER = 0.90
+VULNERABILITY_MODIFIER_TOME_OF_WATER = 0.85
+
 PLAYER_MAX_COMBAT_LEVEL = 126
 PLAYER_MAX_SKILL_LEVEL = 99
 
@@ -69,6 +84,13 @@ MUTTA_EATS_PER_ROOM = 3
 
 # made this up completely, #not true
 TEKTON_HP_HEALED_PER_ANVIL_RATIO = 0.10
+
+# olm #########################################################################
+
+OLM_HEAD_MAX_HP = 13600
+OLM_HAND_MAX_HP = 10200
+DUMMY_NAME = "dummy"
+
 
 CSV_SEP = "\t"
 
@@ -261,6 +283,16 @@ MonsterCombatSkills = (
     Skills.HITPOINTS,
 )
 
+BgsReducedSkills = (
+    Skills.DEFENCE,
+    Skills.STRENGTH,
+    Skills.ATTACK,
+    Skills.MAGIC,
+    Skills.RANGED,
+)
+
+ArclightReducedSkills = (Skills.ATTACK, Skills.STRENGTH, Skills.DEFENCE)
+
 # monster types & locations ###################################################
 
 
@@ -361,6 +393,53 @@ class Slayer(Enum):
     TROLLS = auto()
     VAMPYRES = auto()
     WYRMS = auto()
+
+
+DATAMODE_TYPE = namedtuple("datamode", ["key", "dtype", "attribute"])
+
+
+class DataMode(Enum):
+    """DataMode enums for the analysis_tools module"""
+
+    DPT = DATAMODE_TYPE("damage per tick", float, "per_tick")
+    DPS = DATAMODE_TYPE("damage per second", float, "per_second")
+    DPM = DATAMODE_TYPE("damage per minute", float, "per_minute")
+    DPH = DATAMODE_TYPE("damage per hour", float, "per_hour")
+    MAX = DATAMODE_TYPE("max hit", int, "max_hit")
+    MIN = DATAMODE_TYPE("min hit", int, "min_hit")
+    MEAN = DATAMODE_TYPE("mean hit", float, "mean")
+    POSITIVE_DAMAGE = DATAMODE_TYPE(
+        "chance to deal positive damage", float, "probability_nonzero_damage"
+    )
+    TICKS_TO_KILL = DATAMODE_TYPE("ticks to kill", float, None)
+    SECONDS_TO_KILL = DATAMODE_TYPE("seconds to kill", float, None)
+    MINUTES_TO_KILL = DATAMODE_TYPE("minutes to kill", float, None)
+    HOURS_TO_KILL = DATAMODE_TYPE("hours to kill", float, None)
+    DAMAGE_PER_TICK = DPT
+    DAMAGE_PER_SECOND = DPS
+    DAMAGE_PER_MINUTE = DPM
+    DAMAGE_PER_HOUR = DPH
+    MAX_HIT = MAX
+    MIN_HIT = MIN
+    MEAN_HIT = MEAN
+    DWH_SUCCESS = POSITIVE_DAMAGE
+    TTK = TICKS_TO_KILL
+    STK = SECONDS_TO_KILL
+    MTK = MINUTES_TO_KILL
+    HTK = HOURS_TO_KILL
+
+
+@unique
+class DataAxes(Enum):
+    """DataAxes enums for the analysis_tools module"""
+
+    players = "players"
+    targets = "targets"
+    equipment = "equipment"
+    active_style = "active_style"
+    prayers = "prayers"
+    boosts = "boosts"
+    levels = "levels"
 
 
 # slots ######################################################################

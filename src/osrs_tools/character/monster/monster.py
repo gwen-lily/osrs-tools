@@ -9,13 +9,25 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from osrs_tools import gear, utils
+from osrs_tools.character import Character, CharacterError
+from osrs_tools.character.player import Player
 from osrs_tools.combat import combat as cmb
-from osrs_tools.data import Level, MonsterLocations, MonsterTypes, Slayer, StyleBonus
-from osrs_tools.stats.stats import AggressiveStats, DefensiveStats, MonsterLevels
-from osrs_tools.style.style import MonsterStyle, MonsterStyles
+from osrs_tools.data import (
+    DT,
+    DUMMY_NAME,
+    MagicDamageTypes,
+    MonsterLocations,
+    MonsterTypes,
+    Slayer,
+    Slots,
+    Stances,
+)
+from osrs_tools.stats import AggressiveStats, DefensiveStats, MonsterLevels
+from osrs_tools.style import MonsterStyle, MonsterStyles
 from osrs_tools.timers.timers import Timer
-
-from ..character import Character, CharacterError
+from osrs_tools.tracked_value import Level, StyleBonus
+from osrs_tools.tracked_value.tracked_values import Roll
 
 ###############################################################################
 # exceptions                                                                  #
@@ -36,9 +48,9 @@ class Monster(Character):
     _levels: MonsterLevels = field(repr=False)
     _attack_delay: int = field(init=False, default=0)
     _active_style: MonsterStyle | None = None
-    _aggressive_bonus: AggressiveStats = field(default_factory=AggressiveStats.no_bonus)
+    _aggressive_bonus: AggressiveStats = field(default_factory=AggressiveStats)
     combat_level: Level | None = field(default=None, repr=False)
-    _defensive_bonus: DefensiveStats = field(default_factory=DefensiveStats.no_bonus)
+    _defensive_bonus: DefensiveStats = field(default_factory=DefensiveStats)
     exp_modifier: float = 1.0
     levels: MonsterLevels = field(init=False)
     location: MonsterLocations = MonsterLocations.NONE
@@ -65,6 +77,14 @@ class Monster(Character):
     # event and effect methods ################################################
 
     # properties ##############################################################
+
+    @property
+    def lvl(self) -> MonsterLevels:
+        return self.levels
+
+    @lvl.setter
+    def lvl(self, __value: MonsterLevels) -> None:
+        self.levels = __value
 
     @property
     def styles(self) -> MonsterStyles:
@@ -150,6 +170,21 @@ class Monster(Character):
 
         return cmb.effective_level(defensive_level, style_bonus)
 
+    # combat methods
+
+    def defence_roll(self, other: Character, _dt: DT) -> Roll:
+
+        _roll = super().defence_roll(other, _dt)
+
+        if isinstance(other, Player) and _dt in MagicDamageTypes:
+            if other.eqp[Slots.RING] == gear.BrimstoneRing:
+                reduction = _roll // 10 / 4
+                _roll -= reduction
+
+        return _roll
+
+    # class methods
+
     @classmethod
     def from_bb(cls, name: str, **kwargs):
 
@@ -164,13 +199,15 @@ class Monster(Character):
         options.update(kwargs)
 
         name = name.lower()
-        mon_df = rr.lookup_normal_monster_by_name(name)
+        mon_df = utils.lookup_normal_monster_by_name(name)
 
         if mon_df["location"].values[0] == "raids":
-            raise MonsterError(f"{name=} must be an instance of {CoxMonster}")
+            raise TypeError(cls)
 
         # attack style parsing
-        damage_types_str: str = mon_df["main attack style"].values[0]
+        _dts = mon_df["main attack style"]
+        damage_types_str = _dts.values[0]
+        assert isinstance(damage_types_str, str)
         damage_types = damage_types_str.split(" and ")
         styles = []
 
@@ -178,11 +215,19 @@ class Monster(Character):
             if not dt:
                 continue
 
+            for _dt in DT:
+                if _dt.value == dt:
+                    dt_enum = _dt
+                    break
+            else:
+                raise ValueError(dt)
+
             styles.append(
                 MonsterStyle(
-                    damage_type=dt,
-                    name=dt,
-                    attack_speed=mon_df["attack speed"].values[0],
+                    name=dt_enum.value,
+                    damage_type=dt_enum,
+                    stance=Stances.NPC,
+                    _attack_speed=mon_df["attack speed"].values[0],
                     ignores_defence=options["ignores_defence"],
                     ignores_prayer=options["ignores_prayer"],
                     attack_speed_modifier=options["attack_speed_modifier"],
@@ -190,11 +235,12 @@ class Monster(Character):
                 )
             )
 
-        attack_styles = StylesCollection(name=damage_types_str, styles=tuple(styles))
+        attack_styles = MonsterStyles(name=name, styles=styles, default=styles[0])
+
         if len(attack_styles.styles) > 0:
-            active_style = attack_styles.styles[0]
+            active_style = attack_styles.default
         else:
-            active_style = MonsterStyle.default_style()
+            active_style = None
 
         # type parsing
         raw_type_value = mon_df["type"].values[0]
@@ -215,19 +261,13 @@ class Monster(Character):
         elif raw_type_value == "undead":
             special_attributes.append(MonsterTypes.UNDEAD)
         elif raw_type_value == "vampyre - tier 1":
-            special_attributes.extend(
-                [MonsterTypes.VAMPYRE, MonsterTypes.VAMPYRE_TIER_1]
-            )
+            special_attributes.extend([MonsterTypes.VAMPYRE_TIER_1])
         elif raw_type_value == "vampyre - tier 2":
-            special_attributes.extend(
-                [MonsterTypes.VAMPYRE, MonsterTypes.VAMPYRE_TIER_2]
-            )
+            special_attributes.extend([MonsterTypes.VAMPYRE_TIER_2])
         elif raw_type_value == "vampyre - tier 3":
-            special_attributes.extend(
-                [MonsterTypes.VAMPYRE, MonsterTypes.VAMPYRE_TIER_3]
-            )
+            special_attributes.extend([MonsterTypes.VAMPYRE_TIER_3])
         elif raw_type_value == "guardian":
-            raise MonsterError(f"{name=} must be an instance of {Guardian}")
+            raise TypeError(cls)
         elif raw_type_value == "":
             pass
         else:
@@ -235,7 +275,9 @@ class Monster(Character):
                 f"{name=} {raw_type_value=} is an unsupported or undefined type"
             )
 
-        exp_modifier = 1 + mon_df["exp bonus"].values[0]
+        _exp_mod = mon_df["exp bonus"].values[0]
+        assert isinstance(_exp_mod, (float, int))
+        exp_modifier = 1 + _exp_mod
 
         location_enum = None
         location_src = mon_df["location"].values[0]
@@ -243,47 +285,34 @@ class Monster(Character):
         for loc in MonsterLocations:
             if location_src == loc.name:
                 location_enum = loc
+                break
+        else:
+            raise ValueError(location_src)
 
         return cls(
             name=name,
-            levels=MonsterLevels.from_bb(name),
-            aggressive_bonus=AggressiveStats.from_bb(name),
-            defensive_bonus=DefensiveStats.from_bb(name),
-            styles=attack_styles,
-            active_style=active_style,
+            _levels=MonsterLevels.from_bb(name),
+            _aggressive_bonus=AggressiveStats.from_bb(name),
+            _defensive_bonus=DefensiveStats.from_bb(name),
+            _styles=attack_styles,
+            _active_style=active_style,
             location=location_enum,
             exp_modifier=exp_modifier,
             combat_level=mon_df["combat level"].values[0],
-            defence_floor=options["defence_floor"],
-            special_attributes=tuple(special_attributes),
+            special_attributes=special_attributes,
             **options,
         )
 
+    @classmethod
+    def dummy(cls) -> Monster:
+        _lvls = MonsterLevels.dummy_levels()
+        _name = DUMMY_NAME
+        _location = MonsterLocations.WILDERNESS
+        _spec_attrs = [_t for _t in MonsterTypes]
 
-@define(**character_attrs_settings)
-class Dummy(Monster):
-    base_levels = field(factory=MonsterLevels.dummy_levels, repr=False)
-    levels = field(init=False, repr=False)
-    name: str = field(default="dummy")
-    level_bounds = field(factory=MonsterLevels.zeros, repr=False)
-    styles_coll = None
-    active_style = None
-    last_attacked: Character | None = field(repr=False, default=None)
-    last_attacked_by: Character | None = field(repr=False, default=None)
-    aggressive_bonus = field(factory=AggressiveStats.no_bonus, repr=False)
-    defensive_bonus = field(factory=DefensiveStats.no_bonus, repr=False)
-
-    styles = field(default=None, repr=False)
-    active_style = field(default=None, repr=False)
-    location = field(default=MonsterLocations.WILDERNESS, repr=False)
-    exp_modifier = field(default=None, repr=False)
-    combat_level = field(default=None, repr=False)
-    special_attributes = field(default=tuple(t for t in MonsterTypes), repr=False)
-
-
-class CoxMonster(Monster):
-    ...
-
-
-class SpecificCoxMonster(CoxMonster):
-    ...
+        return cls(
+            name=_name,
+            _levels=_lvls,
+            location=_location,
+            special_attributes=_spec_attrs,
+        )

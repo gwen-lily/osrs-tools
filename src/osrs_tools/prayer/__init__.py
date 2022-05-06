@@ -5,3 +5,6 @@
 # created:  2022-                                                             #
 ###############################################################################
 """
+from .prayer import Prayer
+from .prayer_collection import Prayers
+from .prayers import *

@@ -1,11 +1,10 @@
-"""The monster sub-module, handling all things monster :3
+"""The spell sub-module of osrs-tools
 
 ###############################################################################
 # email:    noahgill409@gmail.com                                             #
-# created:  2022-04-30                                                        #
+# created:  2022-                                                             #
 ###############################################################################
 """
 
-from .cox import *
-from .cox.cox_monster import CoxMonster
-from .monster import Monster, MonsterError
+from .spell import AncientSpell, GodSpell, PoweredSpell, Spell, StandardSpell
+from .spells import *

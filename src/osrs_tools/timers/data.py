@@ -1,7 +1,7 @@
-"""The spell sub-module of osrs-tools
+"""Data for the timers sub-module of osrs-tools
 
 ###############################################################################
 # email:    noahgill409@gmail.com                                             #
-# created:  2022-                                                             #
+# created:  2022-04-24                                                        #
 ###############################################################################
 """

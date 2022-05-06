@@ -8,24 +8,19 @@
 
 from dataclasses import dataclass, field
 
-from osrs_tools.boosts import SuperAttackPotion
-from osrs_tools.character import SkeletalMystic
+from osrs_tools import gear
+from osrs_tools.boost import SuperAttackPotion
+from osrs_tools.character.monster import SkeletalMystic
+from osrs_tools.combat.damage import Damage
 from osrs_tools.cox_scaled.estimate import RoomEstimate
-from osrs_tools.cox_scaled.strategy import (
+from osrs_tools.prayer import IncredibleReflexes, Prayers, ProtectFromMagic, Rigour
+from osrs_tools.strategy import (
     CombatStrategy,
     DwhStrategy,
     RangedStrategy,
     TbowStrategy,
 )
-from osrs_tools.damage import Damage
-from osrs_tools.data import Level
-from osrs_tools.equipment import Equipment, Gear, Weapon
-from osrs_tools.prayer import (
-    IncredibleReflexes,
-    PrayerCollection,
-    ProtectFromMagic,
-    Rigour,
-)
+from osrs_tools.tracked_value import Level
 from typing_extensions import Self
 
 ###############################################################################
@@ -34,40 +29,25 @@ from typing_extensions import Self
 
 # prayers
 
-_RIGOUR_PRAYMAGE = PrayerCollection(
+_RIGOUR_PRAYMAGE = Prayers(
     name="rigour & pray mage", prayers=[Rigour, ProtectFromMagic]
 )
 
 # gear
-
-_DRGIMP_EXTRA_GEAR = [
-    Gear.from_bb("dwarven helmet"),
-    Gear.from_bb("mythical cape"),
-    Gear.from_bb("bandos chestplate"),
-    Gear.from_bb("bandos tassets"),
-    Gear.from_bb("tyrannical (i)"),
+_DRGIMP_GEAR = gear.InquisitorSet + [
+    gear.SalveAmuletEI,
+    gear.MythicalCape,
+    gear.TyrannicalRingI,
 ]
 
-_SIRNARGETH_EXTRA_GEAR = [
-    Gear.from_bb("god d'hide coif"),
-    Gear.from_bb("book of law"),
-    Gear.from_bb("god d'hide boots"),
-    Gear.from_bb("ring of suffering (i)"),
+_SIRNARGETH__GEAR = gear.CrystalArmorSet + [
+    gear.SalveAmuletEI,
+    gear.BookOfLaw,
+    gear.BlessedBoots,
+    gear.RingOfSufferingI,
+    gear.RuneCrossbow,
+    gear.RubyBoltsE,
 ]
-
-_SALVE_GEAR = Equipment().equip_salve().equipped_gear
-_DRGIMP_GEAR = (
-    Equipment().equip_salve(e=True, i=True).equip(*_DRGIMP_EXTRA_GEAR).equipped_gear
-)
-_SIRNARGETH_GEAR = (
-    Equipment()
-    .equip_basic_ranged_gear(pegasian=False, brimstone=False)
-    .equip_crystal_set(barrows=True)
-    .equip_salve(e=True, i=True)
-    .equip_crossbow(Weapon.from_bb("rune crossbow"), rubies=True)
-    .equip(*_SIRNARGETH_EXTRA_GEAR)
-    .equipped_gear
-)
 
 ###############################################################################
 # strategy                                                                    #
@@ -79,14 +59,14 @@ class TbowMystic(TbowStrategy):
     """Standard tbow mystics strategy."""
 
     prayers = _RIGOUR_PRAYMAGE
-    gear = field(default_factory=lambda: _SALVE_GEAR)
+    gear = field(default_factory=lambda: [gear.SalveAmuletEI])
 
 
 @dataclass
 class RuneCbowMystic(RangedStrategy):
     """For the iron."""
 
-    gear = field(default_factory=lambda: _SIRNARGETH_GEAR)
+    gear = field(default_factory=lambda: _SIRNARGETH__GEAR)
 
 
 @dataclass
@@ -129,7 +109,7 @@ class MysticsEstimate(RoomEstimate):
         return self._scale_at_load_time
 
     def room_estimates(self) -> tuple[int, int]:
-        target = SkeletalMystic.from_de0(self.scale)
+        target = SkeletalMystic.simple(self.scale)
 
         dam = self.strategy.activate().damage_distribution(target)
 

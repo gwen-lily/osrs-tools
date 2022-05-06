@@ -32,6 +32,21 @@ class CombatStats(StatsOptional):
     Players add more levels (including prayer), monsters don't.
     """
 
+    _attack: Level | None = None
+    _strength: Level | None = None
+    _defence: Level | None = None
+    _ranged: Level | None = None
+    _magic: Level | None = None
+    _hitpoints: Level | None = None
+
+    def __getitem__(self, __key: Skills, /) -> Level:
+        _val = getattr(self, f"_{__key.value}")
+        assert isinstance(_val, Level)
+        return _val
+
+    def __setitem__(self, __key: Skills, __value: Level, /) -> None:
+        setattr(self, f"_{__key.value}", __value)
+
     @property
     def attack(self) -> Level:
         return self._level_getter(Skills.ATTACK)

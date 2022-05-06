@@ -6,6 +6,8 @@
 ###############################################################################
 """
 
+from osrs_tools.data import Slots
+
 from .gear import Gear
 from .special_weapon import SpecialWeapon
 from .weapon import Weapon
@@ -21,6 +23,11 @@ EliteVoidTop = Gear.from_bb("elite void top")
 EliteVoidRobe = Gear.from_bb("elite void robe")
 
 # misc ########################################################################
+
+RingOfEndurance = Gear.no_stats("ring of endurance", Slots.RING)
+KodaiWand = Weapon.from_bb("kodai wand")
+BookOfTheDead = (Gear.from_bb("book of the dead"),)
+RingOfSufferingI = Gear.from_bb("ring of suffering (i)")
 
 SanguinestiStaff = Weapon.from_bb("sanguinesti staff")
 HarmonisedStaff = Weapon.from_bb("harmonised nightmare staff")
@@ -146,20 +153,20 @@ DragonWarhammer = SpecialWeapon.from_bb("dragon warhammer")
 
 # ammunition ##################################################################
 
-RubyDragonBoltsE = (Gear.from_bb("ruby dragon bolts (e)"),)
-RubyBoltsE = (Gear.from_bb("ruby bolts (e)"),)
+RubyDragonBoltsE = Gear.from_bb("ruby dragon bolts (e)")
+RubyBoltsE = Gear.from_bb("ruby bolts (e)")
 
 
-DiamondDragonBoltsE = (Gear.from_bb("diamond dragon bolts (e)"),)
-DiamondBoltsE = (Gear.from_bb("diamond bolts (e)"),)
+DiamondDragonBoltsE = Gear.from_bb("diamond dragon bolts (e)")
+DiamondBoltsE = Gear.from_bb("diamond bolts (e)")
 
 
-DragonstoneDragonBoltsE = (Gear.from_bb("dragonstone dragon bolts (e)"),)
-DragonstoneBoltsE = (Gear.from_bb("dragonstone bolts (e)"),)
+DragonstoneDragonBoltsE = Gear.from_bb("dragonstone dragon bolts (e)")
+DragonstoneBoltsE = Gear.from_bb("dragonstone bolts (e)")
 
 
-OnyxDragonBoltsE = (Gear.from_bb("onyx dragon bolts (e)"),)
-OnyxBoltsE = (Gear.from_bb("onyx bolts (e)"),)
+OnyxDragonBoltsE = Gear.from_bb("onyx dragon bolts (e)")
+OnyxBoltsE = Gear.from_bb("onyx bolts (e)")
 
 
 # basic melee
@@ -212,6 +219,19 @@ ArmadylChainskirt = Gear.from_bb("armadyl chainskirt")
 AncestralHat = Gear.from_bb("ancestral hat")
 AncestralRobeTop = Gear.from_bb("ancestral robe top")
 AncestralRobeBottoms = Gear.from_bb("ancestral robe bottoms")
+
+NeitiznotHelm = Gear.from_bb("neitiznot helm")
+FireCape = Gear.from_bb("fire cape")
+DragonDefender = Gear.from_bb("dragon defender")
+RegenBracelet = Gear.from_bb("regen bracelet")
+DragonBoots = Gear.from_bb("dragon boots")
+
+DwarvenHelmet = Gear.from_bb("dwarven helmet")
+MythicalCape = Gear.from_bb("mythical cape")
+TyrannicalRingI = Gear.from_bb("tyrannical (i)")
+
+BookOfLaw = Gear.from_bb("book of law")
+RuneCrossbow = Weapon.from_bb("rune crossbow")
 
 # gear shorthand ##############################################################
 

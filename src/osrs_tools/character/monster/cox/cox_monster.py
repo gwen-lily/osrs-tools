@@ -10,25 +10,24 @@ from __future__ import annotations
 
 import math
 from abc import ABC, abstractmethod
-from copy import copy
 from dataclasses import dataclass, field
 
-from osrs_tools import utils as rr
+from osrs_tools import utils
 from osrs_tools.character.player import Player
 from osrs_tools.data import (
     COX_POINTS_PER_HITPOINT,
     PARTY_AVERAGE_MINING_LEVEL,
-    Level,
-    LevelModifier,
     MonsterLocations,
     MonsterTypes,
+    Skills,
 )
-from osrs_tools.stats.stats import (
+from osrs_tools.stats import (
     AggressiveStats,
     DefensiveStats,
     MonsterLevels,
     PlayerLevels,
 )
+from osrs_tools.tracked_value import Level, LevelModifier
 from typing_extensions import Self
 
 from ..monster import Monster
@@ -41,7 +40,7 @@ from ..monster import Monster
 def get_base_levels_and_stats(
     name: str,
 ) -> tuple[MonsterLevels, AggressiveStats, DefensiveStats]:
-    mon_df = rr.get_cox_monster_base_stats_by_name(name)
+    mon_df = utils.get_cox_monster_base_stats_by_name(name)
 
     levels = MonsterLevels(
         _attack=Level(mon_df["melee"].values[0]),
@@ -121,72 +120,58 @@ class CoxMonster(Monster, ABC):
         """Scale levels by cox modifiers."""
 
         # order matters, floor each intermediate value (handled via my arcane dataclasses)
-        _lvl: MonsterLevels = self._levels
 
-        hp_scaled = (
-            _lvl.hitpoints
-            * self.player_hp_scaling_factor
-            * self.party_hp_scaling_factor
-        )
-        hp_scaled = (
-            hp_scaled * self.cm_hp_scaling_factor if self.challenge_mode else hp_scaled
-        )
+        def _scale_level(
+            skills: list[Skills], *modifiers: LevelModifier | None
+        ) -> None:
+            """Scale a level by the given modifiers
 
-        # TODO: Refactor this into Olm/Head/Hands
-        # if isinstance(self, OlmHead) and hp_scaled > 13600:
-        #     hp_scaled = Level(13600, "olm head max hp")
-        # elif (
-        #     isinstance(self, OlmMeleeHand) or isinstance(self, OlmMageHand)
-        # ) and hp_scaled > 10200:
-        #     hp_scaled = Level(10200, "olm hand max hp")
+            Parameters
+            ----------
+            skills : list[Skills]
+                A list of skills to scale
+            """
+            for _skill in skills:
+                _skill_lvl = getattr(self._levels, _skill.value)
 
-        _lvl.hitpoints = hp_scaled
+                for _mod in [_m for _m in modifiers if _m is not None]:
+                    _skill_lvl *= _mod
 
-        # attack and strength
-        melee_scaled = (
-            _lvl.attack
-            * self.player_off_def_scaling_factor
-            * self.party_off_scaling_factor
-        )
-        melee_scaled = (
-            melee_scaled * self.cm_off_scaling_factor
-            if self.challenge_mode
-            else melee_scaled
-        )
-        _lvl.attack = melee_scaled
-        _lvl.strength = copy(_lvl.attack)
+                setattr(self._levels, _skill.value, _skill_lvl)
 
-        defence_scaled = (
-            _lvl.defence
-            * self.player_off_def_scaling_factor
-            * self.party_def_scaling_factor
-        )
-        _lvl.defence = (
-            defence_scaled * self.cm_def_scaling_factor
-            if self.challenge_mode
-            else defence_scaled
+        _scale_level(
+            [Skills.HITPOINTS],
+            self.player_hp_scaling_factor,
+            self.party_hp_scaling_factor,
+            self.cm_hp_scaling_factor,
         )
 
-        magic_scaled = (
-            _lvl.magic
-            * self.player_off_def_scaling_factor
-            * self.party_off_scaling_factor
-        )
-        _lvl.magic = (
-            magic_scaled * self.cm_off_scaling_factor
-            if self.challenge_mode
-            else magic_scaled
+        _scale_level(
+            [Skills.ATTACK, Skills.STRENGTH],
+            self.player_off_def_scaling_factor,
+            self.party_off_scaling_factor,
+            self.cm_off_scaling_factor,
         )
 
-        ranged_scaled = (
-            _lvl.ranged
-            * self.player_off_def_scaling_factor
-            * self.party_off_scaling_factor
+        _scale_level(
+            [Skills.DEFENCE],
+            self.player_off_def_scaling_factor,
+            self.party_def_scaling_factor,
+            self.cm_def_scaling_factor,
         )
-        _lvl.ranged = (
-            ranged_scaled * self.cm_off_scaling_factor
-            if self.challenge_mode
-            else ranged_scaled
+
+        _scale_level(
+            [Skills.MAGIC],
+            self.player_off_def_scaling_factor,
+            self.party_off_scaling_factor,
+            self.cm_off_scaling_factor,
+        )
+
+        _scale_level(
+            [Skills.RANGED],
+            self.player_off_def_scaling_factor,
+            self.party_off_scaling_factor,
+            self.cm_off_scaling_factor,
         )
 
         return self
