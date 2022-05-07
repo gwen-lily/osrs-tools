@@ -10,9 +10,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from osrs_tools import gear, utils
-from osrs_tools.character import Character, CharacterError
-from osrs_tools.character.player import Player
-from osrs_tools.combat import combat as cmb
+from osrs_tools import utils_combat as cmb
+from osrs_tools.character import Character, CharacterError, Player
 from osrs_tools.data import (
     DT,
     DUMMY_NAME,
@@ -25,9 +24,8 @@ from osrs_tools.data import (
 )
 from osrs_tools.stats import AggressiveStats, DefensiveStats, MonsterLevels
 from osrs_tools.style import MonsterStyle, MonsterStyles
-from osrs_tools.timers.timers import Timer
-from osrs_tools.tracked_value import Level, StyleBonus
-from osrs_tools.tracked_value.tracked_values import Roll
+from osrs_tools.timers import Timer
+from osrs_tools.tracked_value import Level, Roll, StyleBonus
 
 ###############################################################################
 # exceptions                                                                  #

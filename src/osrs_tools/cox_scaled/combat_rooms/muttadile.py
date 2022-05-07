@@ -9,10 +9,11 @@
 from dataclasses import dataclass, field
 
 from osrs_tools import gear
-from osrs_tools.character.monster import BigMuttadile, SmallMuttadile
+from osrs_tools.character.monster.cox import BigMuttadile, SmallMuttadile
 from osrs_tools.combat.damage import Damage
 from osrs_tools.cox_scaled.estimate import RoomEstimate
 from osrs_tools.data import Styles
+from osrs_tools.gear import Equipment
 from osrs_tools.strategy import (
     CombatStrategy,
     EliteVoidStrategy,
@@ -38,24 +39,24 @@ _SANG_GEAR = [gear.ElysianSpiritShield]
 class SangSmallMutta(SangStrategy):
     """Sang small mutta with an elysian offhand."""
 
-    gear = field(default_factory=lambda: _SANG_GEAR)
-    _style = PoweredStaffStyles[Styles.LONGRANGE]
+    equipment = field(default_factory=lambda: Equipment().equip(*_SANG_GEAR))
+    style = PoweredStaffStyles[Styles.LONGRANGE]
 
 
 @dataclass
 class ZcbSmallMutta(EliteVoidStrategy):
     """Zcb small muttadile from safespot."""
 
-    gear = field(default_factory=lambda: _ZCB_GEAR)
-    _style = CrossbowStyles[Styles.LONGRANGE]
+    equipment = field(default_factory=lambda: Equipment().equip(*_ZCB_GEAR))
+    style = CrossbowStyles[Styles.LONGRANGE]
 
 
 @dataclass
 class FbowSmallMutta(RangedStrategy):
     """Fbow small muttadile from safespot."""
 
-    gear = field(default_factory=lambda: _FBOW_GEAR)
-    _style = BowStyles[Styles.LONGRANGE]
+    gear = field(default_factory=lambda: Equipment().equip(*_FBOW_GEAR))
+    style = BowStyles[Styles.LONGRANGE]
 
 
 ###############################################################################

@@ -12,9 +12,8 @@ import math
 from dataclasses import dataclass, field
 
 from osrs_tools import gear
+from osrs_tools import utils_combat as cmb
 from osrs_tools.boost import Boost, DivineBoost, OverloadBoost
-from osrs_tools.character import Character, CharacterError
-from osrs_tools.combat import combat as cmb
 from osrs_tools.data import (
     DIVINE_DURATION,
     DT,
@@ -64,6 +63,8 @@ from osrs_tools.tracked_value import (
     VoidModifiers,
 )
 from typing_extensions import Self
+
+from .character import Character, CharacterError
 
 ###############################################################################
 # exceptions                                                                  #
@@ -117,12 +118,6 @@ class Player(Character):
         except AssertionError:
             self.wpn = Weapon.unarmed()
             self.style = UnarmedStyles.default
-
-    def __copy__(self) -> Player:
-        _val = super().__copy__()
-        assert isinstance(_val, Player)
-
-        return _val
 
     # event and effect methods ################################################
 

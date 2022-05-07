@@ -7,6 +7,7 @@
 """
 
 from .abyssal_portal import AbyssalPortal
+from .cox_monster import CoxMonster
 from .deathly_monsters import DeathlyMage, DeathlyRanger
 from .guardian import Guardian
 from .ice_demon import IceDemon

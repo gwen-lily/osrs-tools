@@ -8,7 +8,7 @@
 
 from dataclasses import dataclass
 
-from osrs_tools.character.monster import DeathlyMage, DeathlyRanger
+from osrs_tools.character.monster.cox import DeathlyMage, DeathlyRanger
 from osrs_tools.cox_scaled.estimate import RoomEstimate
 from osrs_tools.data import Styles
 from osrs_tools.strategy import CombatStrategy, RedChinsVoidStrategy

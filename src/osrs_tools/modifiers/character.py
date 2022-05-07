@@ -1,10 +1,11 @@
-"""The modifiers sub-module of osrs-tools.
+"""Abstract / protocol character modifiers
 
 ###############################################################################
 # email:    noahgill409@gmail.com                                             #
-# created:  2022-05-02                                                        #
+# created:  2022-05-07                                                        #
 ###############################################################################
 """
 
-from .monster import MonsterModifiers
-from .player import PlayerModifiers
+
+class CharacterModifiers:
+    ...

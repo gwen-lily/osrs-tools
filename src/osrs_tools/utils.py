@@ -27,10 +27,11 @@ def _load_de0():
         _description_
     """
     cox_df = pd.read_csv(MONSTERS_DE0, sep=CSV_SEP)
+    name_key = "name"
 
     # column headers lower case / name column to lower case
-    cox_df.columns = [_s.lower for _s in cox_df.columns]
-    cox_df["name"] = cox_df["name"].str.lower()
+    cox_df.columns = cox_df.columns.str.lower()
+    cox_df[name_key] = cox_df[name_key].str.lower()
 
     return cox_df
 
@@ -49,7 +50,7 @@ def _load_bitterkoekje_bedevere():
     gear_df = gear_df.rename(columns={gear_df.columns[0]: ITEM_NAME})
 
     # column headers to lower case
-    gear_df.columns = [_s.lower for _s in gear_df.columns]
+    gear_df.columns = gear_df.columns.str.lower()
 
     # column operations #######################################################
 
@@ -58,7 +59,8 @@ def _load_bitterkoekje_bedevere():
 
     for sc in string_columns:
         gear_df[sc] = gear_df[sc].fillna("")
-        gear_df[sc] = gear_df[sc].str.lower().strip()
+        gear_df[sc] = gear_df[sc].str.lower()
+        gear_df[sc] = gear_df[sc].str.strip()
 
     # convert int columns to ints and fill NaN with 0
     integer_columns = gear_df.columns[np.asarray(INT_COLUMNS)]
@@ -103,14 +105,15 @@ def _load_bitterkoekje_npc():
     FLOAT_COLUMNS = [2]
 
     npc_df = pd.read_csv(MONSTERS_BITTER, sep=CSV_SEP, header=1)
-    npc_df.columns = [_s.lower for _s in npc_df.columns]
+    npc_df.columns = npc_df.columns.str.lower()
 
     # column operations #######################################################
     string_columns = npc_df.columns[np.asarray(STRING_COLUMNS)]
 
     for sc in string_columns:
         npc_df[sc] = npc_df[sc].fillna("")
-        npc_df[sc] = npc_df[sc].str.lower().strip()
+        npc_df[sc] = npc_df[sc].str.lower()
+        npc_df[sc] = npc_df[sc].str.strip()
 
     int_columns = npc_df.columns[np.asarray(INT_COLUMNS)]
 

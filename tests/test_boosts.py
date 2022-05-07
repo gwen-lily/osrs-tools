@@ -6,10 +6,21 @@
 ###############################################################################
 """
 
-from osrs_tools.boost.boosts import Overload
-from osrs_tools.character.player import Player
-from osrs_tools.stats.stats import PlayerLevels
+from osrs_tools.boost import Overload
+from osrs_tools.stats import PlayerLevels
+from osrs_tools.tracked_value import Level
+
+from .data import _120
 
 
 def test_overload():
-    lad = Player
+    max_lvls = PlayerLevels.maxed_player()
+
+    boosted_lvls = max_lvls + Overload
+
+    assert boosted_lvls.attack == _120
+    assert boosted_lvls.strength == _120
+    assert boosted_lvls.defence == _120
+    assert boosted_lvls.magic == _120
+    assert boosted_lvls.ranged == _120
+    assert boosted_lvls.hitpoints == Level(49)

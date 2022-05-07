@@ -17,6 +17,7 @@ from osrs_tools.character.monster.cox import OlmHead, OlmMageHand, OlmMeleeHand
 from osrs_tools.character.monster.cox.olm import OlmABC
 from osrs_tools.cox_scaled.data import MeleeAttackPattern, RangedAttackPattern
 from osrs_tools.cox_scaled.estimate import MonsterEstimate, RoomEstimate
+from osrs_tools.gear import Equipment
 from osrs_tools.strategy import (
     BgsStrategy,
     CombatStrategy,
@@ -65,27 +66,27 @@ _BGS_GEAR = _MELEE_GEAR[:] + [gear.BandosGodsword]
 
 @dataclass
 class SangOlm(SangStrategy):
-    gear = field(default_factory=lambda: _MAGE_GEAR)
+    equipment = field(default_factory=lambda: Equipment().equip(*_MAGE_GEAR))
 
 
 @dataclass
 class TbowOlm(TbowStrategy):
-    gear = field(default_factory=lambda: _RANGED_GEAR)
+    equipment = field(default_factory=lambda: Equipment().equip(*_RANGED_GEAR))
 
 
 @dataclass
 class DwhOlm(DwhStrategy):
-    gear = field(default_factory=lambda: _DWH_GEAR)
+    equipment = field(default_factory=lambda: Equipment().equip(*_DWH_GEAR))
 
 
 @dataclass
 class BgsOlm(BgsStrategy):
-    gear = field(default_factory=lambda: _BGS_GEAR)
+    equipment = field(default_factory=lambda: Equipment().equip(*_BGS_GEAR))
 
 
 @dataclass
 class DHLanceOlm(MeleeStrategy):
-    gear = field(default_factory=lambda: _DHLANCE_GEAR)
+    equipment = field(default_factory=lambda: Equipment().equip(*_DHLANCE_GEAR))
 
 
 ###############################################################################

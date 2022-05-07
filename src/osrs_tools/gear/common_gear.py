@@ -7,6 +7,8 @@
 """
 
 from osrs_tools.data import Slots
+from osrs_tools.stats import AggressiveStats, DefensiveStats, PlayerLevels
+from osrs_tools.tracked_value import EquipmentStat
 
 from .gear import Gear
 from .special_weapon import SpecialWeapon
@@ -26,7 +28,14 @@ EliteVoidRobe = Gear.from_bb("elite void robe")
 
 RingOfEndurance = Gear.no_stats("ring of endurance", Slots.RING)
 KodaiWand = Weapon.from_bb("kodai wand")
-BookOfTheDead = (Gear.from_bb("book of the dead"),)
+BookOfTheDead = Gear(
+    name="book of the dead",
+    slot=Slots.SHIELD,
+    aggressive_bonus=AggressiveStats(magic_attack=EquipmentStat(6)),
+    defensive_bonus=DefensiveStats(),
+    prayer_bonus=3,
+    level_requirements=PlayerLevels.starting_stats(),
+)
 RingOfSufferingI = Gear.from_bb("ring of suffering (i)")
 
 SanguinestiStaff = Weapon.from_bb("sanguinesti staff")
@@ -220,7 +229,7 @@ AncestralHat = Gear.from_bb("ancestral hat")
 AncestralRobeTop = Gear.from_bb("ancestral robe top")
 AncestralRobeBottoms = Gear.from_bb("ancestral robe bottoms")
 
-NeitiznotHelm = Gear.from_bb("neitiznot helm")
+NeitiznotHelm = Gear.from_bb("neitiznot")
 FireCape = Gear.from_bb("fire cape")
 DragonDefender = Gear.from_bb("dragon defender")
 RegenBracelet = Gear.from_bb("regen bracelet")

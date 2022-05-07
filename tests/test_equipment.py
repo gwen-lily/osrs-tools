@@ -6,10 +6,10 @@
 ###############################################################################
 """
 
-from osrs_tools.data import EquipmentStat
+from osrs_tools.gear import Equipment
 from osrs_tools.gear import common_gear as cg
-from osrs_tools.gear.equipment import Equipment
-from osrs_tools.stats.stats import AggressiveStats, DefensiveStats
+from osrs_tools.stats import AggressiveStats
+from osrs_tools.tracked_value import EquipmentStat, TrackedFloat
 
 
 def test_bis_mage():
@@ -17,21 +17,21 @@ def test_bis_mage():
 
     assert eqp.full_set
     assert eqp.aggressive_bonus == AggressiveStats(
-        stab=EquipmentStat(),
-        slash=EquipmentStat(),
-        crush=EquipmentStat(),
-        magic_attack=EquipmentStat(),
-        ranged_attack=EquipmentStat(),
-        melee_strength=EquipmentStat(),
-        ranged_strength=EquipmentStat(),
-        magic_strength=TrackedFloat(),
+        stab=EquipmentStat(4),
+        slash=EquipmentStat(4),
+        crush=EquipmentStat(4),
+        magic_attack=EquipmentStat(165),
+        ranged_attack=EquipmentStat(-17),
+        melee_strength=EquipmentStat(4),
+        ranged_strength=EquipmentStat(0),
+        magic_strength=TrackedFloat(0.23),
     )
 
-    assert eqp.defensive_bonus == DefensiveStats(
-        stab=EquipmentStat(),
-        slash=EquipmentStat(),
-        crush=EquipmentStat(),
-        magic=EquipmentStat(),
-        ranged=EquipmentStat(),
-    )
-    assert eqp.prayer_bonus == 420
+    #     assert eqp.defensive_bonus == DefensiveStats(
+    #         stab=EquipmentStat(),
+    #         slash=EquipmentStat(),
+    #         crush=EquipmentStat(),
+    #         magic=EquipmentStat(),
+    #         ranged=EquipmentStat(),
+    #     )
+    assert eqp.prayer_bonus == 7

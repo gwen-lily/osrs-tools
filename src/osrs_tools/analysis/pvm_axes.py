@@ -12,7 +12,9 @@ from dataclasses import Field, dataclass, field
 from typing import Any
 
 from osrs_tools.boost import Boost
-from osrs_tools.character import Character, Monster, Player
+from osrs_tools.character import Character
+from osrs_tools.character.monster import Monster
+from osrs_tools.character.player import Player
 from osrs_tools.gear import Equipment
 from osrs_tools.prayer import Prayer, Prayers
 from osrs_tools.spell import Spell

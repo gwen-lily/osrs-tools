@@ -12,4 +12,5 @@ from .basic_combat_strategies import (
     MeleeStrategy,
     RangedStrategy,
 )
+from .derivative_combat_strategies import *
 from .strategy import CombatStrategy, SkillingStrategy, Strategy

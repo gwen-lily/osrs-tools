@@ -6,7 +6,8 @@ import math
 from dataclasses import dataclass
 
 from osrs_tools.character import Character
-from osrs_tools.character.monster import CoxMonster, Guardian, IceDemon, Monster
+from osrs_tools.character.monster import Monster
+from osrs_tools.character.monster.cox import CoxMonster, Guardian, IceDemon
 from osrs_tools.character.player import AutocastError, NoTaskError, Player
 from osrs_tools.data import (
     CRYSTAL_PIECE_ARM,
@@ -42,13 +43,11 @@ from osrs_tools.tracked_value import (
     create_modifier_pair,
 )
 
+from .character import CharacterModifiers
+
 ###########################################################################
 # main classes                                                            #
 ###########################################################################
-
-
-class CharacterModifiers:
-    ...
 
 
 @dataclass

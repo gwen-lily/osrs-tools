@@ -10,16 +10,14 @@ from dataclasses import dataclass, field
 
 from osrs_tools import gear
 from osrs_tools.boost import SuperAttackPotion
-from osrs_tools.character.monster import SkeletalMystic
+from osrs_tools.character.monster.cox import SkeletalMystic
 from osrs_tools.combat.damage import Damage
 from osrs_tools.cox_scaled.estimate import RoomEstimate
-from osrs_tools.prayer import IncredibleReflexes, Prayers, ProtectFromMagic, Rigour
-from osrs_tools.strategy import (
-    CombatStrategy,
-    DwhStrategy,
-    RangedStrategy,
-    TbowStrategy,
-)
+from osrs_tools.gear import Equipment
+from osrs_tools.prayer import (IncredibleReflexes, Prayers, ProtectFromMagic,
+                               Rigour)
+from osrs_tools.strategy import (CombatStrategy, DwhStrategy, RangedStrategy,
+                                 TbowStrategy)
 from osrs_tools.tracked_value import Level
 from typing_extensions import Self
 
@@ -59,14 +57,14 @@ class TbowMystic(TbowStrategy):
     """Standard tbow mystics strategy."""
 
     prayers = _RIGOUR_PRAYMAGE
-    gear = field(default_factory=lambda: [gear.SalveAmuletEI])
+    equipment = field(default_factory=lambda: Equipment().equip(gear.SalveAmuletEI))
 
 
 @dataclass
 class RuneCbowMystic(RangedStrategy):
     """For the iron."""
 
-    gear = field(default_factory=lambda: _SIRNARGETH__GEAR)
+    equipment = field(default_factory=lambda: Equipment().equip(*_SIRNARGETH__GEAR))
 
 
 @dataclass
@@ -75,7 +73,7 @@ class DrGimp(DwhStrategy):
 
     boost = SuperAttackPotion
     prayers = IncredibleReflexes
-    gear = field(default_factory=lambda: _DRGIMP_GEAR)
+    equipment = field(default_factory=lambda: Equipment().equip(*_DRGIMP_GEAR))
 
     def boost_player(self) -> Self:
         """Gimp the doctor with 20 strength."""

@@ -11,8 +11,10 @@ from dataclasses import dataclass
 
 import numpy as np
 from osrs_tools import gear
-from osrs_tools.character import AutocastError, Character, Player
+from osrs_tools import utils_combat as cmb
+from osrs_tools.character import Character
 from osrs_tools.character.monster import Monster
+from osrs_tools.character.player import AutocastError, Player
 from osrs_tools.combat import Damage, Hitsplat
 from osrs_tools.data import (
     ABYSSAL_BLUDGEON_DMG_MOD,
@@ -28,11 +30,10 @@ from osrs_tools.data import (
     RangedDamageTypes,
 )
 from osrs_tools.gear import SpecialWeapon, SpecialWeaponError
-from osrs_tools.modifiers import PlayerModifiers
+from osrs_tools.modifiers import MonsterModifiers, PlayerModifiers
 from osrs_tools.spell import Spell
 from osrs_tools.tracked_value import DamageModifier, EquipmentStat, TrackedFloat
 
-from . import combat as cmb
 from .damage_calculation import DamageCalculation
 
 
@@ -131,9 +132,11 @@ class PvMCalc(DamageCalculation):
             full_dms = dms
             defence_roll_dt = dt
 
+        MMods = MonsterModifiers(target, lad, defence_roll_dt)
+
         # # beeg parameters # #################################################
         att_roll = cmb.maximum_roll(_eff_acc_lvl, accuracy_bonus, *full_arms)
-        def_roll = self.defender.defence_roll(lad, defence_roll_dt)
+        def_roll = MMods.defence_roll()
         accuracy = cmb.accuracy(att_roll, def_roll)
         max_hit = lad.max_hit(*full_dms, spell=spell)
 

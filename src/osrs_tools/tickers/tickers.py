@@ -9,10 +9,10 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
-from osrs_tools.character import Character, Player
+from osrs_tools.character import Character
+from osrs_tools.character.player import Player
 from osrs_tools.data import Effect
-
-from .timers import (
+from osrs_tools.timers import (
     RepeatedEffect,
     RepeatedEffectUpdate,
     TimedEffect,
@@ -65,6 +65,3 @@ class PlayerUpdater(CharacterUpdater):
                 self.lad._regenerate_special_attack()
             elif effect in (Effect.OVERLOAD, Effect.DIVINE_POTION):
                 self.lad.boost(*__timer.boosts)
-
-        if __timer.boosts:
-            self.lad.boost(*__timer.boosts)

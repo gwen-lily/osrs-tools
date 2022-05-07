@@ -9,8 +9,9 @@
 from dataclasses import dataclass, field
 
 from osrs_tools import gear
-from osrs_tools.character.monster import Guardian
+from osrs_tools.character.monster.cox import Guardian
 from osrs_tools.cox_scaled.estimate import RoomEstimate
+from osrs_tools.gear import Equipment
 from osrs_tools.strategy import CombatStrategy, MeleeStrategy
 from osrs_tools.tracked_value import Level
 
@@ -51,19 +52,19 @@ _HYBRID_GEAR = [
 class MainFit(MeleeStrategy):
     """Main dps account, full melee bis."""
 
-    gear = field(default_factory=lambda: _MAIN_GEAR)
+    gear = field(default_factory=lambda: Equipment().equip(*_MAIN_GEAR))
 
 
 @dataclass
 class HybridFit(MeleeStrategy):
-    gear = field(default_factory=lambda: _HYBRID_GEAR)
+    gear = field(default_factory=lambda: Equipment().equip(*_HYBRID_GEAR))
 
 
 @dataclass
 class GuardiansEstimate(RoomEstimate):
     strategy: CombatStrategy
     alt_strategy: CombatStrategy
-    defence_estimate = Level(15, "an honest estimate")
+    defence_estimate = Level(10, "an honest estimate")
     damage_alts: int = 0
     setup_ticks = 300
 

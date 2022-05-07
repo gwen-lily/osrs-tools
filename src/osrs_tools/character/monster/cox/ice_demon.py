@@ -7,8 +7,9 @@
 """
 from __future__ import annotations
 
-from osrs_tools.combat import combat as cmb
-from osrs_tools.data import Level, MonsterTypes
+from osrs_tools import utils_combat as cmb
+from osrs_tools.data import MonsterTypes
+from osrs_tools.tracked_value import Level
 
 from .cox_monster import CoxMonster, get_base_levels_and_stats
 

@@ -11,7 +11,7 @@ from __future__ import annotations
 from copy import copy
 from dataclasses import dataclass, field, fields
 
-from osrs_tools import utils as rr
+from osrs_tools import utils
 from osrs_tools.data import DT, MagicDamageTypes, MeleeDamageTypes, RangedDamageTypes
 from osrs_tools.tracked_value import EquipmentStat, StyleBonus, TrackedFloat
 
@@ -169,7 +169,7 @@ class AggressiveStats(Stats):
 
     @classmethod  # TODO: Look into bitterkoekje's general attack stat and see where it matters
     def from_bb(cls, name: str):
-        mon_df = rr.lookup_normal_monster_by_name(name)
+        mon_df = utils.lookup_normal_monster_by_name(name)
 
         general_attack_bonus = mon_df["attack bonus"]
         val = general_attack_bonus.values[0]
@@ -252,7 +252,7 @@ class DefensiveStats(Stats):
 
     @classmethod
     def from_bb(cls, name: str):
-        mon_df = rr.lookup_normal_monster_by_name(name)
+        mon_df = utils.lookup_normal_monster_by_name(name)
 
         return cls(
             mon_df["stab defence"].values[0],

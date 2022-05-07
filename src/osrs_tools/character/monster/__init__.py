@@ -6,6 +6,4 @@
 ###############################################################################
 """
 
-from .cox import *
-from .cox.cox_monster import CoxMonster
 from .monster import Monster, MonsterError

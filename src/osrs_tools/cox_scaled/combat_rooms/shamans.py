@@ -9,10 +9,10 @@
 from dataclasses import dataclass, field
 
 from osrs_tools import gear
-from osrs_tools.character.monster import LizardmanShaman
+from osrs_tools.character.monster.cox import LizardmanShaman
 from osrs_tools.cox_scaled.estimate import RoomEstimate
 from osrs_tools.data import Slayer
-from osrs_tools.gear import Gear
+from osrs_tools.gear import Equipment
 from osrs_tools.strategy import CombatStrategy, RedChinsSlayerStrategy
 from typing_extensions import Self
 
@@ -29,7 +29,7 @@ _SLAYER_HELM = [gear.SlayerHelmetI]
 
 @dataclass
 class TaskShamans(RedChinsSlayerStrategy):
-    gear: list[Gear] = field(default_factory=lambda: _SLAYER_HELM)
+    equipment = field(default_factory=lambda: Equipment().equip(*_SLAYER_HELM))
 
     def misc_player(self) -> Self:
         self.player.slayer_task = Slayer.LIZARDMEN

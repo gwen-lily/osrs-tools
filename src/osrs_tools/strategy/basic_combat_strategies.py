@@ -10,7 +10,7 @@ from dataclasses import dataclass
 
 from osrs_tools import gear
 from osrs_tools.gear import Equipment
-from osrs_tools.prayer import Augury, Piety, Prayer, Prayers, Rigour
+from osrs_tools.prayer import Augury, Piety, Prayers, Rigour
 from osrs_tools.spell import Spell
 from typing_extensions import Self
 
@@ -19,7 +19,7 @@ from .strategy import CombatStrategy
 
 @dataclass
 class MeleeStrategy(CombatStrategy):
-    prayers: Prayer | Prayers = Piety
+    prayers = Prayers(prayers=[Piety])
 
     def equip_player(self) -> Self:
         # basic bis 'n such
@@ -34,7 +34,7 @@ class MeleeStrategy(CombatStrategy):
 
 @dataclass
 class RangedStrategy(CombatStrategy):
-    prayers: Prayer | Prayers = Rigour
+    prayers = Prayers(prayers=[Rigour])
 
     def equip_player(self) -> Self:
         # basic bis 'n such.
@@ -72,13 +72,13 @@ class MagicStrategy(CombatStrategy):
 
     Attributes
     ----------
-    autocast : Spell | None
+    _autocast : Spell | None
         The spell to autocast. If ommitted, will produce variable results. For
         example, powered staves will likely handle this but not something like
         a kodai wand. Tread carefully. Defaults to None.
     """
 
-    prayers: Prayer | Prayers = Augury
+    prayers = Prayers(prayers=[Augury])
     _autocast: Spell | None = None
 
     @property

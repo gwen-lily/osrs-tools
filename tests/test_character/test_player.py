@@ -7,23 +7,17 @@
 """
 
 from osrs_tools.boost import BastionPotion, ImbuedHeart, Overload, SuperCombatPotion
-from osrs_tools.boost.boosts import RangingPotion
 from osrs_tools.character.player import Player
-from osrs_tools.data import Effect, Level, Slayer
-from osrs_tools.gear import common_gear as cg
-from osrs_tools.gear.equipment import Equipment
-from osrs_tools.stats.stats import PlayerLevels
-from osrs_tools.style.style import UnarmedStyles
+from osrs_tools.data import Effect, Slayer
+from osrs_tools.gear import Equipment
+from osrs_tools.stats import PlayerLevels
+from osrs_tools.style import UnarmedStyles
+from osrs_tools.tracked_value import Level
+from tests.data import _112, _118, _120
 
 ###############################################################################
 # misc                                                                        #
 ###############################################################################
-
-# important levels
-
-_112 = Level(112)
-_118 = Level(118)
-_120 = Level(120)
 
 
 def test_player_init():
@@ -54,7 +48,7 @@ def test_player_stats():
 
     lad.reset_stats()
     lad.boost(BastionPotion)
-    assert lad.lvl.ranged == Level(112)
+    assert lad.lvl.ranged == _112
     assert lad.lvl.defence == _118
 
     lad.boost(ImbuedHeart)

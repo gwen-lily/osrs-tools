@@ -12,9 +12,10 @@ you are able.
 from dataclasses import dataclass, field
 
 from osrs_tools import gear
-from osrs_tools.character.monster import IceDemon
+from osrs_tools.character.monster.cox import IceDemon
 from osrs_tools.cox_scaled.estimate import RoomEstimate
 from osrs_tools.data import Stances
+from osrs_tools.gear import Equipment
 from osrs_tools.spell import Spell, StandardSpells
 from osrs_tools.strategy import CombatStrategy, MagicStrategy
 from osrs_tools.style import PlayerStyle, StaffStyles
@@ -48,9 +49,9 @@ _SURGER_RSN = "SirNargeth"
 
 
 class KodaiSurgeIceDemon(MagicStrategy):
-    gear = field(default_factory=lambda: _SURGER_GEAR)
+    equipment = field(default_factory=lambda: Equipment().equip(*_SURGER_GEAR))
     style: PlayerStyle = StaffStyles[Stances.DEFENSIVE]
-    autocast: Spell = StandardSpells.FIRE_SURGE.value
+    _autocast: Spell = StandardSpells.FIRE_SURGE.value
 
 
 @dataclass

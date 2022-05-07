@@ -6,13 +6,14 @@
 ###############################################################################
 """
 
-from osrs_tools.data import EquipmentStat, Level, Slots, TrackedFloat
-from osrs_tools.gear import common_gear as cg
-from osrs_tools.stats.stats import AggressiveStats, DefensiveStats, PlayerLevels
+from osrs_tools import gear
+from osrs_tools.data import Slots
+from osrs_tools.stats import AggressiveStats, DefensiveStats
+from osrs_tools.tracked_value import EquipmentStat, Level, TrackedFloat
 
 
 def test_zaryte_vambraces():
-    zvambs = cg.ZaryteVambraces
+    zvambs = gear.ZaryteVambraces
 
     assert zvambs.slot is Slots.HANDS
     assert zvambs.aggressive_bonus == AggressiveStats(

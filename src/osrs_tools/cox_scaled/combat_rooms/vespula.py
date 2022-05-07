@@ -9,8 +9,9 @@
 from dataclasses import dataclass, field
 
 from osrs_tools import gear
-from osrs_tools.character.monster import AbyssalPortal
+from osrs_tools.character.monster.cox import AbyssalPortal
 from osrs_tools.cox_scaled.estimate import CombatStrategy, RoomEstimate
+from osrs_tools.gear import Equipment
 from osrs_tools.strategy import TbowStrategy
 
 ###############################################################################
@@ -26,7 +27,7 @@ _RING_OF_ENDURANCE = [gear.RingOfEndurance]
 
 @dataclass
 class TbowPortal(TbowStrategy):
-    gear = field(default_factory=lambda: _RING_OF_ENDURANCE)
+    equipment = field(default_factory=lambda: Equipment().equip(*_RING_OF_ENDURANCE))
 
 
 @dataclass

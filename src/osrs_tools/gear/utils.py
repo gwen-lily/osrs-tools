@@ -11,7 +11,6 @@ from functools import reduce
 
 from osrs_tools import utils
 from osrs_tools.data import DT, Slots
-from osrs_tools.gear import Gear
 from osrs_tools.stats import AggressiveStats, DefensiveStats, PlayerLevels
 from osrs_tools.style import WeaponStyles
 from osrs_tools.style.all_weapon_styles import (
@@ -207,6 +206,10 @@ def lookup_weapon_attrib_bb_by_name(name: str):
     )
 
 
-def get_minimum_reqs(*_gear: Gear) -> PlayerLevels:
+def get_minimum_reqs(*_gear) -> PlayerLevels:
+    from .gear import Gear
+
+    assert all(isinstance(_g, Gear) for _g in _gear)
+
     reqs = [_g.level_requirements for _g in _gear]
     return reduce(lambda x, y: x.max_levels_per_skill(y), reqs)

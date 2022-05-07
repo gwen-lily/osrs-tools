@@ -17,7 +17,8 @@ import numpy as np
 import pandas as pd
 from osrs_tools.analysis.pvm_axes import PvmAxes
 from osrs_tools.boost import Boost, Overload
-from osrs_tools.character import Character, Player
+from osrs_tools.character import Character
+from osrs_tools.character.player import Player
 from osrs_tools.combat import PvMCalc
 from osrs_tools.data import DEFAULT_FLOAT_FMT, DEFAULT_TABLE_FMT, DataAxes, DataMode
 from osrs_tools.exceptions import OsrsException

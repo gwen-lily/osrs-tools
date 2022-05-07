@@ -6,12 +6,11 @@
 ###############################################################################
 """
 
-
-from .tickers import CharacterUpdater, PlayerUpdater
 from .timers import (
     GET_UPDATE_CALLABLE,
     Effect,
     RepeatedEffect,
+    RepeatedEffectUpdate,
     TimedEffect,
     TimedEffectExpired,
     Timer,

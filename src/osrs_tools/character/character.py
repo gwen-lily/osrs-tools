@@ -12,8 +12,8 @@ from copy import copy
 from dataclasses import dataclass, field
 
 from osrs_tools import gear
+from osrs_tools import utils_combat as cmb
 from osrs_tools.boost.boost import Boost
-from osrs_tools.combat import combat as cmb
 from osrs_tools.data import (
     ARCLIGHT_FLAT_REDUCTION,
     DT,
