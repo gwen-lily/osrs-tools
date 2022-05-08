@@ -32,6 +32,7 @@ from osrs_tools.data import (
     RangedDamageTypes,
     Skills,
     Slayer,
+    Slots,
 )
 from osrs_tools.gear import Equipment, Weapon
 from osrs_tools.prayer import Prayer, Prayers, Preserve
@@ -422,11 +423,14 @@ class Player(Character):
 
     @property
     def wpn(self) -> Weapon:
-        return self.eqp.weapon
+        _val = self.eqp[Slots.WEAPON]
+        assert isinstance(_val, Weapon)
+
+        return _val
 
     @wpn.setter
     def wpn(self, __value: Weapon) -> None:
-        self.eqp.weapon = __value
+        self.eqp[Slots.WEAPON] = __value
 
     # access properties #######################################################
 
@@ -465,7 +469,7 @@ class Player(Character):
         if self.wpn in gear.Chinchompas:
             # don't account for ammo if using chinchompas or thrown weapons
             # TODO: Thrown weapons
-            ammo = self.eqp.ammunition
+            ammo = self.eqp[Slots.AMMUNITION]
 
             if ammo is not None:
                 ammo_bonus = ammo.aggressive_bonus.ranged_strength

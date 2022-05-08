@@ -12,7 +12,7 @@ from collections import Counter
 from copy import copy
 from dataclasses import dataclass, field, fields
 from itertools import compress
-from typing import Any
+from typing import Iterator
 
 from osrs_tools.data import Slots
 from osrs_tools.exceptions import OsrsException
@@ -83,58 +83,40 @@ class Equipment:
     _feet: Gear | None = None
     _ring: Gear | None = None
 
-    # dunder & access methods
-
-    def __iter__(self):
-        yield from self.equipped_gear
-
-    def __bool__(self) -> bool:
-        return len(self.equipped_gear) > 0
-
-    def __getattribute__(self, __name: str | Slots, /) -> Any:
-        if isinstance(__name, str):
-            return super().__getattribute__(__name)
-        elif isinstance(__name, Slots):
-            _gear = super().__getattribute__(__name.value)
-            assert isinstance(_gear, Gear)
-            return _gear
-        else:
-            raise TypeError(__name)
-
-    def __setattr__(self, __name: str | Slots, __value: Any, /) -> None:
-        if isinstance(__name, str):
-            super().__setattr__(__name, __value)
-        elif isinstance(__name, Slots):
-            if not isinstance(__value, Gear):
-                raise TypeError(f"{__value} is not instance of {Gear}")
-
-            super().__setattr__(__name.value, __value)
-        else:
-            raise TypeError(__name)
-
-        return
+    # dunder methods
 
     def __getitem__(self, __key: Slots, /) -> Gear:
-        _gear = super().__getattribute__(__key.value)
+        # access protected attribute of type Gear | None
+        _gear = getattr(self, f"_{__key.value}")
         assert isinstance(_gear, Gear)
         return _gear
 
-    def __setitem__(self, __key: Slots, __value: Gear, /) -> None:
-        self.__setattr__(__key, __value)
+    def __setitem__(self, __key: Slots, __value: Gear | None, /) -> None:
+        try:
+            setattr(self, __key.value, __value)
 
-    def _slot_getter(self, __slot: Slots, /) -> Gear:
-        """Get a protected slot attribute and return the Gear object."""
-        attribute_name = f"_{__slot.value}"
-        _gear = getattr(self, attribute_name)
-        assert isinstance(_gear, Gear)
+        except AttributeError:
+            setattr(self, f"_{__key.value}", __value)
 
-        return _gear
+    def __iter__(self) -> Iterator:
+        yield from self.equipped_gear
 
-    def _slot_setter(self, __slot: Slots, __value: Gear, /):
-        """Validate slot membership and set protected slot attribute."""
-        assert __value.slot is __slot
-        attribute_name = f"_{__slot.value}"
-        setattr(self, attribute_name, __value)
+    def __len__(self) -> int:
+        return len(self.equipped_gear)
+
+    def __bool__(self) -> bool:
+        return len(self) > 0
+
+    def __str__(self):
+        _clsname = self.__class__.__name__
+
+        if self.name is None:
+            _joined = ", ".join([g.name for g in self.equipped_gear])
+            message = f"{_clsname}({_joined})"
+        else:
+            message = f"{_clsname}({self.name})"
+
+        return message
 
     def __add__(self, other: Gear | list[Gear] | Equipment) -> Equipment:
         """
@@ -160,120 +142,53 @@ class Equipment:
 
         return self.equip(*gear_list)
 
-    def __str__(self):
-        _clsname = self.__class__.__name__
-
-        if self.name is None:
-            _joined = ", ".join([g.name for g in self.equipped_gear])
-            message = f"{_clsname}({_joined})"
-        else:
-            message = f"{_clsname}({self.name})"
-
-        return message
-
     def __copy__(self):
         return Equipment().equip(*[copy(g) for g in self.equipped_gear])
 
-    # access & type validation properties
-
-    @property
-    def head(self) -> Gear:
-        return self._slot_getter(Slots.HEAD)
-
-    @head.setter
-    def head(self, __value: Gear):
-        self._slot_setter(Slots.HEAD, __value)
-
-    @property
-    def cape(self) -> Gear:
-        return self._slot_getter(Slots.CAPE)
-
-    @cape.setter
-    def cape(self, __value: Gear):
-        self._slot_setter(Slots.CAPE, __value)
-
-    @property
-    def neck(self) -> Gear:
-        return self._slot_getter(Slots.NECK)
-
-    @neck.setter
-    def neck(self, __value: Gear):
-        self._slot_setter(Slots.NECK, __value)
-
-    @property
-    def ammunition(self) -> Gear:
-        return self._slot_getter(Slots.AMMUNITION)
-
-    @ammunition.setter
-    def ammunition(self, __value: Gear):
-        self._slot_setter(Slots.AMMUNITION, __value)
+    # properties: getters / setters
 
     @property
     def weapon(self) -> Weapon:
-        wpn = self._slot_getter(Slots.WEAPON)
-        assert isinstance(wpn, Weapon)
-
-        return wpn
+        assert isinstance(self._weapon, Weapon)
+        return self._weapon
 
     @weapon.setter
-    def weapon(self, __value: Weapon):
-        self._slot_setter(Slots.WEAPON, __value)
+    def weapon(self, __value: Weapon | None, /) -> None:
+        if __value is None:
+            self._weapon = None
+            return
+
+        assert isinstance(__value, Weapon)
 
         if __value.two_handed:
-            self.unequip(Slots.SHIELD)
+            self[Slots.SHIELD] = None
+            return
 
     @property
-    def body(self) -> Gear:
-        return self._slot_getter(Slots.BODY)
-
-    @body.setter
-    def body(self, __value: Gear):
-        self._slot_setter(Slots.BODY, __value)
-
-    @property
-    def shield(self) -> Gear:
-        return self._slot_getter(Slots.SHIELD)
+    def shield(self) -> Gear | None:
+        return self._shield
 
     @shield.setter
-    def shield(self, __value: Gear):
-        self._slot_setter(Slots.SHIELD, __value)
+    def shield(self, __value: Gear | None, /) -> None:
+        if __value is None:
+            self._shield = None
+            return
+
+        self._shield = __value
+
+        if self._weapon is None:
+            return
 
         if self.weapon.two_handed:
-            self.unequip(Slots.WEAPON)
+            self._weapon = None
+            return
 
-    @property
-    def legs(self) -> Gear:
-        return self._slot_getter(Slots.LEGS)
+    # well well well if it ain't a bug I just done found 'ere
+    # there it is, if there's no weapon this is an error
+    # if self[Slots.WEAPON].two_handed:
+    #    self.unequip(Slots.WEAPON)
 
-    @legs.setter
-    def legs(self, __value: Gear):
-        self._slot_setter(Slots.LEGS, __value)
-
-    @property
-    def hands(self) -> Gear:
-        return self._slot_getter(Slots.HANDS)
-
-    @hands.setter
-    def hands(self, __value: Gear):
-        self._slot_setter(Slots.HANDS, __value)
-
-    @property
-    def feet(self) -> Gear:
-        return self._slot_getter(Slots.FEET)
-
-    @feet.setter
-    def feet(self, __value: Gear):
-        self._slot_setter(Slots.FEET, __value)
-
-    @property
-    def ring(self) -> Gear:
-        return self._slot_getter(Slots.RING)
-
-    @ring.setter
-    def ring(self, __value: Gear):
-        self._slot_setter(Slots.RING, __value)
-
-    # Basic properties
+    # properties
 
     @property
     def aggressive_bonus(self) -> AggressiveStats:
@@ -372,20 +287,11 @@ class Equipment:
                 raise ValueError(f"Duplicate gear: {', '.join(dupe_gear)}")
 
         for g in _gear:
-
             # type checking
             if not isinstance(g, Gear):
                 raise TypeError(f"{type(g)} not allowed")
 
-            # attribute modification
-            public_slot_name = g.slot.value
-            protected_slot_name = f"_{g.slot.value}"
-
-            # don't re-equip the same gear.
-            if getattr(self, protected_slot_name) == g:
-                continue
-
-            setattr(self, public_slot_name, g)
+            self[g.slot] = g
 
         return self
 
@@ -394,11 +300,10 @@ class Equipment:
 
         for slot in slots:
             if slot is Slots.WEAPON:
-                setattr(self, Slots.WEAPON.name, Weapon.empty_slot())
+                self[Slots.WEAPON] = Weapon.empty_slot()
                 continue
 
-            public_slot_name = slot.value
-            setattr(self, public_slot_name, None)
+            self[slot] = None
 
         return self
 
@@ -423,18 +328,23 @@ class Equipment:
     # Wearing Properties
 
     def _full_set_method(self, requires_ammo: bool | None = None) -> bool:
-        """Property which returns True if the Equipment slots are fulfilled as needed to perform attacks.
+        """Property which returns True if the Equipment slots are filled
 
         # TODO: implement osrsbox-db wrapper which eliminates the need for assume_2h parameter.
 
-        Args:
-            requires_ammo (bool, optional): If True, requires Ammunition to be equipped even for styles which don't make use
-             of it. Defaults to None.
-            assume_2h (bool, optional): If True, requires the Equipment.shield slot to be empty. Defaults to True.
+        Parameters
+        ----------
+        requires_ammo : bool | None
+            If True, requires Ammunition to be equipped even for styles which
+            don't make use of it, defaults to None
 
-        Returns:
-            bool: True
+        Returns
+        -------
+        bool
         """
+        if self._weapon is None:
+            return False
+
         wpn = self.weapon
 
         if requires_ammo is None:
@@ -456,7 +366,7 @@ class Equipment:
                 if wpn == Weapon.empty_slot():
                     return False
             else:
-                _ = getattr(self, slot.value)  # runs slot assertion
+                _ = self[slot]  # runs slot assertion
 
         return True
 
@@ -541,7 +451,7 @@ class Equipment:
             gear.ObsidianMaul,
             gear.ObsidianSword,
         ]
-        return self.weapon in qualifying_weapons
+        return self[Slots.WEAPON] in qualifying_weapons
 
     @property
     def leafy_weapon(self) -> bool:
@@ -550,14 +460,14 @@ class Equipment:
             gear.LeafBladedSword,
             gear.LeafBladedBattleaxe,
         ]
-        return self.weapon in qualifying_weapons
+        return self[Slots.WEAPON] in qualifying_weapons
 
     @property
     def keris(self) -> bool:
         qualifying_weapons = [
             gear.Keris,
         ]
-        return self.weapon in qualifying_weapons
+        return self[Slots.WEAPON] in qualifying_weapons
 
     @property
     def crystal_armor_set(self) -> bool:
@@ -573,12 +483,12 @@ class Equipment:
             gear.CrystalBow,
             gear.BowOfFaerdhinen,
         ]
-        return self.weapon in qualifying_weapons
+        return self[Slots.WEAPON] in qualifying_weapons
 
     @property
     def smoke_staff(self) -> bool:
         qualifying_weapons = [gear.MysticSmokeStaff, gear.SmokeBattlestaff]
-        return self.weapon in qualifying_weapons
+        return self[Slots.WEAPON] in qualifying_weapons
 
     @property
     def graceful_set(self) -> bool:
@@ -598,10 +508,10 @@ class Equipment:
             gear.StaffOfTheDead,
             gear.ToxicStaffOfTheDead,
         ]
-        return self.weapon in qualifying_weapons
+        return self[Slots.WEAPON] in qualifying_weapons
 
     @staticmethod
-    def _is_crossbow(__wpn: Weapon, /) -> bool:
+    def _is_crossbow(__wpn: Weapon | None, /) -> bool:
         """Return True if any form of crossbow is equipped.
 
         This generic property checks a few obvious values to ensure that other
@@ -610,6 +520,9 @@ class Equipment:
         Returns:
             bool: True if any crossbow is equiped, otherwise False.
         """
+        if __wpn is None:
+            return False
+
         name_check = "crossbow" in __wpn.name
         styles_check = __wpn.styles == CrossbowStyles
 
@@ -640,7 +553,7 @@ class Equipment:
             gear.DragonHunterCrossbow,
             gear.DragonHunterLance,
         ]
-        return self.weapon in qualifying_weapons
+        return self[Slots.WEAPON] in qualifying_weapons
 
     @property
     def salve(self) -> bool:
@@ -654,7 +567,7 @@ class Equipment:
             gear.SalveAmuletI,
             gear.SalveAmuletEI,
         ]
-        return self.neck in qualifying_items
+        return self[Slots.NECK] in qualifying_items
 
     @property
     def wilderness_weapon(self) -> bool:
@@ -670,7 +583,7 @@ class Equipment:
             gear.ViggorasChainmace,
             gear.ThammaronsSceptre,
         ]
-        return self.weapon in qualifying_weapons
+        return self[Slots.WEAPON] in qualifying_weapons
 
     @property
     def pickaxe(self) -> bool:
@@ -680,8 +593,8 @@ class Equipment:
             bool: _description_
         """
         try:
-            assert isinstance(self.weapon, Weapon)
-            return "pickaxe" in self.weapon.name
+            assert isinstance(self[Slots.WEAPON], Weapon)
+            return "pickaxe" in self[Slots.WEAPON].name
         except AssertionError:
             return False
 
@@ -696,7 +609,7 @@ class Equipment:
         qualifying_weapons = [
             gear.AbyssalDagger,
         ]
-        return self.weapon in qualifying_weapons
+        return self[Slots.WEAPON] in qualifying_weapons
 
     @property
     def dragon_dagger(self) -> bool:
@@ -709,7 +622,7 @@ class Equipment:
         qualifying_weapons = [
             gear.DragonDagger,
         ]
-        return self.weapon in qualifying_weapons
+        return self[Slots.WEAPON] in qualifying_weapons
 
     # Ammunition / Bolts
 
@@ -741,25 +654,25 @@ class Equipment:
     def enchanted_ruby_bolts(self) -> bool:
         """True if enchanted ruby bolts are equipped."""
         matching_ammunition = [gear.RubyDragonBoltsE, gear.RubyBoltsE]
-        return self.ammunition in matching_ammunition
+        return self[Slots.AMMUNITION] in matching_ammunition
 
     @property
     def enchanted_diamond_bolts(self) -> bool:
         """True if enchanted diamond bolts are equipped."""
         matching_ammunition = [gear.DiamondDragonBoltsE, gear.DiamondBoltsE]
-        return self.ammunition in matching_ammunition
+        return self[Slots.AMMUNITION] in matching_ammunition
 
     @property
     def enchanted_dragonstone_bolts(self) -> bool:
         """True if enchanted dragonstone bolts are equipped."""
         matching_ammunition = [gear.DragonstoneDragonBoltsE, gear.DragonstoneBoltsE]
-        return self.ammunition in matching_ammunition
+        return self[Slots.AMMUNITION] in matching_ammunition
 
     @property
     def enchanted_onyx_bolts(self) -> bool:
         """True if enchanted onyx bolts are equipped."""
         matching_ammunition = [gear.OnyxDragonBoltsE, gear.OnyxBoltsE]
-        return self.ammunition in matching_ammunition
+        return self[Slots.AMMUNITION] in matching_ammunition
 
     @property
     def enchanted_bolts_equipped(self) -> bool:
@@ -928,7 +841,7 @@ class Equipment:
             gear.TormentedBracelet,
             gear.EternalBoots,
         )
-        gear_bools = [god_cape, occult, arcane, tormented, eternal]
+        gear_bools = (god_cape, occult, arcane, tormented, eternal)
         _gear.extend(compress(gear_options, gear_bools))
 
         return self.equip(*_gear)

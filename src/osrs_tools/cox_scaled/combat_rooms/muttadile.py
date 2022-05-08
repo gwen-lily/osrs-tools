@@ -100,3 +100,14 @@ class BigMuttadileEstimate(RoomEstimate):
         ticks = target.base_hp // dpt
         points = target.points_per_room(freeze=self.freeze)
         return ticks, points
+
+
+class MuttadileEstimate(RoomEstimate):
+    small_muttadile_estimate: RoomEstimate
+    big_muttadile_estimate: RoomEstimate
+
+    def room_estimates(self) -> tuple[int, int]:
+        _smol_tck, _smol_pts = self.small_muttadile_estimate.room_estimates()
+        _beeg_tck, _beeg_pts = self.big_muttadile_estimate.room_estimates()
+
+        return _smol_tck + _beeg_tck, _smol_pts + _beeg_pts

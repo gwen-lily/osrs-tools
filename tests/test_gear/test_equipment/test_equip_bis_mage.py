@@ -12,8 +12,11 @@ from osrs_tools.stats import AggressiveStats
 from osrs_tools.tracked_value import EquipmentStat, TrackedFloat
 
 
-def test_bis_mage():
+def test_equip_bis_mage():
     eqp = Equipment().equip_bis_mage().equip(cg.SanguinestiStaff, cg.BrimstoneRing)
+
+    for _eq in eqp:
+        print(_eq)
 
     assert eqp.full_set
     assert eqp.aggressive_bonus == AggressiveStats(

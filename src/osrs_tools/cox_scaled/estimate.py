@@ -10,7 +10,7 @@ import math
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
-from osrs_tools.character.monster import CoxMonster
+from osrs_tools.character.monster.cox import CoxMonster
 from osrs_tools.combat import Damage
 from osrs_tools.data import COX_POINTS_PER_HITPOINT
 from osrs_tools.strategy import CombatStrategy, Strategy
