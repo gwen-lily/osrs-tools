@@ -110,8 +110,8 @@ class StylesCollection:
 class WeaponStyles(StylesCollection):
     default: PlayerStyle
 
-    def __getitem__(self, __value: Styles | DT | Stances, /) -> PlayerStyle:
-        val = super().__getitem__(__value)
+    def __getitem__(self, __key: Styles | DT | Stances, /) -> PlayerStyle:
+        val = super().__getitem__(__key)
         assert isinstance(val, PlayerStyle)
 
         return val

@@ -8,6 +8,8 @@ These strategies implement weapons & styles basically.
 ###############################################################################
 """
 
+from dataclasses import dataclass
+
 from osrs_tools import gear
 from osrs_tools.data import Stances, Styles
 from osrs_tools.spell import PoweredSpells, Spell
@@ -31,8 +33,9 @@ from .basic_combat_strategies import (
 ###############################################################################
 
 
+@dataclass
 class DwhStrategy(MeleeStrategy):
-    """A basically bis (berserker) dwh strategy with max melee."""
+    """A basically bis (brimstone) dwh strategy with max melee."""
 
     style = BluntStyles[Stances.ACCURATE]
 

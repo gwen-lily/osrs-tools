@@ -16,7 +16,10 @@ def zero_purple_chance(points: int) -> float:
         return (1 - capped_roll_chance) ** max_rolls
 
     uncapped_roll_chance = remaining_points / points_per_purple
-    return (1 - capped_roll_chance) ** capped_rolls * (1 - uncapped_roll_chance)
+    zero_chance = (1 - capped_roll_chance) ** capped_rolls * \
+        (1 - uncapped_roll_chance)
+
+    return zero_chance
 
 
 def purple_chance(points: int, number: int) -> float:
@@ -58,12 +61,14 @@ def main(**kwargs):
 
     plt.plot(x_thousand[:-1], dy_dx_thousand_as_percentage)
     plt.xlabel("points (K)")
-    plt.ylabel("d[P(At least one unique)]/d[points] as % effective of initial roll")
+    plt.ylabel(
+        "d[P(At least one unique)]/d[points] as % effective of initial roll"
+    )
 
     plt.show()
 
 
-def ori_maths():
+def ori_31_scale_maths():
     # assume four accounts that cap with some extra dps alts
     # the fraction could be estimated better with data, but I'm
     # assuming it's low because of how many points Olm gives.
@@ -102,20 +107,68 @@ def ori_maths():
     p_loot_on_capped_acc = p_event_1 + p_event_2
 
     # overall loot chance
-    chance_to_see_any_amount_of_drops = 1 - p_noloot
+    _chance_any_drop = 1 - p_noloot
 
     expected_purples_per_raid = np.dot(np.arange(1, 2 + 1), [p_1loot, p_2loot])
 
     print(
-        f"chance of a capped account getting a purple: {p_loot_on_capped_acc * 100:.1f}%"
+        "chance of a capped account getting a purple: " +
+        f"{p_loot_on_capped_acc * 100:.1f}%"
     )
     print(
-        f"chance of seeing at least one purple: {chance_to_see_any_amount_of_drops*100:.0f}%"
+        f"chance of seeing at least one purple: {_chance_any_drop*100:.0f}%"
     )
     print(f"expected purples per raid: {expected_purples_per_raid:.2f}")
 
 
+def ori_three_plus_twelve_overcap(iron_points: int) -> float:
+
+    # clamp iron points to the individual cap
+    if iron_points <= individual_point_cap:
+        excess_points = 0
+    else:
+        excess_points = iron_points - individual_point_cap
+        iron_points = individual_point_cap
+
+    # deduct from the assignment pool
+    sum_of_individual_points = total_pts_estimate - excess_points
+
+    # the points that determine whether or not a purple is rolled
+    # re-add the excess points into the total pool
+    _purple_chance = 1 - zero_purple_chance(total_pts_estimate)
+
+    # the chance for the iron to get the purple, once a purple has been rolled
+    iron_point_share = iron_points / sum_of_individual_points
+    iron_purple_chance = _purple_chance * iron_point_share
+
+    return iron_purple_chance
+
+
 if __name__ == "__main__":
-    # main()
-    # print(two_cap_at_least_one())
-    ori_maths()
+    total_points_data = [
+        342589,
+        341693,
+        339492,
+        325621,
+        320835,
+        313269,
+        325721,
+        320762,
+        330708,
+        314555,
+    ]
+
+    total_pts_estimate = sum(total_points_data) // len(total_points_data)
+    print(total_pts_estimate)
+
+    iron_pts_ary = np.arange(120000, 150000, int(1e3))
+    iron_purp_ary = np.empty(shape=iron_pts_ary.shape, dtype=float)
+
+    for idx, ep in enumerate(iron_pts_ary):
+        iron_purp_ary[idx] = ori_three_plus_twelve_overcap(ep)
+
+    plt.plot(iron_pts_ary, iron_purp_ary)
+    plt.xlabel('points over cap')
+    plt.ylabel('iron purple chance')
+
+    plt.show()

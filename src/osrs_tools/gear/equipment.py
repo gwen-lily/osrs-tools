@@ -142,6 +142,22 @@ class Equipment:
 
         return self.equip(*gear_list)
 
+    def __radd__(self, other) -> Equipment:
+        """radd pvm bro
+
+        Parameters
+        ----------
+        other : _type_
+
+        Returns
+        -------
+        Equipment
+        """
+        if isinstance(other, (Gear, list)):
+            return self.__add__(other)
+
+        raise TypeError(other)
+
     def __copy__(self):
         return Equipment().equip(*[copy(g) for g in self.equipped_gear])
 
