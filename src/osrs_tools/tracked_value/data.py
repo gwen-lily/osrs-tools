@@ -17,4 +17,4 @@ ModifierPair = tuple[RollModifier, TrackedFloat]
 VoidModifiers = tuple[LevelModifier, LevelModifier]
 
 MinimumVisibleLevel = Level(0, "min visible lvl")
-MaximumVisibleLevel = Level(120, "max visible lvl")
+MaximumVisibleLevel = Level(125, "max visible lvl")     # yagex lmaooooooo

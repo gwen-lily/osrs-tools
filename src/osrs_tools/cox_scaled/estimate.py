@@ -6,10 +6,13 @@
 ###############################################################################
 """
 
+from __future__ import annotations
+
 import math
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
+from osrs_tools.character.monster import Monster
 from osrs_tools.character.monster.cox import CoxMonster
 from osrs_tools.combat import Damage
 from osrs_tools.data import COX_POINTS_PER_HITPOINT
@@ -48,19 +51,36 @@ class RoomEstimate(CoxEstimate, ABC):
 
     strategy: Strategy
     setup_ticks: int
+    monster_types: list[type] = field(default_factory=list)
+    monsters: list[CoxMonster] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        if self.monsters or not self.monster_types:
+            # don't do anything if monsters exists or there are no types
+            return
+
+        for mt in self.monster_types:
 
     @abstractmethod
-    def room_estimates(self) -> tuple[int, int]:  # type: ignore
-        """Generic room_estimates method which returns ticks & points.
+    def tick_estimate(self) -> int:
+        ...
 
-        Returns:
-            tuple[int, int]: (ticks, points)
+    def point_estimate(self, **kwargs) -> int:
+        """Estimate the points yielded by just monsters in the room.
+
+        Additional points from unique mechanics must be handled by estimate
+        classes.
         """
+
+        return sum([est.monster.points_per_room(**kwargs)
+                    for est in self.monster_estimates])
 
 
 @dataclass
 class MonsterEstimate(CoxEstimate):
     """A monster estimate.
+
+    # TODO: Smarter thrall multiplier, how many thralls? Where does this start?
 
     Attributes
     ----------
@@ -83,11 +103,12 @@ class MonsterEstimate(CoxEstimate):
         water. Defaults to False.
     """
 
-    monster: CoxMonster
-    main_strategy: CombatStrategy
+    monster: type
+    main_strategy: type
     thralls: bool = False
     zero_defence: bool = False
     vulnerability: bool = False
+    scale: int
 
     def _get_dam(self, **kwargs) -> Damage:
         """Get the damage distribution from a normal strategy."""

@@ -7,9 +7,7 @@
 """
 from __future__ import annotations
 
-import math
-
-from osrs_tools.data import COX_POINTS_PER_HITPOINT, DT, Stances, Styles
+from osrs_tools.data import DT, Stances, Styles
 from osrs_tools.style import MonsterStyle, MonsterStyles
 from osrs_tools.tracked_value import LevelModifier
 
@@ -20,7 +18,9 @@ from .cox_monster import CoxMonster, get_base_levels_and_stats
 ###############################################################################
 
 _MONSTER_NAME_SMOL = "tekton"
-_LVLS_SMOL, _AGG_SMOL, _DEF_SMOL = get_base_levels_and_stats(_MONSTER_NAME_SMOL)
+_LVLS_SMOL, _AGG_SMOL, _DEF_SMOL = get_base_levels_and_stats(
+    _MONSTER_NAME_SMOL
+)
 
 _MONSTER_NAME_BIG = "tekton (enraged)"
 _LVLS_BIG, _AGG_BIG, _DEF_BIG = get_base_levels_and_stats(_MONSTER_NAME_BIG)
@@ -35,19 +35,16 @@ class TektonABC(CoxMonster):
 
     @property
     def cm_def_scaling_factor(self) -> LevelModifier | None:
-        if self.challenge_mode:
-            value = 12 / 10
-            comment = "cm defensive (tekton)"
-            return LevelModifier(value, comment)
+        if not self.challenge_mode:
+            return
+
+        value = 12 / 10
+        comment = "cm defensive (tekton)"
+        return LevelModifier(value, comment)
 
     def count_per_room(self) -> int:
         _ = self
         return 1
-
-    def points_per_room(self, freeze: bool = True) -> int:
-        count = self.count_per_room()
-        effective_hp = self.base_hp
-        return math.floor(count * int(effective_hp) * COX_POINTS_PER_HITPOINT)
 
 
 ###############################################################################
@@ -90,21 +87,9 @@ class TektonEnraged(TektonABC):
     """The big muttadile from the Chambers of Xeric."""
 
     @classmethod
-    def simple(cls, party_size: int, challenge_mode: bool = False) -> TektonEnraged:
-        _rng_style = MonsterStyle(
-            Styles.NPC_RANGED,
-            DT.RANGED,
-            Stances.NPC,
-            _attack_speed=4,
-            ignores_prayer=True,
-        )
-        _mag_style = MonsterStyle(
-            Styles.NPC_MAGIC,
-            DT.MAGIC,
-            Stances.NPC,
-            _attack_speed=4,
-            ignores_prayer=True,
-        )
+    def simple(cls, party_size: int, challenge_mode: bool = False) -> \
+            TektonEnraged:
+
         _mel_style = MonsterStyle(
             Styles.NPC_MELEE,
             DT.CRUSH,
@@ -112,9 +97,7 @@ class TektonEnraged(TektonABC):
             _attack_speed=4,
         )
 
-        _styles = MonsterStyles(
-            _MONSTER_NAME_BIG, [_rng_style, _mag_style, _mel_style], _rng_style
-        )
+        _styles = MonsterStyles(_MONSTER_NAME_SMOL, [_mel_style], _mel_style)
 
         return cls(
             name=_MONSTER_NAME_BIG,

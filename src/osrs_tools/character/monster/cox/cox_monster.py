@@ -15,19 +15,11 @@ from dataclasses import dataclass, field
 from osrs_tools import utils
 from osrs_tools.character.monster import Monster
 from osrs_tools.character.player import Player
-from osrs_tools.data import (
-    COX_POINTS_PER_HITPOINT,
-    PARTY_AVERAGE_MINING_LEVEL,
-    MonsterLocations,
-    MonsterTypes,
-    Skills,
-)
-from osrs_tools.stats import (
-    AggressiveStats,
-    DefensiveStats,
-    MonsterLevels,
-    PlayerLevels,
-)
+from osrs_tools.data import (COX_POINTS_PER_HITPOINT,
+                             PARTY_AVERAGE_MINING_LEVEL, MonsterLocations,
+                             MonsterTypes, Skills)
+from osrs_tools.stats import (AggressiveStats, DefensiveStats, MonsterLevels,
+                              PlayerLevels)
 from osrs_tools.tracked_value import Level, LevelModifier
 from typing_extensions import Self
 
@@ -41,31 +33,76 @@ def get_base_levels_and_stats(
 ) -> tuple[MonsterLevels, AggressiveStats, DefensiveStats]:
     mon_df = utils.get_cox_monster_base_stats_by_name(name)
 
-    levels = MonsterLevels(
-        _attack=Level(mon_df["melee"].values[0]),
-        _strength=Level(mon_df["melee"].values[0]),
-        _defence=Level(mon_df["defence"].values[0]),
-        _ranged=Level(mon_df["ranged"].values[0]),
-        _magic=Level(mon_df["magic"].values[0]),
-        _hitpoints=Level(mon_df["hp"].values[0]),
-    )
+    _attack = mon_df["melee"].values[0]
+    _strength = mon_df["melee"].values[0]
+    _defence = mon_df["defence"].values[0]
+    _ranged = mon_df["ranged"].values[0]
+    _magic = mon_df["magic"].values[0]
+    _hitpoints = mon_df["hp"].values[0]
+
     aggressive_melee_bonus = mon_df["melee att+"].values[0]
+    magic_attack = mon_df["magic att+"].values[0]
+    ranged_attack = mon_df["ranged att+"].values[0]
+    melee_strength = mon_df["melee str+"].values[0]
+    ranged_strength = mon_df["ranged str+"].values[0]
+    magic_strength = mon_df["magic str+"].values[0]
+
+    stab_defence = mon_df["stab def+"].values[0]
+    slash_defence = mon_df["slash def+"].values[0]
+    crush_defence = mon_df["crush def+"].values[0]
+    magic_defence = mon_df["magic def+"].values[0]
+    ranged_defence = mon_df["ranged def+"].values[0]
+
+    values = [
+        # levels
+        _attack,
+        _strength,
+        _defence,
+        _ranged,
+        _magic,
+        _hitpoints,
+        # aggressive
+        aggressive_melee_bonus,
+        magic_attack,
+        ranged_attack,
+        melee_strength,
+        ranged_strength,
+        magic_strength,
+        # defensive
+        stab_defence,
+        slash_defence,
+        crush_defence,
+        magic_defence,
+        ranged_defence,
+    ]
+
+    assert all((elem := e) is not None for e in values)
+
+    levels = MonsterLevels(
+        _attack=Level(_attack),
+        _strength=Level(_strength),
+        _defence=Level(_defence),
+        _ranged=Level(_ranged),
+        _magic=Level(_magic),
+        _hitpoints=Level(_hitpoints),
+    )
+
     aggressive_bonus = AggressiveStats(
         stab=aggressive_melee_bonus,
         slash=aggressive_melee_bonus,
         crush=aggressive_melee_bonus,
-        magic_attack=mon_df["magic att+"].values[0],
-        ranged_attack=mon_df["ranged att+"].values[0],
-        melee_strength=mon_df["melee str+"].values[0],
-        ranged_strength=mon_df["ranged str+"].values[0],
-        magic_strength=mon_df["magic str+"].values[0],
+        magic_attack=magic_attack,
+        ranged_attack=ranged_attack,
+        melee_strength=melee_strength,
+        ranged_strength=ranged_strength,
+        magic_strength=magic_strength,
     )
     defensive_bonus = DefensiveStats(
-        stab=mon_df["stab def+"].values[0],
-        slash=mon_df["slash def+"].values[0],
-        crush=mon_df["crush def+"].values[0],
-        magic=mon_df["magic def+"].values[0],
-        ranged=mon_df["ranged def+"].values[0],
+        stab=stab_defence,
+        slash=slash_defence,
+        crush=crush_defence,
+        magic=magic_defence,
+        ranged=ranged_defence,
     )
     return levels, aggressive_bonus, defensive_bonus
 
