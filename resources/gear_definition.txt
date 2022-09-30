@@ -1,0 +1,25 @@
+{g.name.replace(' ','_')} = Gear(
+	name={g.name},
+	slot=Slots.{g.slot.name},
+	aggressive_bonus=AggressiveStats(
+        stab={g.aggressive_bonus.stab}
+        slash={g.aggressive_bonus.slash}
+        crush={g.aggressive_bonus.crush}
+        magic_attack={g.aggressive_bonus.magic_attack}
+        ranged_attack={g.aggressive_bonus.ranged_attack}
+        melee_strength={g.aggressive_bonus.melee_strength}
+        ranged_strength={g.aggressive_bonus.ranged_strength}
+        magic_strength={g.aggressive_bonus.magic_strength}
+    ),
+	defensive_bonus=DefensiveStats(
+        stab={g.defensive_bonus.stab}
+        slash={g.defensive_bonus.slash}
+        crush={g.defensive_bonus.crush}
+        magic={g.defensive_bonus.magic}
+        ranged={g.defensive_bonus.ranged}
+    ),
+	prayer_bonus={g.prayer_bonus},
+	level_requirements=PlayerLevels(
+        REQS_LINE
+    )
+)

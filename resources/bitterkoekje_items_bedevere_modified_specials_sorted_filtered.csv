@@ -1,0 +1,66 @@
+	Stab attack	Slash attack	Crush attack	Magic attack	Ranged attack	Stab defence	Slash defence	Crush defence	Magic defence	Ranged defence	Melee strength	Ranged strength	Magic damage	Prayer	Special accuracy	Special damage 1	Special damage 2	Special defence roll	Spell max hit	Attack speed	Combat options	Mining level req	slot	weapon type	two handed
+normal routine																									
+2h Korasi	0	100	60								88					0.5		Magic		4	10		weapon		
+Abyssal bludgeon			102								85				0	0.495		Crush		4	14		weapon	bludgeons	TRUE
+Abyssal dagger	75	40	-4						1		75				0.25	-0.15		Slash		4	4		weapon	stab swords	
+Abyssal tentacle		90									86				0.25	0		Slash		4	13		weapon	whips	
+Abyssal whip		82									82				0.25	0		Slash		4	13		weapon	whips	
+Ancient godsword	0	132	80	0	0	0	0	0	0	0	132			8	1	0.1		Slash		6	10		weapon	two-handed swords	TRUE
+Ancient mace	10	-2	16								14			3				Crush		5	7		weapon	spiked weapons	
+Arclight	10	38	-2				3	2	2		8							Stab		4	6		weapon	slash swords	
+Armadyl godsword		132	80								132			8	1	0.1	0.25	Slash		6	10		weapon	two-handed swords	TRUE
+Bandos godsword		132	80								132			8	1	0.1	0.1	Slash		6	10		weapon	two-handed swords	TRUE
+Barrelchest anchor	-2	10	92					20			100				1	0.1		Crush		6	7		weapon	spiked weapons	TRUE
+Crystal halberd	85	110		-4		-1	4	5			118				-0.25	0.1		Slash		7	11		weapon	polearms	TRUE
+Darklight	10	16	-2				3	2	2		13							Stab		5	6		weapon	slash swords	
+Dinh's Bulwark	0	0	124	0	0	106	109	109	-10	148	38				0.2			Crush		5	21		weapon	bulwarks	TRUE
+Dragon 2h sword	-4	92	80	-4						-1	93							Slash		7	10		weapon	two-handed swords	TRUE
+Dragon battleaxe	-2	70	65							-1	85							Slash		6	8		weapon	axes	
+Dragon claws	41	57				13	26	7			56							Slash		4	6		weapon	claws	TRUE
+Dragon dagger	40	25	-4	1							40				0.15	0.15		Slash		4	4		weapon	stab swords	
+Dragon halberd	70	95		-4		-1	4	5			89				-0.25	0.1		Slash		7	11		weapon	polearms	TRUE
+Dragon hasta	55	55	55	0	0	-15	-15	-12	0	-15	60				1	0.5		Stab		4	12		weapon	spears	
+Dragon longsword	58	69	-2				3	2			71					0.25		Slash		5	6		weapon	slash swords	
+Dragon mace	40	-2	60								55			5	0.25	0.5		Crush		4	7		weapon	spiked weapons	
+Dragon scimitar	8	67	-2				1				66				0.25			Slash		4	6		weapon	slash swords	
+Dragon sword	65	55	-2				2	1			63				0.25	0.25		Stab		4	5		weapon	stab swords	
+Dragon warhammer	-4	-4	95	-4	0						85					0.5		Crush		6	9		weapon	blunt weapons	
+Gadderhammer	-4	-4	35								35							Crush		5	9		weapon	blunt weapons	TRUE
+Granite hammer	0	0	57	-3	-1						56				0.5			Crush		4	9		weapon	blunt weapons	
+Granite maul			81								79							Crush		7	9		weapon	blunt weapons	TRUE
+Keris	40	20	-10	2					2		30			2				Stab		4	4		weapon	stab swords	
+Keris Partisan	58	58	57	2	0						45			3				Stab		4	12		weapon		
+Osmumten's Fang	150	105									115				0.5			stab		5	5		weapon	stab swords	
+Rune claws	26	38	-4			10	19	5			39				0.15	0.15		Slash		4	6		weapon	claws	TRUE
+Saradomin's blessed sword		100	60								88			2	1	0.25		Magic		4	10		weapon	two-handed swords	TRUE
+Saradomin godsword		132	80								132			8	1	0.1		Slash		6	10		weapon	two-handed swords	TRUE
+Saradomin sword		82	60								82			2	1	0.1		Magic		4	10		weapon	two-handed swords	TRUE
+Statius's warhammer	-4	-4	125								114					0.25		Crush		5	9		weapon	blunt weapons	
+Vesta's longsword	106	121	-2			1	4	3			118					0.2		Stab		5	6		weapon	slash swords	
+Zamorak godsword		132	80								132			8	1	0.1		Slash		6	10		weapon	two-handed swords	TRUE
+																									
+normal routine																									
+3rd age bow					80															4	17		weapon	bow	TRUE
+Zaryte crossbow					110	14	14	12	15	16				1	1			ranged		6	17		weapon	crossbow	
+Armadyl crossbow					100									1	1			ranged		6	17		weapon	crossbow	
+Dark bow					95											0.5		ranged		9	17		weapon	bow	TRUE
+Dorgeshuun crossbow					42													ranged		5	17		weapon	crossbow	
+Dragon crossbow					94											0.2		ranged		6	17		weapon	crossbow	
+Dragon thrownaxe					36							47			0.25			ranged		5	17		weapon	thrown	
+Rune thrownaxe					26							36						ranged		5	17		weapon	thrown	
+Heavy ballista					125							15			0.25	0.25		ranged		7	17		weapon	crossbow	TRUE
+Light ballista					110										0.25	0.25		ranged		7	17		weapon	crossbow	TRUE
+Magic compositebow					71													ranged		5	17		weapon	bow	TRUE
+Magic longbow					69													ranged		6	17		weapon	bow	TRUE
+Magic shortbow					69													ranged		4	17		weapon	bow	TRUE
+Magic shortbow (i)					75													ranged		4	17		weapon	bow	TRUE
+Seercull					69													ranged		5	17		weapon	bow	TRUE
+Toxic blowpipe					30							20			1	0.5		ranged		3	17		weapon	thrown	TRUE
+																									
+Eldritch nightmare staff				16					14				0.15		0			magic		5	15		weapon	staves	
+Volatile nightmare staff				16					14				0.15		0.5			magic		5	15		weapon	staves	
+																									
+bolt routine (separate)																									
+Opal bolts (e)												14				0.25							ammunition		
+Diamond bolts (e)												105				0.15							ammunition		
+Onyx bolts (e)												120				0.2							ammunition		
