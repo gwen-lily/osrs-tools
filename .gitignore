@@ -1,12 +1,6 @@
-.idea
-.idea/*
-.venv
-.venv/*
-venv
-venv/*
-__pycache__
-__pycache__/*
-.vscode
+.idea*
+.venv*
+__pycache__*
 
 *.pyc
 *.xml
@@ -14,3 +8,18 @@ __pycache__/*
 *.ods
 *.pyc
 *.xml
+*.txt
+*.png
+
+resources/wiki_items_working_list.csv
+resources/bitterkoekje_items_bedevere_modified_specials_sorted_filtered.csv
+resources/bitterkoekje_items_bedevere_modified_specials_only.csv
+resources/.~lock*
+*.egg-info
+src/osrs_tools/gear_from_osrsbox.py
+src/osrs_tools/gear_from_osrsbox.py
+src/osrs_tools/gear_from_osrsbox.py
+scratch.py
+_character.py
+.pytest_cache
+src/osrs_tools/combat/_monster.py
