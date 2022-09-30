@@ -38,8 +38,13 @@ BookOfTheDead = Gear(
 )
 RingOfSufferingI = Gear.from_bb("ring of suffering (i)")
 
+IbansStaff = Weapon.from_bb("iban staff (u)")
+TridentOfTheSeas = Weapon.from_bb("trident of the seas")
+TridentOfTheSwamp = Weapon.from_bb("trident of the swamp")
+
 SanguinestiStaff = Weapon.from_bb("sanguinesti staff")
 HarmonisedStaff = Weapon.from_bb("harmonised nightmare staff")
+TumekensShadow = Weapon.from_bb("tumeken's shadow")
 
 BlessedCoif = Gear.from_bb("god coif")
 BlessedBody = Gear.from_bb("god d'hide body")
@@ -142,6 +147,7 @@ Arclight = SpecialWeapon.from_bb("arclight")
 
 DragonHunterCrossbow = Weapon.from_bb("dragon hunter crossbow")
 DragonHunterLance = Weapon.from_bb("dragon hunter lance")
+GhraziRapier = Weapon.from_bb("ghrazi rapier")
 
 SlayerHelmetI = Gear.from_bb("slayer helmet (i)")
 
@@ -153,6 +159,8 @@ TwistedBow = Weapon.from_bb("twisted bow")
 BerserkerNecklace = Gear.from_bb("berserker necklace")
 ChaosGauntlets = Gear.from_bb("chaos gauntlets")
 
+AbyssalWhip = SpecialWeapon.from_bb("abyssal whip")
+AbyssalTentacle = SpecialWeapon.from_bb("abyssal tentacle")
 AbyssalDagger = SpecialWeapon.from_bb("abyssal dagger")
 DragonDagger = SpecialWeapon.from_bb("dragon dagger")
 
@@ -181,6 +189,7 @@ OnyxBoltsE = Gear.from_bb("onyx bolts (e)")
 # basic melee
 AmuletOfTorture = Gear.from_bb("amulet of torture")
 PrimordialBoots = Gear.from_bb("primordial boots")
+GuardianBoots = Gear.from_bb("guardian boots")
 InfernalCape = Gear.from_bb("infernal cape")
 FerociousGloves = Gear.from_bb("ferocious gloves")
 BrimstoneRing = Gear.from_bb("brimstone ring")
@@ -204,6 +213,7 @@ AvernicDefender = Gear.from_bb("avernic defender")
 TyrannicalRingI = Gear.from_bb("tyrannical (i)")
 
 BandosGodsword = SpecialWeapon.from_bb("bandos godsword")
+ZamorakianHasta = SpecialWeapon.from_bb("zamorakian hasta")
 DragonPickaxe = SpecialWeapon.from_bb("dragon pickaxe")
 DragonArrows = Gear.from_bb("dragon arrow")
 

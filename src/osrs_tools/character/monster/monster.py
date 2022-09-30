@@ -7,25 +7,19 @@
 """
 from __future__ import annotations
 
+from copy import copy
 from dataclasses import dataclass, field
 
 from osrs_tools import gear, utils
 from osrs_tools import utils_combat as cmb
-from osrs_tools.character import Character, CharacterError, Player
-from osrs_tools.data import (
-    DT,
-    DUMMY_NAME,
-    MagicDamageTypes,
-    MonsterLocations,
-    MonsterTypes,
-    Slayer,
-    Slots,
-    Stances,
-)
+from osrs_tools.character import Character, CharacterError
+from osrs_tools.character.player import Player
+from osrs_tools.data import DT, DUMMY_NAME, MagicDamageTypes, MonsterLocations, MonsterTypes, Slayer, Slots, Stances
 from osrs_tools.stats import AggressiveStats, DefensiveStats, MonsterLevels
 from osrs_tools.style import MonsterStyle, MonsterStyles
 from osrs_tools.timers import Timer
 from osrs_tools.tracked_value import Level, Roll, StyleBonus
+from typing_extensions import Self
 
 ###############################################################################
 # exceptions                                                                  #
@@ -67,7 +61,7 @@ class Monster(Character):
             self._active_style = self.styles.default
 
     def __copy__(self) -> Monster:
-        _val = super().__copy__()
+        _val = copy(self)
         assert isinstance(_val, Monster)
 
         return _val
@@ -104,7 +98,7 @@ class Monster(Character):
         return cmb.effective_level(self.levels.attack, style_bonus)
 
     @property
-    def _effective_melee_strength_level(self) -> Level:
+    def effective_melee_strength_level(self) -> Level:
         astyle = self._active_style
         if astyle is not None and astyle._combat_bonus is not None:
             style_bonus = astyle._combat_bonus.melee_strength
@@ -114,7 +108,7 @@ class Monster(Character):
         return cmb.effective_level(self.levels.strength, style_bonus)
 
     @property
-    def _effective_defence_level(self) -> Level:
+    def effective_defence_level(self) -> Level:
         astyle = self._active_style
         if astyle is not None and astyle._combat_bonus is not None:
             style_bonus = astyle._combat_bonus.defence
@@ -124,7 +118,7 @@ class Monster(Character):
         return cmb.effective_level(self.levels.defence, style_bonus)
 
     @property
-    def _effective_ranged_attack_level(self) -> Level:
+    def effective_ranged_attack_level(self) -> Level:
         astyle = self._active_style
         if astyle is not None and astyle._combat_bonus is not None:
             style_bonus = astyle._combat_bonus.ranged_attack
@@ -134,7 +128,7 @@ class Monster(Character):
         return cmb.effective_level(self.levels.ranged, style_bonus)
 
     @property
-    def _effective_ranged_strength_level(self) -> Level:
+    def effective_ranged_strength_level(self) -> Level:
         astyle = self._active_style
         if astyle is not None and astyle._combat_bonus is not None:
             style_bonus = astyle._combat_bonus.ranged_strength
@@ -167,6 +161,14 @@ class Monster(Character):
             style_bonus = StyleBonus(0)
 
         return cmb.effective_level(defensive_level, style_bonus)
+
+    @property
+    def aggressive_bonus(self) -> AggressiveStats:
+        return self._aggressive_bonus
+
+    @property
+    def defensive_bonus(self) -> DefensiveStats:
+        return self._defensive_bonus
 
     # combat methods
 
@@ -269,9 +271,7 @@ class Monster(Character):
         elif raw_type_value == "":
             pass
         else:
-            raise MonsterError(
-                f"{name=} {raw_type_value=} is an unsupported or undefined type"
-            )
+            raise MonsterError(f"{name=} {raw_type_value=} is an unsupported or undefined type")
 
         _exp_mod = mon_df["exp bonus"].values[0]
         assert isinstance(_exp_mod, (float, int))
@@ -314,3 +314,11 @@ class Monster(Character):
             location=_location,
             special_attributes=_spec_attrs,
         )
+
+    # foo methods
+
+    def _initialize_timers(self, reinitialize: bool = False) -> Self:
+        return self
+
+    def _update_stats(self) -> Self:
+        return super()._update_stats()

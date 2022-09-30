@@ -39,14 +39,14 @@ class DamageAxes:
 
     @property
     def squeezed_axes(self) -> tuple[Field[Any], ...]:
-        return tuple(_axis for _axis in self.axes if len(getattr(self, _axis.name)))
+        return tuple(_axis for _axis in self.axes if len(getattr(self, _axis.name)) > 1)
 
     @property
     def squeezed_dims(self) -> tuple[int, ...]:
         return tuple(_d for _d in self.dims if _d > 1)
 
     @property
-    def squeezed_indices(self) -> product[tuple[int, ...]]:
+    def squeezed_indices(self) -> product:
         return product(*(range(n) for n in self.squeezed_dims))
 
     # dunder methods

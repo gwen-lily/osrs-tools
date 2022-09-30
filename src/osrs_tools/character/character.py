@@ -110,15 +110,16 @@ class Character(ABC):
     def reset_character(self) -> Self:
         return self.reset_stats()._initialize_timers()
 
-    def boost(self, *boosts: Boost) -> Self:
+    def _boost(self, *boosts: Boost) -> Self:
         for boost in boosts:
-            self.lvl += boost
+            self.lvl = self.lvl + boost
 
-        return self._initialize_timers()
+        self._initialize_timers()
+        return self
 
     def reset_stats(self) -> Self:
         """Set the character's active levels to its base levels."""
-        self.lvl = copy(self._levels)
+        self.levels = copy(self._levels)
         return self._remove_effect_timer(Effect.UPDATE_STATS)
 
     # shorthand properties ####################################################
@@ -278,9 +279,7 @@ class Character(ABC):
             else:
                 self.hp = copy(self._levels.hitpoints)
 
-    def defence_roll(
-        self, other: Character, special_defence_roll: DT | None = None
-    ) -> Roll:
+    def defence_roll(self, other: Character, special_defence_roll: DT | None = None) -> Roll:
         """Returns the defence roll of self when attacked by other.
 
         Optionally with a specific damage type.
@@ -308,7 +307,7 @@ class Character(ABC):
         _sdr = special_defence_roll
         dt = _sdr if _sdr else other.style.damage_type
 
-        if dt in (MeleeDamageTypes, RangedDamageTypes):
+        if dt in MeleeDamageTypes or dt in RangedDamageTypes:
             defensive_stat = self.effective_defence_level
         elif dt in MagicDamageTypes:
             defensive_stat = self.effective_magic_defence_level
@@ -382,9 +381,7 @@ class Character(ABC):
 
         return self
 
-    def apply_vulnerability(
-        self, success: bool = True, tome_of_water: bool = True
-    ) -> Self:
+    def apply_vulnerability(self, success: bool = True, tome_of_water: bool = True) -> Self:
         if success:
             if tome_of_water:
                 _mod_val = VULNERABILITY_MODIFIER_TOME_OF_WATER

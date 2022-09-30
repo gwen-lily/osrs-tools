@@ -12,7 +12,8 @@ from copy import copy
 from dataclasses import dataclass, field, fields
 
 from osrs_tools import utils
-from osrs_tools.data import DT, MagicDamageTypes, MeleeDamageTypes, RangedDamageTypes
+from osrs_tools.data import (DT, MagicDamageTypes, MeleeDamageTypes,
+                             RangedDamageTypes)
 from osrs_tools.tracked_value import EquipmentStat, StyleBonus, TrackedFloat
 
 from .data import StatBonusPair
@@ -167,6 +168,16 @@ class AggressiveStats(Stats):
 
         return AggressiveStats(**new_vals)
 
+    def __radd__(self, other: int | AggressiveStats) -> AggressiveStats:
+        if isinstance(other, int):
+            if other == 0:
+                return self
+
+            raise ValueError(other)
+
+        else:
+            return self.__add__(other)
+
     @classmethod  # TODO: Look into bitterkoekje's general attack stat and see where it matters
     def from_bb(cls, name: str):
         mon_df = utils.lookup_normal_monster_by_name(name)
@@ -178,19 +189,19 @@ class AggressiveStats(Stats):
         if val > 0:
             stab_attack, slash_attack, crush_attack = 3 * (general_attack_bonus,)
         else:
-            stab_attack = mon_df["stab attack"].values[0]
-            slash_attack = mon_df["slash attack"].values[0]
-            crush_attack = mon_df["crush attack"].values[0]
+            stab_attack = EquipmentStat(int(mon_df["stab attack"].values[0]))
+            slash_attack = EquipmentStat(int(mon_df["slash attack"].values[0]))
+            crush_attack = EquipmentStat(int(mon_df["crush attack"].values[0]))
 
         return cls(
             stab_attack,
             slash_attack,
             crush_attack,
-            mon_df["magic attack"].values[0],
-            mon_df["ranged attack"].values[0],
-            mon_df["melee strength"].values[0],
-            mon_df["ranged strength"].values[0],
-            mon_df["magic strength"].values[0],
+            EquipmentStat(int(mon_df["magic attack"].values[0])),
+            EquipmentStat(int(mon_df["ranged attack"].values[0])),
+            EquipmentStat(int(mon_df["melee strength"].values[0])),
+            EquipmentStat(int(mon_df["ranged strength"].values[0])),
+            EquipmentStat(int(mon_df["magic strength"].values[0])),
         )
 
     @classmethod
@@ -250,16 +261,27 @@ class DefensiveStats(Stats):
 
         return DefensiveStats(**new_vals)
 
+    def __radd__(self, other: int | DefensiveStats) -> DefensiveStats:
+
+        if isinstance(other, int):
+            if other == 0:
+                return self
+
+            raise ValueError(other)
+
+        else:
+            return self.__add__(other)
+
     @classmethod
     def from_bb(cls, name: str):
         mon_df = utils.lookup_normal_monster_by_name(name)
 
         return cls(
-            mon_df["stab defence"].values[0],
-            mon_df["slash defence"].values[0],
-            mon_df["crush defence"].values[0],
-            mon_df["magic defence"].values[0],
-            mon_df["ranged defence"].values[0],
+            EquipmentStat(int(mon_df["stab defence"].values[0])),
+            EquipmentStat(int(mon_df["slash defence"].values[0])),
+            EquipmentStat(int(mon_df["crush defence"].values[0])),
+            EquipmentStat(int(mon_df["magic defence"].values[0])),
+            EquipmentStat(int(mon_df["ranged defence"].values[0])),
         )
 
     @classmethod

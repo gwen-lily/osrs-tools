@@ -15,11 +15,8 @@ from dataclasses import dataclass, field
 from osrs_tools import utils
 from osrs_tools.character.monster import Monster
 from osrs_tools.character.player import Player
-from osrs_tools.data import (COX_POINTS_PER_HITPOINT,
-                             PARTY_AVERAGE_MINING_LEVEL, MonsterLocations,
-                             MonsterTypes, Skills)
-from osrs_tools.stats import (AggressiveStats, DefensiveStats, MonsterLevels,
-                              PlayerLevels)
+from osrs_tools.data import COX_POINTS_PER_HITPOINT, PARTY_AVERAGE_MINING_LEVEL, MonsterLocations, MonsterTypes, Skills
+from osrs_tools.stats import AggressiveStats, DefensiveStats, MonsterLevels, PlayerLevels
 from osrs_tools.tracked_value import Level, LevelModifier
 from typing_extensions import Self
 
@@ -125,15 +122,9 @@ class CoxMonster(Monster, ABC):
     location: MonsterLocations = MonsterLocations.COX
     party_size: int = field(default=1)
     party_max_combat_level: Level = field(default_factory=Player.max_combat_level)
-    party_max_hitpoints_level: Level = field(
-        default_factory=PlayerLevels.max_skill_level
-    )
-    party_average_mining_level: Level = field(
-        default_factory=lambda: Level(PARTY_AVERAGE_MINING_LEVEL)
-    )
-    special_atttributes: list[MonsterTypes] = field(
-        default_factory=lambda: [MonsterTypes.XERICIAN]
-    )
+    party_max_hitpoints_level: Level = field(default_factory=PlayerLevels.max_skill_level)
+    party_average_mining_level: Level = field(default_factory=lambda: Level(PARTY_AVERAGE_MINING_LEVEL))
+    special_atttributes: list[MonsterTypes] = field(default_factory=lambda: [MonsterTypes.XERICIAN])
 
     # dunder and helper methods
 
@@ -157,9 +148,7 @@ class CoxMonster(Monster, ABC):
 
         # order matters, floor each intermediate value (handled via my arcane dataclasses)
 
-        def _scale_level(
-            skills: list[Skills], *modifiers: LevelModifier | None
-        ) -> None:
+        def _scale_level(skills: list[Skills], *modifiers: LevelModifier | None) -> None:
             """Scale a level by the given modifiers
 
             Parameters
@@ -243,9 +232,7 @@ class CoxMonster(Monster, ABC):
     @property
     def party_def_scaling_factor(self) -> LevelModifier:
         n = self.party_size
-        value = (
-            math.floor(math.sqrt(n - 1)) + math.floor((7 / 10) * (n - 1)) + 100
-        ) / 100
+        value = (math.floor(math.sqrt(n - 1)) + math.floor((7 / 10) * (n - 1)) + 100) / 100
         comment = "party defensive"
         return LevelModifier(value, comment)
 
@@ -285,11 +272,9 @@ class CoxMonster(Monster, ABC):
 
     # class methods
 
-    @abstractmethod
     @classmethod
-    def simple(
-        cls, party_size: int, challenge_mode: bool = False, **kwargs
-    ) -> CoxMonster:
+    @abstractmethod
+    def simple(cls, party_size: int, challenge_mode: bool = False, **kwargs) -> CoxMonster:
         """A simple constructor for concrete CoxMonsters.
 
         Parameters

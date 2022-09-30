@@ -35,25 +35,18 @@ from osrs_tools.data import (
     Slots,
 )
 from osrs_tools.gear import Equipment, Weapon
-from osrs_tools.prayer import Prayer, Prayers, Preserve
-from osrs_tools.spell import (
-    AncientSpell,
-    GodSpell,
-    PoweredSpell,
-    PoweredSpells,
-    Spell,
-    StandardSpell,
-    StandardSpells,
+from osrs_tools.gear.common_gear import (
+    HarmonisedStaff,
+    IbansStaff,
+    SanguinestiStaff,
+    TridentOfTheSeas,
+    TridentOfTheSwamp,
 )
+from osrs_tools.prayer import Prayer, Prayers, Preserve
+from osrs_tools.spell import AncientSpell, GodSpell, PoweredSpell, PoweredSpells, Spell, StandardSpell, StandardSpells
 from osrs_tools.stats import AggressiveStats, DefensiveStats, PlayerLevels
 from osrs_tools.style import PlayerStyle, UnarmedStyles, WeaponStyles
-from osrs_tools.timers import (
-    GET_UPDATE_CALLABLE,
-    Effect,
-    RepeatedEffect,
-    TimedEffect,
-    Timer,
-)
+from osrs_tools.timers import GET_UPDATE_CALLABLE, Effect, RepeatedEffect, TimedEffect, Timer
 from osrs_tools.tracked_value import (
     DamageModifier,
     DamageValue,
@@ -100,9 +93,7 @@ class Player(Character):
     kandardin_hard_diary: bool = True
     levels: PlayerLevels = field(init=False)
     _min_levels: PlayerLevels = field(repr=False, default_factory=PlayerLevels.zeros)
-    _max_levels: PlayerLevels = field(
-        repr=False, default_factory=PlayerLevels.max_levels
-    )
+    _max_levels: PlayerLevels = field(repr=False, default_factory=PlayerLevels.max_levels)
     _prayers: Prayers = field(default_factory=Prayers)
     _run_energy: int = field(init=False, default=RUN_ENERGY_MAX)
     slayer_task: Slayer = Slayer.NONE
@@ -114,10 +105,8 @@ class Player(Character):
     def __post_init__(self) -> None:
         self.reset_stats()
 
-        try:
-            self.wpn
-        except AssertionError:
-            self.wpn = Weapon.unarmed()
+        if self.eqp._weapon is None:
+            self.eqp[Slots.WEAPON] = Weapon.unarmed()
             self.style = UnarmedStyles.default
 
     # event and effect methods ################################################
@@ -152,9 +141,7 @@ class Player(Character):
         new_timers = get_timer(*effects_pairs)
         self.timers.extend(new_timers)
 
-    def _get_special_energy_timer(
-        self, reinitialize: bool = False
-    ) -> RepeatedEffect | None:
+    def _get_special_energy_timer(self, reinitialize: bool = False) -> RepeatedEffect | None:
         if self.special_energy_full:
             return
 
@@ -167,9 +154,7 @@ class Player(Character):
             True,
         )
 
-    def _get_update_stats_timer(
-        self, reinitialize: bool = False
-    ) -> RepeatedEffect | None:
+    def _get_update_stats_timer(self, reinitialize: bool = False) -> RepeatedEffect | None:
         if not self.affected_by_boost:
             return
 
@@ -185,9 +170,7 @@ class Player(Character):
             True,
         )
 
-    def _get_prayer_drain_timer(
-        self, reinitialize: bool = False
-    ) -> RepeatedEffect | None:
+    def _get_prayer_drain_timer(self, reinitialize: bool = False) -> RepeatedEffect | None:
         if len(self.prayers) == 0:
             return
 
@@ -268,7 +251,7 @@ class Player(Character):
             else:
                 pass  # normal potions don't require any more work
 
-        return super().boost(*boosts)
+        return self._boost(*boosts)
 
     def pray(self, *prayers: Prayer | Prayers):
         self.prayers.pray(*prayers)
@@ -284,9 +267,7 @@ class Player(Character):
 
     # combat methods ##########################################################
 
-    def max_hit(
-        self, *damage_modifiers: DamageModifier, spell: Spell | None = None
-    ) -> DamageValue:
+    def max_hit(self, *damage_modifiers: DamageModifier, spell: Spell | None = None) -> DamageValue:
         """The max hit from base damage and standard modifiers.
 
         Parameters
@@ -322,7 +303,7 @@ class Player(Character):
             dt = self.style.damage_type
 
         # melee and ranged damage is simple
-        if dt in [MeleeDamageTypes, RangedDamageTypes]:
+        if dt in MeleeDamageTypes or dt in RangedDamageTypes:
             if dt in MeleeDamageTypes:
                 effective_level = self.effective_melee_strength_level
                 bonus = ab.melee_strength
@@ -336,13 +317,13 @@ class Player(Character):
         # magic is a little less simple
         if spell is None:
             # no spell or autocast specified, try to manually set it.
-            if self.wpn == Weapon.from_bb("sanguinesti staff"):
+            if self.wpn == SanguinestiStaff:
                 self.autocast = PoweredSpells.SANGUINESTI_STAFF.value
-            elif self.wpn == Weapon.from_bb("trident of the swamp"):
+            elif self.wpn == TridentOfTheSwamp:
                 self.autocast = PoweredSpells.TRIDENT_OF_THE_SWAMP.value
-            elif self.wpn == Weapon.from_bb("trident of the seas"):
+            elif self.wpn == TridentOfTheSeas:
                 self.autocast = PoweredSpells.TRIDENT_OF_THE_SEAS.value
-            elif self.wpn == Weapon.from_bb("iban's staff"):
+            elif self.wpn == IbansStaff:
                 self.autocast = StandardSpells.IBAN_BLAST.value
             else:
                 raise ValueError(self.wpn, self._autocast)
@@ -350,7 +331,7 @@ class Player(Character):
             spell = self.autocast
 
         # spell is specified
-        if isinstance(spell, StandardSpell) or isinstance(spell, AncientSpell):
+        if isinstance(spell, (StandardSpell, AncientSpell)):
             base_damage = spell.max_hit()
         elif isinstance(spell, GodSpell):
             base_damage = spell.max_hit(self.charged)
@@ -379,7 +360,7 @@ class Player(Character):
 
         _asm = self.style.attack_speed_modifier
 
-        if self.wpn == Weapon.from_bb("harmonised nightmare staff"):
+        if self.wpn == HarmonisedStaff:
             if isinstance(active_spell, StandardSpell):
                 _asm -= 1
 
@@ -393,18 +374,17 @@ class Player(Character):
 
     @lvl.setter
     def lvl(self, __value: PlayerLevels) -> None:
-        super().lvl = __value
+        self.levels = __value
 
     @property
     def style(self) -> PlayerStyle:
-        val = super().style
+        val = self._active_style
         assert isinstance(val, PlayerStyle)
-
         return val
 
     @style.setter
     def style(self, __value: PlayerStyle) -> None:
-        super().style = __value
+        self._active_style = __value
 
     @property
     def styles(self) -> WeaponStyles:
@@ -742,12 +722,8 @@ class Player(Character):
         Level
         """
         # order important
-        adj_eff_def_lvl = self.effective_defence_level * LevelModifier(
-            0.30, "magic defence 30%"
-        )
-        adj_eff_mag_lvl = self.effective_magic_attack_level * LevelModifier(
-            0.70, "magic defence 70%"
-        )
+        adj_eff_def_lvl = self.effective_defence_level * LevelModifier(0.30, "magic defence 30%")
+        adj_eff_mag_lvl = self.effective_magic_attack_level * LevelModifier(0.70, "magic defence 70%")
 
         invisible_magic_defence = adj_eff_def_lvl + adj_eff_mag_lvl
         bonus = self.style.combat_bonus.defence

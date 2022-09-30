@@ -19,13 +19,13 @@ from .cox_monster import CoxMonster, get_base_levels_and_stats
 # get info                                                                    #
 ###############################################################################
 
-_HEAD_NAME = "__FOO__"
+_HEAD_NAME = "Great Olm"
 _LVLS_HEAD, _AGG_HEAD, _DEF_HEAD = get_base_levels_and_stats(_HEAD_NAME)
 
-_MAGE_HAND_NAME = "__FOO__"
+_MAGE_HAND_NAME = "Great Olm (right/mage claw)"
 _LVLS_MAGE, _AGG_MAGE, _DEF_MAGE = get_base_levels_and_stats(_MAGE_HAND_NAME)
 
-_MELEE_HAND_NAME = "__FOO__"
+_MELEE_HAND_NAME = "Great Olm (left/melee claw)"
 _LVLS_MELEE, _AGG_MELEE, _DEF_MELEE = get_base_levels_and_stats(_MELEE_HAND_NAME)
 
 ###############################################################################
@@ -65,6 +65,8 @@ class OlmABC(CoxMonster):
             value = 1
             comment = "cm hp (olm)"
             return LevelModifier(value, comment)
+
+        return
 
     @property
     def phases(self) -> int:
