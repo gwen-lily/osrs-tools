@@ -1,6 +1,7 @@
 import numpy as np
-from osrs_tools.modifier import Level, Skills
-from osrs_tools.stats.stats import PlayerLevels
+from osrs_tools.data import Skills
+from osrs_tools.stats import PlayerLevels
+from osrs_tools.tracked_value import Level
 
 ###############################################################################
 # email:    noahgill409@gmail.com                                             #

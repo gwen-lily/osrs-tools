@@ -18,6 +18,7 @@ from osrs_tools.data import Slots
 from osrs_tools.exceptions import OsrsException
 from osrs_tools.stats import AggressiveStats, DefensiveStats, PlayerLevels
 from osrs_tools.style import BowStyles, CrossbowStyles, ThrownStyles
+from osrs_tools.tracked_value.tracked_values import EquipmentStat
 from typing_extensions import Self
 
 from . import common_gear as gear
@@ -93,10 +94,11 @@ class Equipment:
 
     def __setitem__(self, __key: Slots, __value: Gear | None, /) -> None:
         try:
-            setattr(self, __key.value, __value)
+            var_name = f"_{__key.value}"
+            setattr(self, var_name, __value)
 
         except AttributeError:
-            setattr(self, f"_{__key.value}", __value)
+            setattr(self, f"{__key.value}", __value)
 
     def __iter__(self) -> Iterator:
         yield from self.equipped_gear
@@ -178,7 +180,9 @@ class Equipment:
 
         if __value.two_handed:
             self[Slots.SHIELD] = None
-            return
+
+        self._weapon = __value
+        return
 
     @property
     def shield(self) -> Gear | None:
@@ -219,19 +223,6 @@ class Equipment:
 
         _val = sum(g.aggressive_bonus for g in self.equipped_gear)
         assert isinstance(_val, AggressiveStats)
-
-        # Hey reader, it's me Joe from Family Guy here to explain why this
-        # is necessary. See, the sum function starts with 0 and performs
-        # successive sums on all the elements of an iterable. But, by the
-        # definition of AggressiveStats, ...
-
-        # Hey :b:eader, it's me Family Guy Peter Griffin to interrupt Joe,
-        # see I actually consulted the documentation and it turns out I
-        # retconned that, it's a much smarter system so this extra
-        # coupling is completely unnecessary, carry on!
-
-        # if isinstance(val, int) and val == 0:
-        #     return AggressiveStats().no_bonus()
 
         return _val
 
@@ -307,7 +298,12 @@ class Equipment:
             if not isinstance(g, Gear):
                 raise TypeError(f"{type(g)} not allowed")
 
-            self[g.slot] = g
+            if isinstance(g, Weapon):
+                self.weapon = g
+            elif g.slot is Slots.SHIELD:
+                self.shield = g
+            else:
+                self[g.slot] = g
 
         return self
 
@@ -332,11 +328,11 @@ class Equipment:
             raise EquipmentError("Equipment.wearing call with no *args or **kwargs")
 
         if m > 0:
-            if any(getattr(self, g.slot.value) != g for g in args):
+            if any(getattr(self, f"_{g.slot.value}") != g for g in args):
                 return False
 
         if n > 0:
-            if any(getattr(self, k) != v for k, v in kwargs.items()):
+            if any(getattr(self, f"_{k}") != v for k, v in kwargs.items()):
                 return False
 
         return True
@@ -507,6 +503,10 @@ class Equipment:
         return self[Slots.WEAPON] in qualifying_weapons
 
     @property
+    def tumekens_shadow(self) -> bool:
+        return self[Slots.WEAPON] == gear.TumekensShadow
+
+    @property
     def graceful_set(self) -> bool:
         return self.wearing(
             gear.GracefulHood,
@@ -579,6 +579,9 @@ class Equipment:
         -------
         bool
         """
+        if self._neck is None:
+            return False
+
         qualifying_items = [
             gear.SalveAmuletI,
             gear.SalveAmuletEI,

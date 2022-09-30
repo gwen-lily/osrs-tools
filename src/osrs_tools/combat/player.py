@@ -29,7 +29,7 @@ from osrs_tools.data import (
     MeleeDamageTypes,
     RangedDamageTypes,
 )
-from osrs_tools.gear import SpecialWeapon, SpecialWeaponError
+from osrs_tools.gear import BoneDagger, Chinchompas, DorgeshuunCrossbow, SpecialWeapon, SpecialWeaponError
 from osrs_tools.modifiers import MonsterModifiers, PlayerModifiers
 from osrs_tools.spell import Spell
 from osrs_tools.tracked_value import DamageModifier, EquipmentStat, TrackedFloat
@@ -108,9 +108,7 @@ class PvMCalc(DamageCalculation):
         else:
             raise ValueError(dt)
 
-        PMods = PlayerModifiers(
-            lad, target, special_attack, distance, spell, additional_targets, dt
-        )
+        PMods = PlayerModifiers(lad, target, special_attack, distance, spell, additional_targets, dt)
 
         ab = PMods.aggressive_bonus  # more information (dinhs/smoke)
         arms, dms = PMods.get_modifiers()
@@ -259,7 +257,7 @@ class PvMCalc(DamageCalculation):
             _accuracy = None
 
             # dorgeshuun weapons: crossbow & dagger
-            if lad.eqp.dorgeshuun_special_weapon and target.last_attacked_by != self:
+            if lad.eqp.weapon in [BoneDagger, DorgeshuunCrossbow] and target.last_attacked_by is not self:
                 _accuracy = 1.0
 
             # seercull
@@ -289,9 +287,7 @@ class PvMCalc(DamageCalculation):
                 dmg_val_A1 = list(range(min_hit_A, max_hit_A + 1))
                 dmg_val_A2 = [math.floor(dmg / 2) for dmg in dmg_val_A1]
                 dmg_val_A3 = [math.floor(dmg / 2) for dmg in dmg_val_A2]
-                dmg_val_A4 = [
-                    dmg for dmg in dmg_val_A3
-                ]  # TODO: probability of the 1 ocurring?
+                dmg_val_A4 = [dmg for dmg in dmg_val_A3]  # TODO: probability of the 1 ocurring?
                 n_A = len(dmg_val_A1)
 
                 # scenario B: second attack is successful (0-4-2-2)
@@ -426,9 +422,7 @@ class PvMCalc(DamageCalculation):
             if hs is not None:
                 return Damage(attack_speed, hs)
 
-            return Damage.basic_constructor(
-                lad.attack_speed(), _max_hit, _accuracy, target.hp
-            )
+            return Damage.basic_constructor(lad.attack_speed(), _max_hit, _accuracy, target.hp)
 
         def __get_standard_distribution() -> Damage:
             """Return a normal distribution from accuracy and max hit.
@@ -450,21 +444,16 @@ class PvMCalc(DamageCalculation):
                     _hs = Hitsplat.basic_constructor(_mh, accuracy, target.hp)
                     hs.append(_hs)
 
-            elif eqp.chinchompas and additional_targets:
+            elif eqp.weapon in Chinchompas and additional_targets:
                 max_targets = PVM_MAX_TARGETS
 
                 if isinstance(additional_targets, int):
                     targets = min([1 + additional_targets, max_targets])
-                    hs = [
-                        Hitsplat.basic_constructor(max_hit, accuracy, target.hp)
-                        for _ in range(targets)
-                    ]
+                    hs = [Hitsplat.basic_constructor(max_hit, accuracy, target.hp) for _ in range(targets)]
 
                 elif isinstance(additional_targets, (list, Character)):
                     if isinstance(additional_targets, list):
-                        assert all(
-                            isinstance(_at, Character) for _at in additional_targets
-                        )
+                        assert all(isinstance(_at, Character) for _at in additional_targets)
                         _additional_targets = additional_targets
                     else:
                         _additional_targets = [additional_targets]
@@ -474,10 +463,7 @@ class PvMCalc(DamageCalculation):
                     clamp = len(targets) <= max_targets
                     targets = targets[:max_targets] if clamp else targets
 
-                    hs = [
-                        Hitsplat.basic_constructor(max_hit, accuracy, t.hp)
-                        for t in targets
-                    ]
+                    hs = [Hitsplat.basic_constructor(max_hit, accuracy, t.hp) for t in targets]
 
                 else:
                     raise NotImplementedError
@@ -487,7 +473,7 @@ class PvMCalc(DamageCalculation):
             if damage is not None:
                 return damage
 
-            if hs is not None:
+            if hs:
                 return Damage(attack_speed, hs)
 
             return Damage.basic_constructor(attack_speed, max_hit, accuracy, target.hp)

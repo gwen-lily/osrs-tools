@@ -10,7 +10,8 @@ from dataclasses import dataclass, field
 
 from bedevere.markov import MarkovChain
 from osrs_tools.boost import Boost, Overload
-from osrs_tools.character import CoxMonster, Player
+from osrs_tools.character.monster.cox import CoxMonster
+from osrs_tools.character.player import Player
 from osrs_tools.combat import Damage, PvMCalc
 from osrs_tools.gear.equipment import Equipment
 from osrs_tools.prayer import Prayers
@@ -135,12 +136,7 @@ class CombatStrategy(Strategy):
         -------
         Self
         """
-        return (
-            self.equip_player(**kwargs)
-            .boost_player()
-            .pray_player()
-            .misc_player(**kwargs)
-        )
+        return self.equip_player(**kwargs).boost_player().pray_player().misc_player(**kwargs)
 
     def damage_distribution(self, target: CoxMonster, **kwargs) -> Damage:
         """Simple wrapper for Player.damage_distribution"""

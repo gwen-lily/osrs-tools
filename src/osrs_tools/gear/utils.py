@@ -38,6 +38,8 @@ from osrs_tools.style.all_weapon_styles import (
     WhipStyles,
 )
 from osrs_tools.tracked_value import DamageModifier, Level, RollModifier
+from osrs_tools.tracked_value.tracked_value import TrackedFloat
+from osrs_tools.tracked_value.tracked_values import EquipmentStat
 
 ###############################################################################
 # utilities                                                                   #
@@ -76,28 +78,26 @@ def lookup_gear_bb_by_name(
     assert isinstance(name, str)
 
     aggressive_bonus = AggressiveStats(
-        stab=item_df["stab attack"].values[0],
-        slash=item_df["slash attack"].values[0],
-        crush=item_df["crush attack"].values[0],
-        magic_attack=item_df["magic attack"].values[0],
-        ranged_attack=item_df["ranged attack"].values[0],
-        melee_strength=item_df["melee strength"].values[0],
-        ranged_strength=item_df["ranged strength"].values[0],
-        magic_strength=item_df["magic damage"].values[
-            0
-        ],  # stored as float in bitterkoekje's sheet
+        stab=EquipmentStat(int(item_df["stab attack"].values[0])),
+        slash=EquipmentStat(int(item_df["slash attack"].values[0])),
+        crush=EquipmentStat(int(item_df["crush attack"].values[0])),
+        magic_attack=EquipmentStat(int(item_df["magic attack"].values[0])),
+        ranged_attack=EquipmentStat(int(item_df["ranged attack"].values[0])),
+        melee_strength=EquipmentStat(int(item_df["melee strength"].values[0])),
+        ranged_strength=EquipmentStat(int(item_df["ranged strength"].values[0])),
+        magic_strength=TrackedFloat(
+            float(item_df["magic damage"].values[0])
+        ),  # stored as float in bitterkoekje's sheet
     )
     defensive_bonus = DefensiveStats(
-        stab=item_df["stab defence"].values[0],
-        slash=item_df["slash defence"].values[0],
-        crush=item_df["crush defence"].values[0],
-        magic=item_df["magic defence"].values[0],
-        ranged=item_df["ranged defence"].values[0],
+        stab=EquipmentStat(int(item_df["stab defence"].values[0])),
+        slash=EquipmentStat(int(item_df["slash defence"].values[0])),
+        crush=EquipmentStat(int(item_df["crush defence"].values[0])),
+        magic=EquipmentStat(int(item_df["magic defence"].values[0])),
+        ranged=EquipmentStat(int(item_df["ranged defence"].values[0])),
     )
     prayer_bonus = item_df["prayer"].values[0]
-    level_requirements = PlayerLevels(
-        _mining=Level(item_df["mining level req"].values[0])
-    )
+    level_requirements = PlayerLevels(_mining=Level(item_df["mining level req"].values[0]))
 
     slot_src = item_df["slot"].values[0]
     slot_enum = None

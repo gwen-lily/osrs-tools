@@ -10,7 +10,7 @@ from enum import Enum, unique
 
 from osrs_tools.tracked_value import DamageValue
 
-from .spell import AncientSpell, GodSpell, PoweredSpell, StandardSpell
+from .spell import AncientSpell, GodSpell, PoweredSpell, StandardSpell, TumekenPoweredSpell
 
 # standard spells #############################################################
 
@@ -78,34 +78,18 @@ class AncientSpells(Enum):
     SHADOW_RUSH = AncientSpell(name="shadow rush", base_max_hit=DamageValue(14))
     BLOOD_RUSH = AncientSpell(name="blood rush", base_max_hit=DamageValue(15))
     ICE_RUSH = AncientSpell(name="ice rush", base_max_hit=DamageValue(16))
-    SMOKE_BURST = AncientSpell(
-        name="smoke burst", base_max_hit=DamageValue(17), max_targets_hit=9
-    )
-    SHADOW_BURST = AncientSpell(
-        name="shadow burst", base_max_hit=DamageValue(18), max_targets_hit=9
-    )
-    BLOOD_BURST = AncientSpell(
-        name="blood burst", base_max_hit=DamageValue(21), max_targets_hit=9
-    )
-    ICE_BURST = AncientSpell(
-        name="ice burst", base_max_hit=DamageValue(22), max_targets_hit=9
-    )
+    SMOKE_BURST = AncientSpell(name="smoke burst", base_max_hit=DamageValue(17), max_targets_hit=9)
+    SHADOW_BURST = AncientSpell(name="shadow burst", base_max_hit=DamageValue(18), max_targets_hit=9)
+    BLOOD_BURST = AncientSpell(name="blood burst", base_max_hit=DamageValue(21), max_targets_hit=9)
+    ICE_BURST = AncientSpell(name="ice burst", base_max_hit=DamageValue(22), max_targets_hit=9)
     SMOKE_BLITZ = AncientSpell(name="smoke blitz", base_max_hit=DamageValue(23))
     SHADOW_BLITZ = AncientSpell(name="shadow blitz", base_max_hit=DamageValue(24))
     BLOOD_BLITZ = AncientSpell(name="blood blitz", base_max_hit=DamageValue(25))
     ICE_BLITZ = AncientSpell(name="ice blitz", base_max_hit=DamageValue(26))
-    SMOKE_BARRAGE = AncientSpell(
-        name="smoke barrage", base_max_hit=DamageValue(27), max_targets_hit=9
-    )
-    SHADOW_BARRAGE = AncientSpell(
-        name="shadow barrage", base_max_hit=DamageValue(28), max_targets_hit=9
-    )
-    BLOOD_BARRAGE = AncientSpell(
-        name="blood barrage", base_max_hit=DamageValue(29), max_targets_hit=9
-    )
-    ICE_BARRAGE = AncientSpell(
-        name="ice barrage", base_max_hit=DamageValue(30), max_targets_hit=9
-    )
+    SMOKE_BARRAGE = AncientSpell(name="smoke barrage", base_max_hit=DamageValue(27), max_targets_hit=9)
+    SHADOW_BARRAGE = AncientSpell(name="shadow barrage", base_max_hit=DamageValue(28), max_targets_hit=9)
+    BLOOD_BARRAGE = AncientSpell(name="blood barrage", base_max_hit=DamageValue(29), max_targets_hit=9)
+    ICE_BARRAGE = AncientSpell(name="ice barrage", base_max_hit=DamageValue(30), max_targets_hit=9)
 
 
 # powered spells ##############################################################
@@ -113,12 +97,7 @@ class AncientSpells(Enum):
 
 @unique
 class PoweredSpells(Enum):
-    TRIDENT_OF_THE_SEAS = PoweredSpell(
-        name="trident of the seas", base_max_hit=DamageValue(20)
-    )
-    TRIDENT_OF_THE_SWAMP = PoweredSpell(
-        name="trident of the swamp", base_max_hit=DamageValue(23)
-    )
-    SANGUINESTI_STAFF = PoweredSpell(
-        name="sanguinesti staff", base_max_hit=DamageValue(24)
-    )
+    TRIDENT_OF_THE_SEAS = PoweredSpell(name="trident of the seas", base_max_hit=DamageValue(20))
+    TRIDENT_OF_THE_SWAMP = PoweredSpell(name="trident of the swamp", base_max_hit=DamageValue(23))
+    SANGUINESTI_STAFF = PoweredSpell(name="sanguinesti staff", base_max_hit=DamageValue(24))
+    TUMEKENS_SHADOW = TumekenPoweredSpell()

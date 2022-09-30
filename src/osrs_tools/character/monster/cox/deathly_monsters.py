@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 from osrs_tools.data import DT, Stances, Styles
-from osrs_tools.style.style import MonsterStyle, MonsterStyles
+from osrs_tools.style import MonsterStyle, MonsterStyles
 
 from .cox_monster import CoxMonster, get_base_levels_and_stats
 

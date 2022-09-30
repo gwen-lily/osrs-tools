@@ -92,6 +92,14 @@ class DamageValue(TrackedInt):
     def __rmul__(self, other) -> DamageValue:
         return self._assert_subclass(super().__rmul__(other))
 
+    @classmethod
+    def zero(cls) -> DamageValue:
+        return cls(0)
+
+    @classmethod
+    def one(cls) -> DamageValue:
+        return cls(1)
+
 
 class DamageModifier(TrackedFloat):
     def _assert_subclass(self, __value: TrackedValue, /) -> DamageModifier:
@@ -129,6 +137,9 @@ class EquipmentStat(TrackedInt):
 
     def __sub__(self, other) -> EquipmentStat:
         return self._assert_subclass(super().__sub__(other))
+
+    def __mul__(self, other: int) -> EquipmentStat:
+        return self._assert_subclass(super().__mul__(other))
 
     # class methods
 

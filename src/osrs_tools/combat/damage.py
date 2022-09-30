@@ -66,9 +66,7 @@ class Hitsplat:
 
         NDArray[np.int_]
         """
-        return np.random.choice(
-            self.damage, size=(k,), replace=False, p=self.probability
-        )
+        return np.random.choice(self.damage, size=(k,), replace=False, p=self.probability)
 
     @classmethod
     def basic_constructor(
@@ -99,15 +97,17 @@ class Hitsplat:
         probability = np.asarray([accuracy * (1 / (int(max_hit) + 1)) for _ in damage])
         probability[0] += 1 - accuracy
 
-        if hitpoints_cap is not None and hitpoints_cap < damage.max():
-            return cls.clamp_to_hitpoints_cap(damage, probability, hitpoints_cap)
-        else:
-            return cls(damage, probability)
+        if hitpoints_cap is not None:
+            if isinstance(hitpoints_cap, int):
+                hitpoints_cap = Level(hitpoints_cap)
+
+            if hitpoints_cap.value < damage.max():
+                return cls.clamp_to_hitpoints_cap(damage, probability, hitpoints_cap)
+
+        return cls(damage, probability)
 
     @classmethod
-    def clamp_to_hitpoints_cap(
-        cls, damage: np.ndarray, probability: np.ndarray, hitpoints_cap: int | Level
-    ):
+    def clamp_to_hitpoints_cap(cls, damage: np.ndarray, probability: np.ndarray, hitpoints_cap: int | Level):
         hp_cap = int(hitpoints_cap)
         dmg_adj = damage[: hp_cap + 1]
         prb_adj = np.zeros(dmg_adj.shape)
@@ -146,10 +146,16 @@ class Damage:
         self.min_hit = sum(hs.min_hit for hs in self.hitsplats)
         self.max_hit = sum(hs.max_hit for hs in self.hitsplats)
         self.mean_hit = sum(hs.mean_hit for hs in self.hitsplats)
-        zero_probs = (hs.probability[0] for hs in self.hitsplats)
-        self.probability_nonzero_damage = 1 - functools.reduce(
-            lambda x, y: x * y, zero_probs
-        )
+        zero_probs = [hs.probability[0] for hs in self.hitsplats]
+
+        if len(zero_probs) == 0:
+            raise ValueError(zero_probs)
+        elif len(zero_probs) == 1:
+            self.probability_nonzero_damage = 1 - zero_probs[0]
+        else:
+            all_zeros = functools.reduce(lambda x, y: x * y, zero_probs)
+            self.probability_nonzero_damage = 1 - all_zeros
+
         self.per_tick = self.mean_hit / self.attack_speed
         self.per_second = self.per_tick * TICKS_PER_SECOND
         self.per_minute = self.per_tick * TICKS_PER_MINUTE
