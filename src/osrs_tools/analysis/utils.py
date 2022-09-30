@@ -79,9 +79,7 @@ def tabulate_enhanced(
 
         table_data.append(labeled_row)
 
-    table = tabulate(
-        table_data, headers=col_labels, floatfmt=floatfmt, tablefmt=tablefmt
-    )
+    table = tabulate(table_data, headers=col_labels, floatfmt=floatfmt, tablefmt=tablefmt)
 
     if meta_header is not None:
         line_length = len(table.split("\n")[0])
@@ -148,7 +146,7 @@ def table_2d(func: Callable) -> Callable:
         if (mh_k := "meta_header") in kwargs.keys():
             meta_header = kwargs.pop(mh_k)
 
-        retval = _, axes_dict, data_ary = func(*args, **kwargs)
+        retval = axes_dict, data_ary = func(*args, **kwargs)
 
         if not isinstance(data_ary, np.ndarray):
             raise TypeError(data_ary)
@@ -201,9 +199,7 @@ def table_2d(func: Callable) -> Callable:
             if data_df is None:
                 data_df = convert_to_df(data_ary, columns=col_labels)
                 data_df = data_df.assign(**{"row_label": row_labels})
-                data_df = data_df.sort_values(
-                    by=col_labels[0], axis=0, ascending=ascending
-                )
+                data_df = data_df.sort_values(by=col_labels[0], axis=0, ascending=ascending)
 
             data_df = data_df.sort_values(by=col_labels[0], ascending=ascending)
             row_labels = list(data_df["row_label"])

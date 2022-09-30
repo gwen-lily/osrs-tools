@@ -18,5 +18,5 @@ class DamageCalculation(ABC):
     thralls: bool = False
 
     @abstractmethod
-    def get_damage() -> Damage:
+    def get_damage(*args) -> Damage:
         ...

@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from osrs_tools.character import Character
 from osrs_tools.character.monster import Monster
 from osrs_tools.character.monster.cox import CoxMonster, Guardian, IceDemon
+from osrs_tools.character.monster.toa import ToaMonster
 from osrs_tools.character.player import AutocastError, NoTaskError, Player
 from osrs_tools.data import (
     CRYSTAL_PIECE_ARM,
@@ -23,12 +24,30 @@ from osrs_tools.data import (
     MonsterTypes,
     RangedDamageTypes,
     Slayer,
+    Slots,
     Styles,
 )
-from osrs_tools.gear import common_gear as cg
+from osrs_tools.gear import Chinchompas, SalveAmuletEI, SalveAmuletI
+from osrs_tools.gear.common_gear import (
+    AbyssalBludgeon,
+    Arclight,
+    BerserkerNecklace,
+    ChaosGauntlets,
+    CrawsBow,
+    CrystalArmorSet,
+    DragonHunterCrossbow,
+    DragonHunterLance,
+    InquisitorSet,
+    Seercull,
+    SlayerHelmetI,
+    ThammaronsSceptre,
+    TomeOfFire,
+    TwistedBow,
+    ViggorasChainmace,
+)
 from osrs_tools.spell.spell import Spell
 from osrs_tools.spell.spells import BoltSpells, FireSpells, StandardSpell
-from osrs_tools.stats import AggressiveStats
+from osrs_tools.stats import AggressiveStats, additional_stats
 from osrs_tools.style import BulwarkStyles, ChinchompaStyles
 from osrs_tools.tracked_value import (
     DamageModifier,
@@ -81,6 +100,14 @@ class PlayerModifiers(CharacterModifiers):
         elif (smoke := self._smoke_modifier()) is not None:
             _, gear_damage_bonus = smoke
             ab.magic_strength += gear_damage_bonus
+        elif lad.eqp.tumekens_shadow:
+            if isinstance(self.target, ToaMonster):
+                tumeken_mod = 4
+            else:
+                tumeken_mod = 3
+
+            ab.magic_attack *= tumeken_mod
+            ab.magic_strength *= tumeken_mod
 
         return ab
 
@@ -230,11 +257,13 @@ class PlayerModifiers(CharacterModifiers):
         if not lad.eqp.salve or not isinstance(chump, Monster):
             return
 
+        assert isinstance(chump, Monster)
+
         if MonsterTypes.UNDEAD in chump.special_attributes:
             comment = "salve"
-            if lad.wearing(neck=cg.SalveAmuletI):
+            if lad.wearing(SalveAmuletI):
                 modifier = 7 / 6
-            elif lad.wearing(neck=cg.SalveAmuletEI):
+            elif lad.wearing(SalveAmuletEI):
                 modifier = 1.2
             else:
                 raise NotImplementedError
@@ -301,14 +330,15 @@ class PlayerModifiers(CharacterModifiers):
     def _slayer_modifier(self) -> ModifierPair | None:
         lad = self.player
         chump = self.target
+        assert isinstance(chump, Monster)
 
-        if lad.wearing(cg.Seercull):
+        if lad.wearing(Seercull):
             return  # seercull cannot benefit from slayer bonus
 
-        if lad.wearing(cg.SlayerHelmetI) and lad.slayer_task is Slayer.NONE:
-            raise NoTaskError(lad)
+        if not lad.wearing(SlayerHelmetI):
+            return
 
-        if not isinstance(chump, Monster) or lad.slayer_task != chump.slayer_category:
+        if lad.slayer_task is not chump.slayer_category:
             return
 
         comment = "slayer"
@@ -327,11 +357,7 @@ class PlayerModifiers(CharacterModifiers):
         lad = self.player
         chump = self.target
 
-        if (
-            lad.wpn == cg.Arclight
-            and isinstance(chump, Monster)
-            and MonsterTypes.DEMON in chump.special_attributes
-        ):
+        if lad.wpn == Arclight and isinstance(chump, Monster) and MonsterTypes.DEMON in chump.special_attributes:
             modifier = 1.7
             comment = "arclight"
             return create_modifier_pair(modifier, comment)
@@ -339,16 +365,13 @@ class PlayerModifiers(CharacterModifiers):
     def _draconic_modifier(self) -> ModifierPair | None:
         lad = self.player
         chump = self.target
+        assert isinstance(chump, Monster)
 
-        if (
-            lad.eqp.dragonbane_weapon
-            and isinstance(chump, Monster)
-            and MonsterTypes.DRACONIC in chump.special_attributes
-        ):
+        if lad.eqp.dragonbane_weapon and MonsterTypes.DRACONIC in chump.special_attributes:
             comment = "draconic"
-            if lad.eqp.wearing(cg.DragonHunterLance):
+            if lad.eqp.wearing(DragonHunterLance):
                 modifier = 1.2
-            elif lad.eqp.wearing(cg.DragonHunterCrossbow):
+            elif lad.eqp.wearing(DragonHunterCrossbow):
                 modifier = 1.3
             else:
                 raise NotImplementedError
@@ -359,19 +382,15 @@ class PlayerModifiers(CharacterModifiers):
         lad = self.player
         chump = self.target
 
-        if (
-            lad.eqp.wilderness_weapon
-            and isinstance(chump, Monster)
-            and chump.location is MonsterLocations.WILDERNESS
-        ):
+        if lad.eqp.wilderness_weapon and isinstance(chump, Monster) and chump.location is MonsterLocations.WILDERNESS:
             comment = "wilderness"
-            if lad.eqp.wearing(cg.CrawsBow):
+            if lad.eqp.wearing(CrawsBow):
                 arm = 1.5
                 dm = 1.5
-            elif lad.eqp.wearing(cg.ViggorasChainmace):
+            elif lad.eqp.wearing(ViggorasChainmace):
                 arm = 1.5
                 dm = 1.5
-            elif lad.eqp.wearing(cg.ThammaronsSceptre):
+            elif lad.eqp.wearing(ThammaronsSceptre):
                 arm = 2
                 dm = 1.25
             else:
@@ -383,7 +402,7 @@ class PlayerModifiers(CharacterModifiers):
         lad = self.player
         chump = self.target
 
-        if lad.wpn != cg.TwistedBow:
+        if lad.wpn != TwistedBow:
             return
 
         comment = "twisted bow"
@@ -401,14 +420,10 @@ class PlayerModifiers(CharacterModifiers):
         )
 
         accuracy_modifier_percent = (
-            140
-            + math.floor((10 * 3 * magic / 10 - 10) / 100)
-            - math.floor(((3 * magic / 10 - 100) ** 2 / 100))
+            140 + math.floor((10 * 3 * magic / 10 - 10) / 100) - math.floor(((3 * magic / 10 - 100) ** 2 / 100))
         )
         damage_modifier_percent = (
-            250
-            + math.floor((10 * 3 * magic / 10 - 14) / 100)
-            - math.floor(((3 * magic / 10 - 140) ** 2 / 100))
+            250 + math.floor((10 * 3 * magic / 10 - 14) / 100) - math.floor(((3 * magic / 10 - 140) ** 2 / 100))
         )
 
         arm = min([accuracy_modifier_ceiling, accuracy_modifier_percent / 100])
@@ -426,7 +441,7 @@ class PlayerModifiers(CharacterModifiers):
     def _berserker_necklace_damage_modifier(self) -> DamageModifier | None:
         lad = self.player
 
-        if lad.wearing(cg.BerserkerNecklace) and lad.eqp.obsidian_weapon:
+        if lad.wearing(BerserkerNecklace) and lad.eqp.obsidian_weapon:
             modifier = 1.2
             comment = "obsidian weapon & berserker necklace"
             return DamageModifier(modifier, comment)
@@ -444,11 +459,7 @@ class PlayerModifiers(CharacterModifiers):
         lad = self.player
         chump = self.target
 
-        if (
-            lad.eqp.leafy_weapon
-            and isinstance(chump, Monster)
-            and MonsterTypes.LEAFY in chump.special_attributes
-        ):
+        if lad.eqp.leafy_weapon and isinstance(chump, Monster) and MonsterTypes.LEAFY in chump.special_attributes:
             modifier = 1.175
             comment = "leafy"
             return create_modifier_pair(modifier, comment)
@@ -457,11 +468,7 @@ class PlayerModifiers(CharacterModifiers):
         lad = self.player
         chump = self.target
 
-        if (
-            lad.eqp.keris
-            and isinstance(chump, Monster)
-            and MonsterTypes.KALPHITE in chump.special_attributes
-        ):
+        if lad.eqp.keris and isinstance(chump, Monster) and MonsterTypes.KALPHITE in chump.special_attributes:
             modifier = 4 / 3
             comment = "keris"
             return DamageModifier(modifier, comment)
@@ -479,11 +486,7 @@ class PlayerModifiers(CharacterModifiers):
                 _arm = 1
                 _dm = 1
 
-                qualifying_armor = [
-                    cg.CrystalHelm,
-                    cg.CrystalBody,
-                    cg.CrystalLegs,
-                ]
+                qualifying_armor = CrystalArmorSet
 
                 for armor in qualifying_armor:
                     if lad.wearing(armor):
@@ -506,11 +509,7 @@ class PlayerModifiers(CharacterModifiers):
                 modifier = 1 + INQUISITOR_SET_BONUS + 3 * INQUISITOR_PIECE_BONUS
             else:
                 modifier = 1
-                qualifying_armor = [
-                    cg.InquisitorsGreatHelm,
-                    cg.InquisitorsHauberk,
-                    cg.InquisitorsPlateskirt,
-                ]
+                qualifying_armor = InquisitorSet
 
                 for armor in qualifying_armor:
                     if lad.wearing(armor):
@@ -525,7 +524,7 @@ class PlayerModifiers(CharacterModifiers):
         lad = self.player
         dist = self.distance
 
-        if dist is None or not lad.eqp.chinchompas:
+        if dist is None or not lad.eqp[Slots.WEAPON] not in Chinchompas:
             return
 
         comment = "chinchompa"
@@ -559,7 +558,10 @@ class PlayerModifiers(CharacterModifiers):
     def _tome_of_fire_damage_modifier(self) -> DamageModifier | None:
         lad = self.player
 
-        if lad.eqp.tome_of_fire and self.spell in FireSpells:
+        if lad.eqp._shield is None:
+            return
+
+        if lad.eqp[Slots.SHIELD] == TomeOfFire and self.spell in FireSpells:
             modifier = 1.50
             comment = "tome of fire"
             return DamageModifier(modifier, comment)
@@ -580,7 +582,7 @@ class PlayerModifiers(CharacterModifiers):
         lad = self.player
         _spell = self.spell
 
-        if not lad.eqp.chaos_gauntlets:
+        if not lad.eqp._hands == ChaosGauntlets:
             return
 
         try:
@@ -649,7 +651,7 @@ class PlayerModifiers(CharacterModifiers):
         lad = self.player
         spec = self.special_attack
 
-        if not spec or not lad.eqp.abyssal_bludgeon:
+        if not spec or not lad.wpn == AbyssalBludgeon:
             return
 
         pp_missing = min([0, lad._levels.prayer - lad.lvl.prayer])
@@ -657,3 +659,19 @@ class PlayerModifiers(CharacterModifiers):
         comment = "abyssal bludgeon: penance"
 
         return DamageModifier(damage_modifier, comment)
+
+    # class methods
+
+    @classmethod
+    def simple(cls, player: Player, target: Character):
+
+        if player._autocast is not None:
+            spell = player.autocast
+            dt = DT.MAGIC
+        else:
+            spell = None
+            dt = player.style.damage_type
+
+        return cls(
+            player=player, target=target, special_attack=False, distance=None, spell=spell, additional_targets=0, dt=dt
+        )

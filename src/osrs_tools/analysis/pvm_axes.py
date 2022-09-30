@@ -19,7 +19,7 @@ from osrs_tools.gear import Equipment
 from osrs_tools.prayer import Prayer, Prayers
 from osrs_tools.spell import Spell
 from osrs_tools.stats import PlayerLevels
-from osrs_tools.style import WeaponStyles
+from osrs_tools.style import PlayerStyle
 
 from .damage_axes import DamageAxes
 
@@ -28,7 +28,7 @@ from .damage_axes import DamageAxes
 ###############################################################################
 
 
-@dataclass
+@dataclass(frozen=True)
 class PvmAxes(DamageAxes):
     """Axes for a generic PvM damage calculation comparison
 
@@ -44,7 +44,7 @@ class PvmAxes(DamageAxes):
     equipment : list[Equipment]
         A list of Equipment objects
 
-    styles : list[WeaponStyles]
+    styles : list[PlayerStyle]
         A list of styles
 
     prayers : list[Prayers]
@@ -72,7 +72,7 @@ class PvmAxes(DamageAxes):
     target: list[Character]
     # strategy parameters (interact with player)
     equipment: list[Equipment] = field(default_factory=list)
-    style: list[WeaponStyles] = field(default_factory=list)
+    style: list[PlayerStyle] = field(default_factory=list)
     prayers: list[Prayers] = field(default_factory=list)
     boosts: list[Boost] = field(default_factory=list)
     levels: list[PlayerLevels] = field(default_factory=list)
@@ -125,7 +125,7 @@ class PvmAxes(DamageAxes):
         target: Monster | list[Monster] | None = None,
         *,
         equipment: Equipment | list[Equipment] | None = None,
-        style: WeaponStyles | list[WeaponStyles] | None = None,
+        style: PlayerStyle | list[PlayerStyle] | None = None,
         prayers: Prayer | Prayers | list[Prayers] | None = None,
         boosts: Boost | list[Boost] | None = None,
         levels: PlayerLevels | list[PlayerLevels] | None = None,
@@ -133,6 +133,7 @@ class PvmAxes(DamageAxes):
         distance: int | list[int] | None = None,
         spell: Spell | list[Spell] | None = None,
         additional_targets: list[list[Character]] | list[int] | None = None,
+        **kwargs,
     ) -> PvmAxes:
         """Create PvmAxes with converters and type validation
 
@@ -170,6 +171,10 @@ class PvmAxes(DamageAxes):
         for k, v in _axes_dict.items():
             if v is None:
                 continue
+
+            if k == "prayers":
+                if isinstance(v, Prayer):
+                    v = Prayers(prayers=[v])
 
             axes_dict[k] = convert_to_axis(v)
 

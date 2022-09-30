@@ -313,6 +313,7 @@ class MonsterTypes(Enum):
     VAMPYRE_TIER_3 = "vampyre - tier 3"
     XERICIAN = "xerician"
     WILDERNESS = "wilderness"
+    TOA = "toa"
 
 
 VampyreMonsterTypes = (
@@ -328,6 +329,7 @@ class MonsterLocations(Enum):
     WILDERNESS = "wilderness"
     TOB = "tob"
     COX = "cox"
+    TOA = "toa"
 
 
 @unique
@@ -408,9 +410,7 @@ class DataMode(Enum):
     MAX = DATAMODE_TYPE("max hit", int, "max_hit")
     MIN = DATAMODE_TYPE("min hit", int, "min_hit")
     MEAN = DATAMODE_TYPE("mean hit", float, "mean")
-    POSITIVE_DAMAGE = DATAMODE_TYPE(
-        "chance to deal positive damage", float, "probability_nonzero_damage"
-    )
+    POSITIVE_DAMAGE = DATAMODE_TYPE("chance to deal positive damage", float, "probability_nonzero_damage")
     TICKS_TO_KILL = DATAMODE_TYPE("ticks to kill", float, None)
     SECONDS_TO_KILL = DATAMODE_TYPE("seconds to kill", float, None)
     MINUTES_TO_KILL = DATAMODE_TYPE("minutes to kill", float, None)

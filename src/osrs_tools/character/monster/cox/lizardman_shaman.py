@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 from osrs_tools.data import DT, Slayer, Stances, Styles
-from osrs_tools.style.style import MonsterStyle, MonsterStyles
+from osrs_tools.style import MonsterStyle, MonsterStyles
 
 from .cox_monster import CoxMonster, get_base_levels_and_stats
 
@@ -28,9 +28,7 @@ class LizardmanShaman(CoxMonster):
         source: @JagexAsh
         https://twitter.com/JagexAsh/status/1386459382834139136
         """
-        scale_at_load_time = (
-            self.party_size if scale_at_load_time is None else scale_at_load_time
-        )
+        scale_at_load_time = self.party_size if scale_at_load_time is None else scale_at_load_time
 
         count = min([2 + scale_at_load_time // 5, 5])
         return count
