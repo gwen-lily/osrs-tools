@@ -7,6 +7,7 @@
 """
 
 from osrs_tools.boost import BastionPotion, ImbuedHeart, Overload, SuperCombatPotion
+from osrs_tools.boost.boosts import SmellingSalts
 from osrs_tools.character.player import Player
 from osrs_tools.data import Effect, Slayer
 from osrs_tools.stats import PlayerLevels
@@ -66,5 +67,16 @@ def test_player_stats():
             lad.lvl.ranged.value == 120,
             lad.lvl.magic.value == 120,
             lad.lvl.hitpoints.value == 49,
+        ]
+    )
+
+    lad.boost(SmellingSalts)
+    assert all(
+        [
+            lad.lvl.attack.value == 125,
+            lad.lvl.strength.value == 125,
+            lad.lvl.defence.value == 125,
+            lad.lvl.ranged.value == 125,
+            lad.lvl.magic.value == 125,
         ]
     )

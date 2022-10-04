@@ -8,6 +8,7 @@
 
 import math
 from dataclasses import dataclass
+from re import S
 
 import numpy as np
 from osrs_tools import gear
@@ -84,7 +85,6 @@ class PvMCalc(DamageCalculation):
         target = self.defender
         eqp = self.attacker.eqp
         wpn = self.attacker.wpn
-        ab = self.attacker.aggressive_bonus
 
         # special attack validation
         if special_attack:
@@ -93,6 +93,9 @@ class PvMCalc(DamageCalculation):
 
         # get damage type and bonuses
         dt = self._get_damage_type(spell)
+
+        PMods = PlayerModifiers(lad, target, special_attack, distance, spell, additional_targets, dt)
+        ab = PMods.aggressive_bonus  # more information (dinhs/smoke)
         accuracy_bonus, strength_bonus = ab[dt]
 
         # effective levels and strength bonus validation
@@ -108,9 +111,6 @@ class PvMCalc(DamageCalculation):
         else:
             raise ValueError(dt)
 
-        PMods = PlayerModifiers(lad, target, special_attack, distance, spell, additional_targets, dt)
-
-        ab = PMods.aggressive_bonus  # more information (dinhs/smoke)
         arms, dms = PMods.get_modifiers()
 
         # generic special properties. If for whatever reason this is wrong just
@@ -120,9 +120,9 @@ class PvMCalc(DamageCalculation):
             full_arms = arms + wpn.special_attack_roll_modifiers
             full_dms = dms + wpn.special_damage_modifiers
 
-            if wpn._special_defence_roll is not None:
+            try:
                 defence_roll_dt = wpn.special_defence_roll
-            else:
+            except AssertionError:
                 defence_roll_dt = dt
 
         else:
@@ -140,6 +140,10 @@ class PvMCalc(DamageCalculation):
 
         if (_dam := PMods.chaos_gauntlets_damage_bonus()) is not None:
             max_hit += _dam
+
+        # osmumten's fang rolls twice and only fails if both attacks fail
+        if lad.eqp.osmumtens_fang:
+            accuracy = 1 - (1 - accuracy) ** 2
 
         attack_speed = lad.attack_speed(spell)
 
@@ -255,6 +259,8 @@ class PvMCalc(DamageCalculation):
             hs = None
             _max_hit = None
             _accuracy = None
+
+            # osmumten's fang special behaves normally lmao
 
             # dorgeshuun weapons: crossbow & dagger
             if lad.eqp.weapon in [BoneDagger, DorgeshuunCrossbow] and target.last_attacked_by is not self:
@@ -443,6 +449,21 @@ class PvMCalc(DamageCalculation):
                     _mh = max_hit * (2**mod_power)
                     _hs = Hitsplat.basic_constructor(_mh, accuracy, target.hp)
                     hs.append(_hs)
+
+            # osmumten's fang
+            elif lad.eqp.osmumtens_fang:
+                # standard_max = lad.max_hit(*full_dms, spell=spell)
+                _min_hit = math.floor(0.15 * int(max_hit))
+                _max_hit = math.floor(0.85 * int(max_hit))
+                dmg_ary = np.arange(_min_hit, _max_hit + 1)
+                prb_ary = np.zeros(shape=dmg_ary.shape)
+
+                for idx in prb_ary:
+                    prb_ary[idx] = accuracy * (1 / (_max_hit - _min_hit + 1))
+
+                prb_ary[0] += 1 - accuracy
+
+                hs = [Hitsplat.clamp_to_hitpoints_cap(dmg_ary, prb_ary, target.hp)]
 
             elif eqp.weapon in Chinchompas and additional_targets:
                 max_targets = PVM_MAX_TARGETS

@@ -7,6 +7,7 @@
 """
 
 from dataclasses import dataclass
+import math
 
 from osrs_tools import gear
 from osrs_tools.character.monster import Monster
@@ -31,6 +32,6 @@ class MonsterModifiers(CharacterModifiers):
         if self.dt in MagicDamageTypes:
             if self.player.eqp[Slots.RING] == gear.BrimstoneRing:
                 reduction = _roll // 10 / 4
-                _roll -= reduction
+                _roll = Roll(math.floor(_roll.value - reduction))
 
         return _roll

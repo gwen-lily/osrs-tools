@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from copy import copy
 from dataclasses import dataclass
 
 from osrs_tools.character import Character
@@ -93,23 +94,29 @@ class PlayerModifiers(CharacterModifiers):
         AggressiveStats
         """
         lad = self.player
+        target = self.target
         ab = lad.eqp.aggressive_bonus
+        ab2 = copy(ab)
 
         if (dinhs := self._dinhs_strength_modifier()) is not None:
-            ab.melee_strength += dinhs
+            ab2.melee_strength += dinhs
         elif (smoke := self._smoke_modifier()) is not None:
             _, gear_damage_bonus = smoke
-            ab.magic_strength += gear_damage_bonus
+            ab2.magic_strength += gear_damage_bonus
         elif lad.eqp.tumekens_shadow:
-            if isinstance(self.target, ToaMonster):
-                tumeken_mod = 4
+            if isinstance(target, Monster):
+                if MonsterTypes.TOA in target.special_attributes:
+                    tumeken_mod = 4
+                else:
+                    tumeken_mod = 3
             else:
                 tumeken_mod = 3
 
-            ab.magic_attack *= tumeken_mod
-            ab.magic_strength *= tumeken_mod
+            ab2.magic_attack *= tumeken_mod
+            raw_magic_strength = tumeken_mod * float(ab.magic_strength)
+            ab2.magic_strength = TrackedFloat(min([max([0, raw_magic_strength]), 1.0]))
 
-        return ab
+        return ab2
 
     def get_modifiers(self) -> tuple[list[RollModifier], list[DamageModifier]]:
         """Get all attack roll and damage modifiers relevant to the calculation.
@@ -323,7 +330,7 @@ class PlayerModifiers(CharacterModifiers):
         if _dt not in MagicDamageTypes:
             return
 
-        value = 1.0 + float(lad.aggressive_bonus.magic_strength)
+        value = 1.0 + float(self.aggressive_bonus.magic_strength)
         comment = "magic damage"
         return DamageModifier(value, comment)
 

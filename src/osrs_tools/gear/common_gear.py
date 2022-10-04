@@ -163,6 +163,7 @@ AbyssalWhip = SpecialWeapon.from_bb("abyssal whip")
 AbyssalTentacle = SpecialWeapon.from_bb("abyssal tentacle")
 AbyssalDagger = SpecialWeapon.from_bb("abyssal dagger")
 DragonDagger = SpecialWeapon.from_bb("dragon dagger")
+OsmumtensFang = SpecialWeapon.from_bb("osmumten's fang")
 
 Seercull = SpecialWeapon.from_bb("seercull")
 
@@ -209,6 +210,8 @@ TormentedBracelet = Gear.from_bb("tormented bracelet")
 EternalBoots = Gear.from_bb("eternal boots")
 SeersRingI = Gear.from_bb("seers (i)")
 
+ElidinisWardF = Gear.from_bb("elidinis' ward (f)")
+
 AvernicDefender = Gear.from_bb("avernic defender")
 TyrannicalRingI = Gear.from_bb("tyrannical (i)")
 
@@ -234,6 +237,10 @@ InquisitorsPlateskirt = Gear.from_bb("inquisitor's plateskirt")
 ArmadylHelmet = Gear.from_bb("armadyl helmet")
 ArmadylChestplate = Gear.from_bb("armadyl chestplate")
 ArmadylChainskirt = Gear.from_bb("armadyl chainskirt")
+
+MasoriMaskF = Gear.from_bb("masori mask (f)")
+MasoriBodyF = Gear.from_bb("masori body (f)")
+MasoriChapsF = Gear.from_bb("masori chaps (f)")
 
 AncestralHat = Gear.from_bb("ancestral hat")
 AncestralRobeTop = Gear.from_bb("ancestral robe top")

@@ -8,6 +8,7 @@ All time values are in ticks unless otherwise noted.
 ###############################################################################
 """
 
+from copy import copy
 from dataclasses import Field
 from functools import wraps
 from itertools import combinations
@@ -18,9 +19,10 @@ import pandas as pd
 from osrs_tools.analysis.pvm_axes import PvmAxes
 from osrs_tools.boost import Boost, Overload
 from osrs_tools.character import Character
+from osrs_tools.character.monster import Monster
 from osrs_tools.character.player import Player
 from osrs_tools.combat import PvMCalc
-from osrs_tools.data import DEFAULT_FLOAT_FMT, DEFAULT_TABLE_FMT, DataAxes, DataMode
+from osrs_tools.data import DEFAULT_FLOAT_FMT, DEFAULT_TABLE_FMT, DataAxes, DataMode, Slots
 from osrs_tools.exceptions import OsrsException
 from osrs_tools.gear import Equipment, Gear
 from osrs_tools.prayer import Piety, Prayer, Prayers
@@ -266,17 +268,44 @@ def bedevere_the_wise(
         # iterate through all possible indices
         params = pvm_axes[indices]
 
-        player, target = params[0], params[1]
+        player, target = params[0:2]
         strategy_params = params[2:7]
         pvm_calc_params = params[7:11]
 
+        assert isinstance(player, Player)
+        assert isinstance(target, Monster)
+
+        eqp, sty, pry, bst, lvl = strategy_params
+
+        if isinstance(sty, PlayerStyle):
+            if isinstance(eqp, Equipment):
+                if eqp._weapon is not None:
+                    weapon = eqp.weapon
+                else:
+                    weapon = player.wpn
+            else:
+                weapon = player.wpn
+
+            if sty not in weapon.styles:
+                data_ary[indices] = 0
+                continue
+
+        strat_kwargs = {f.name: p for f, p in zip(pvm_axes.strategy_axes, strategy_params)}
+        pvm_calc_kwargs = {f.name: p for f, p in zip(pvm_axes.pvm_calc_axes, pvm_calc_params)}
+
         if any(_sp is not None for _sp in strategy_params):
             # if the player must be modified directly
-            strat = CombatStrategy(player, *strategy_params)
-            dam = strat.activate().damage_distribution(target, *pvm_calc_params)
+            old_eqp = copy(player.eqp)
+            old_sty = copy(player.style)
+
+            strat = CombatStrategy(player, **strat_kwargs)
+            dam = strat.activate().damage_distribution(target, **pvm_calc_kwargs)
+
+            player.eqp = old_eqp
+            player.style = old_sty
         else:
             # if the player does not need to be modified directly
-            dam = PvMCalc(player, target).get_damage(*pvm_calc_params)
+            dam = PvMCalc(player, target).get_damage(**pvm_calc_kwargs)
 
         if data_mode.value.attribute is not None:
             value = dam.__getattribute__(data_mode.value.attribute)
