@@ -30,7 +30,7 @@ def test_pvm_axes():
     )
 
     assert len(ax.axes) == 11
-    assert ax.dims == (1, 1, 2, 0, 1, 1, 0, 2, 0, 0, 0)
+    assert ax.dims == (1, 1, 2, 1, 1, 1, 1, 2, 1, 1, 1)
 
     assert len(ax.squeezed_axes) == 2
     assert ax.squeezed_dims == (2, 2)
@@ -74,8 +74,8 @@ def test_bedevere_the_wise():
     assert dam_ary.shape == (2, 2)
 
     meta_header = "test header"
-    col_labels = [e.weapon.name for e in equipment]
-    row_labels = [s.name.value for s in styles]
+    row_labels = [e.weapon.name for e in equipment]
+    col_labels = [s.name.value for s in styles]
 
     table = tabulate_enhanced(dam_ary, col_labels, row_labels, meta_header)
 
