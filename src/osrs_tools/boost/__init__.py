@@ -32,6 +32,7 @@ from .boosts import (
     SanfewSerum,
     SanfewSerumWrench,
     SaradominBrew,
+    SmellingSalts,
     StrengthPotion,
     SuperAttackPotion,
     SuperCombatPotion,
