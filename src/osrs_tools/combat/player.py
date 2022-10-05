@@ -454,14 +454,16 @@ class PvMCalc(DamageCalculation):
             elif lad.eqp.osmumtens_fang:
                 # standard_max = lad.max_hit(*full_dms, spell=spell)
                 _min_hit = math.floor(0.15 * int(max_hit))
-                _max_hit = math.floor(0.85 * int(max_hit))
-                dmg_ary = np.arange(_min_hit, _max_hit + 1)
+                _max_hit = int(max_hit) - _min_hit
+                dmg_ary = np.arange(0, _max_hit + 1)
                 prb_ary = np.zeros(shape=dmg_ary.shape)
 
-                for idx in prb_ary:
-                    prb_ary[idx] = accuracy * (1 / (_max_hit - _min_hit + 1))
+                for idx, dmg in enumerate(dmg_ary):
+                    if idx == 0:
+                        prb_ary[idx] += 1 - accuracy
 
-                prb_ary[0] += 1 - accuracy
+                    if _min_hit <= dmg <= _max_hit:
+                        prb_ary[idx] += accuracy * (1 / (_max_hit - _min_hit + 1))
 
                 hs = [Hitsplat.clamp_to_hitpoints_cap(dmg_ary, prb_ary, target.hp)]
 
