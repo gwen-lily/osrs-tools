@@ -61,7 +61,8 @@ class TrackedValue:
         elif isinstance(other, self._value_type):
             _val = func(self.value, other)
         else:
-            raise TypeError(other)
+            _val = func(self.value, other)
+            # raise TypeError(other)
 
         return _val
 

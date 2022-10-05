@@ -30,25 +30,25 @@ def get_base_levels_and_stats(
 ) -> tuple[MonsterLevels, AggressiveStats, DefensiveStats]:
     mon_df = utils.get_cox_monster_base_stats_by_name(name)
 
-    _attack = mon_df["melee"].values[0]
-    _strength = mon_df["melee"].values[0]
-    _defence = mon_df["defence"].values[0]
-    _ranged = mon_df["ranged"].values[0]
-    _magic = mon_df["magic"].values[0]
-    _hitpoints = mon_df["hp"].values[0]
+    _attack = int(mon_df["melee"].values[0])
+    _strength = int(mon_df["melee"].values[0])
+    _defence = int(mon_df["defence"].values[0])
+    _ranged = int(mon_df["ranged"].values[0])
+    _magic = int(mon_df["magic"].values[0])
+    _hitpoints = int(mon_df["hp"].values[0])
 
-    aggressive_melee_bonus = mon_df["melee att+"].values[0]
-    magic_attack = mon_df["magic att+"].values[0]
-    ranged_attack = mon_df["ranged att+"].values[0]
-    melee_strength = mon_df["melee str+"].values[0]
-    ranged_strength = mon_df["ranged str+"].values[0]
-    magic_strength = mon_df["magic str+"].values[0]
+    aggressive_melee_bonus = int(mon_df["melee att+"].values[0])
+    magic_attack = int(mon_df["magic att+"].values[0])
+    ranged_attack = int(mon_df["ranged att+"].values[0])
+    melee_strength = int(mon_df["melee str+"].values[0])
+    ranged_strength = int(mon_df["ranged str+"].values[0])
+    magic_strength = int(mon_df["magic str+"].values[0])
 
-    stab_defence = mon_df["stab def+"].values[0]
-    slash_defence = mon_df["slash def+"].values[0]
-    crush_defence = mon_df["crush def+"].values[0]
-    magic_defence = mon_df["magic def+"].values[0]
-    ranged_defence = mon_df["ranged def+"].values[0]
+    stab_defence = int(mon_df["stab def+"].values[0])
+    slash_defence = int(mon_df["slash def+"].values[0])
+    crush_defence = int(mon_df["crush def+"].values[0])
+    magic_defence = int(mon_df["magic def+"].values[0])
+    ranged_defence = int(mon_df["ranged def+"].values[0])
 
     values = [
         # levels

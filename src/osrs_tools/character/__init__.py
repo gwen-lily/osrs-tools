@@ -7,3 +7,5 @@
 """
 
 from .character import Character, CharacterError
+from .player import Player
+from .monster import Monster
