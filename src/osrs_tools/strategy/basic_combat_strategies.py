@@ -6,7 +6,7 @@
 ###############################################################################
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from osrs_tools import gear
 from osrs_tools.gear import Equipment
@@ -19,14 +19,14 @@ from .strategy import CombatStrategy
 
 @dataclass
 class MeleeStrategy(CombatStrategy):
-    prayers = Prayers(prayers=[Piety])
+    prayers: Prayers | None = field(default_factory=lambda: Prayers(prayers=[Piety]))
 
     def equip_player(self) -> Self:
         # basic bis 'n such
         eqp = Equipment().equip_bis_melee()
 
         # equip it
-        self.player.eqp.equip(*eqp.equipped_gear)
+        self.player.eqp += eqp.equipped_gear
 
         # Specific gear and style
         return super().equip_player()
@@ -34,14 +34,14 @@ class MeleeStrategy(CombatStrategy):
 
 @dataclass
 class RangedStrategy(CombatStrategy):
-    prayers = Prayers(prayers=[Rigour])
+    prayers: Prayers | None = field(default_factory=lambda: Prayers(prayers=[Rigour]))
 
     def equip_player(self) -> Self:
         # basic bis 'n such.
         eqp = Equipment().equip_bis_ranged().equip(gear.ArchersRingI)
 
         # equip it
-        self.player.eqp.equip(*eqp.equipped_gear)
+        self.player.eqp += eqp.equipped_gear
 
         # Specific gear and style.
         return super().equip_player()
@@ -59,7 +59,7 @@ class EliteVoidStrategy(RangedStrategy):
         super().equip_player()
 
         # overwrite it with trade chad gear
-        self.player.eqp.equip(*gear.EliteVoidSet)
+        self.player.eqp += gear.EliteVoidSet
 
         return self
 
@@ -78,7 +78,7 @@ class MagicStrategy(CombatStrategy):
         a kodai wand. Tread carefully. Defaults to None.
     """
 
-    prayers = Prayers(prayers=[Augury])
+    prayers: Prayers | None = field(default_factory=lambda: Prayers(prayers=[Augury]))
     _autocast: Spell | None = None
 
     @property
@@ -89,7 +89,8 @@ class MagicStrategy(CombatStrategy):
 
     def equip_player(self) -> Self:
         # equip gear and set the autocast
-        self.player.eqp.equip_bis_mage().equip(gear.BrimstoneRing)
+        eqp = Equipment().equip_bis_mage().equip(gear.BrimstoneRing)
+        self.player.eqp += eqp
 
         if self._autocast is not None:
             self.player.autocast = self.autocast
