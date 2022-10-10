@@ -57,7 +57,7 @@ class LizardmanShaman(CoxMonster):
             combat_level=None,
             _defensive_bonus=_DEF,
             slayer_category=Slayer.LIZARDMEN,
-            styles=_styles,
+            _styles=_styles,
             party_size=party_size,
             challenge_mode=challenge_mode,
         )

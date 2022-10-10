@@ -455,7 +455,7 @@ class Player(Character):
         if self.wpn in gear.Chinchompas:
             # don't account for ammo if using chinchompas or thrown weapons
             # TODO: Thrown weapons
-            ammo = self.eqp[Slots.AMMUNITION]
+            ammo = self.eqp._ammunition
 
             if ammo is not None:
                 ammo_bonus = ammo.aggressive_bonus.ranged_strength

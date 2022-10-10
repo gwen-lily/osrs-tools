@@ -233,6 +233,7 @@ BandosTassets = Gear.from_bb("bandos tassets")
 InquisitorsGreatHelm = Gear.from_bb("inquisitor's great helm")
 InquisitorsHauberk = Gear.from_bb("inquisitor's hauberk")
 InquisitorsPlateskirt = Gear.from_bb("inquisitor's plateskirt")
+InquisitorsMace = Weapon.from_bb("inquisitor's mace")
 
 ArmadylHelmet = Gear.from_bb("armadyl helmet")
 ArmadylChestplate = Gear.from_bb("armadyl chestplate")
