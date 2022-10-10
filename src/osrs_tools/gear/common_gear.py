@@ -62,7 +62,7 @@ TorvaFullHelm = Gear.from_bb("torva full helm")
 TorvaPlatebody = Gear.from_bb("torva platebody")
 TorvaPlatelegs = Gear.from_bb("torva platelegs")
 
-DharoksGreataxe = Gear.from_bb("dharok's greataxe")
+DharoksHelm = Gear.from_bb("dharok's helm")
 DharoksPlatebody = Gear.from_bb("dharok's platebody")
 DharoksPlatelegs = Gear.from_bb("dharok's platelegs")
 DharoksGreataxe = Weapon.from_bb("dharok's greataxe")
@@ -274,53 +274,53 @@ InquisitorSet = [InquisitorsGreatHelm, InquisitorsHauberk, InquisitorsPlateskirt
 
 TorvaSet = [TorvaFullHelm, TorvaPlatebody, TorvaPlatelegs]
 
-DharoksSet = [
-    DharoksGreataxe,
+DharoksSet: list[Gear] = [
+    DharoksHelm,
     DharoksPlatebody,
     DharoksPlatelegs,
     DharoksGreataxe,
 ]
 
-NormalVoidSet = [
+NormalVoidSet: list[Gear] = [
     VoidKnightHelm,
     VoidKnightTop,
     VoidKnightRobe,
     VoidKnightGloves,
 ]
 
-EliteVoidSet = [
+EliteVoidSet: list[Gear] = [
     VoidKnightHelm,
     EliteVoidTop,
     EliteVoidRobe,
     VoidKnightGloves,
 ]
 
-JusticiarSet = [
+JusticiarSet: list[Gear] = [
     JusticiarFaceguard,
     JusticiarChestguard,
     JusticiarLegguard,
 ]
 
-ObsidianArmorSet = [
+ObsidianArmorSet: list[Gear] = [
     ObsidianHelm,
     ObsidianPlatebody,
     ObsidianPlatelegs,
 ]
 
-ObsidianWeapons = [
+ObsidianWeapons: list[Gear] = [
     ObsidianDagger,
     ObsidianMace,
     ObsidianMaul,
     ObsidianSword,
 ]
 
-LeafBladedWeapons = [
+LeafBladedWeapons: list[Weapon] = [
     LeafBladedSpear,
     LeafBladedSword,
     LeafBladedBattleaxe,
 ]
 
-CrystalArmorSet = [
+CrystalArmorSet: list[Gear] = [
     CrystalHelm,
     CrystalBody,
     CrystalLegs,
@@ -328,7 +328,7 @@ CrystalArmorSet = [
 
 SmokeStaves = [SmokeBattlestaff, MysticSmokeStaff]
 
-GracefulSet = [
+GracefulSet: list[Gear] = [
     GracefulHood,
     GracefulTop,
     GracefulLegs,
@@ -337,13 +337,13 @@ GracefulSet = [
     GracefulCape,
 ]
 
-Chinchompas = [
+Chinchompas: list[Weapon] = [
     Chinchompa,
     RedChinchompa,
     BlackChinchompa,
 ]
 
-StavesOfTheDead = [
+StavesOfTheDead: list[SpecialWeapon] = [
     StaffOfLight,
     StaffOfTheDead,
     ToxicStaffOfTheDead,

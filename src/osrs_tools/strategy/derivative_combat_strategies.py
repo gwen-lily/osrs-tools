@@ -12,21 +12,22 @@ from dataclasses import dataclass
 
 from osrs_tools import gear
 from osrs_tools.data import Stances, Styles
-from osrs_tools.spell import PoweredSpells, Spell
-from osrs_tools.style import (
-    BluntStyles,
-    PlayerStyle,
-    PoweredStaffStyles,
-    TwoHandedStyles,
+from osrs_tools.gear import AvernicDefender, BrimstoneRing, DragonWarhammer
+from osrs_tools.gear.common_gear import (
+    BandosGodsword,
+    BerserkerRingI,
+    DragonArrows,
+    RedChinchompa,
+    SanguinestiStaff,
+    SlayerHelmetI,
+    TwistedBow,
+    TwistedBuckler,
 )
+from osrs_tools.spell import PoweredSpells, Spell
+from osrs_tools.style import BluntStyles, PlayerStyle, PoweredStaffStyles, TwoHandedStyles
 from typing_extensions import Self
 
-from .basic_combat_strategies import (
-    EliteVoidStrategy,
-    MagicStrategy,
-    MeleeStrategy,
-    RangedStrategy,
-)
+from .basic_combat_strategies import EliteVoidStrategy, MagicStrategy, MeleeStrategy, RangedStrategy
 
 ###############################################################################
 # melee strategies                                                            #
@@ -37,13 +38,11 @@ from .basic_combat_strategies import (
 class DwhStrategy(MeleeStrategy):
     """A basically bis (brimstone) dwh strategy with max melee."""
 
-    style = BluntStyles[Stances.ACCURATE]
+    style: PlayerStyle = BluntStyles[Stances.ACCURATE]
 
     def equip_player(self) -> Self:
         # equip dwh, avernic, and brimstone
-        self.player.eqp.equip(
-            gear.DragonWarhammer, gear.AvernicDefender, gear.BrimstoneRing
-        )
+        self.player.eqp += [DragonWarhammer, AvernicDefender, BrimstoneRing]
 
         # correct gear, handle style.
         return super().equip_player()
@@ -60,7 +59,7 @@ class BgsStrategy(MeleeStrategy):
         Self
         """
         # equip bgs and berserker
-        self.player.eqp.equip(gear.BandosGodsword, gear.BerserkerRingI)
+        self.player.eqp += [BandosGodsword, BerserkerRingI]
 
         # equip gear and handle style
         super().equip_player()
@@ -89,7 +88,7 @@ class TbowStrategy(RangedStrategy):
 
     def equip_player(self) -> Self:
         # equip bow
-        self.player.eqp.equip(gear.TwistedBow, gear.DragonArrows)
+        self.player.eqp += [TwistedBow, DragonArrows]
 
         # equip basic bis 'n such, as well as default to rapid style
         return super().equip_player()
@@ -100,7 +99,7 @@ class TbowVoidStrategy(EliteVoidStrategy):
 
     def equip_player(self) -> Self:
         # equip bow and such
-        self.player.eqp.equip(gear.TwistedBow, gear.DragonArrows)
+        self.player.eqp += [TwistedBow, DragonArrows]
 
         # equip basic bis 'n such, as well as default to rapid style
         return super().equip_player()
@@ -111,8 +110,7 @@ class RedChinsVoidStrategy(EliteVoidStrategy):
 
     def equip_player(self) -> Self:
         # equip chins
-        self.player.eqp.equip(gear.RedChinchompa, gear.TwistedBuckler)
-
+        self.player.eqp += [RedChinchompa, TwistedBuckler]
         # equip basic bits 'n such, as well as default to medium fuse / rapid.
         return super().equip_player()
 
@@ -125,9 +123,7 @@ class RedChinsSlayerStrategy(RangedStrategy):
         super().equip_player()
 
         # specific equipment
-        self.player.eqp.equip(
-            gear.RedChinchompa, gear.TwistedBuckler, gear.SlayerHelmetI
-        )
+        self.player.eqp += [RedChinchompa, TwistedBuckler, SlayerHelmetI]
 
         return self
 
@@ -150,12 +146,12 @@ class SangStrategy(MagicStrategy):
         The sanguinesti spell. Defaults to the appropriate value.
     """
 
-    style: PlayerStyle = PoweredStaffStyles[Stances.ACCURATE]
-    autocast: Spell = PoweredSpells.SANGUINESTI_STAFF.value
+    style: PlayerStyle | None = PoweredStaffStyles[Stances.ACCURATE]
+    autocast: Spell | None = PoweredSpells.SANGUINESTI_STAFF.value
 
     def equip_player(self) -> Self:
         # equip the sang
-        self.player.eqp.equip(gear.SanguinestiStaff)
+        self.player.eqp += SanguinestiStaff
 
         # handle the rest
         return super().equip_player()
