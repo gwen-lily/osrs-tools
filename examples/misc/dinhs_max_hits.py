@@ -76,7 +76,7 @@ def dinhs_max(**kwargs):
     axes = PvmAxes.create(player, dummy, equipment=equipment_options, style=attack_style, **options)
 
     # justi, torva, torva (slayer)
-    _, normal_table = bedevere_the_wise(axes, data_mode)
+    normal_table = bedevere_the_wise(axes, data_mode)
     print(normal_table)
 
     return normal_table

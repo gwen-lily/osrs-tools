@@ -5,20 +5,29 @@ from itertools import product
 import matplotlib.pyplot as plt
 from osrs_tools.analysis.utils import DataMode, bedevere_the_wise, tabulate_enhanced
 from osrs_tools.character import *
+from osrs_tools.prayer import MysticLore
+from osrs_tools.prayer.prayers import Prayers
+from osrs_tools.stats import PlayerLevels
 
 
 def shaun_vs_normie(**kwargs):
     shaun_rsn = "31 pray btw"
     shaun_levels = PlayerLevels.from_rsn(shaun_rsn)
-    shaun_prayers = PrayerCollection(Prayer.mystic_lore())
+    shaun_prayers = Prayers(MysticLore)
+
+    shaun = Player(
+        name=f"{shaun_rsn} (trident)",
+        _levels=shaun_levels,
+        prayers=shaun_prayers,
+    )
+
     old_shaun = Player(
         name=f"{shaun_rsn} (trident)",
-        base_levels=shaun_levels,
-        prayers_coll=shaun_prayers,
+        _levels=shaun_levels,
+        prayers=shaun_prayers,
     )
-    shaun = Player(
-        name=f"{shaun_rsn} (sang)", base_levels=shaun_levels, prayers_coll=shaun_prayers
-    )
+
+    shaun = Player(name=f"{shaun_rsn} (sang)", base_levels=shaun_levels, prayers_coll=shaun_prayers)
     normie = Player(
         name="normie",
         base_levels=PlayerLevels.maxed_player(),
@@ -46,9 +55,7 @@ def shaun_vs_normie(**kwargs):
     )
 
     old_shaun.equipment = copy(shaun.equipment)
-    old_shaun.active_style = old_shaun.equipment.equip(
-        Weapon.from_bb("trident of the swamp")
-    )
+    old_shaun.active_style = old_shaun.equipment.equip(Weapon.from_bb("trident of the swamp"))
 
     assert shaun.aggressive_bonus.magic == 133
     assert shaun.aggressive_bonus.magic_strength == 0.17
@@ -64,7 +71,7 @@ def shaun_vs_normie(**kwargs):
     scale_data = np.arange(1, 101)
     olms = tuple(OlmMageHand.from_de0(ps) for ps in scale_data)
 
-    indices, axes, data_ary = bedevere_the_wise(
+    data_ary = bedevere_the_wise(
         lads,
         target=olms,
         comparison_mode=ComparisonMode.CARTESIAN,
@@ -103,9 +110,7 @@ class Routine(ABC):
 
 class PrayerRoutine(Routine):
     @abstractmethod
-    def routine(
-        self, player: Player, last_auto: Style, boost: Prayer | PrayerCollection
-    ):
+    def routine(self, player: Player, last_auto: Style, boost: Prayer | PrayerCollection):
         """A method that alters player behavior based on the last attack.
 
         Args:
@@ -116,9 +121,7 @@ class PrayerRoutine(Routine):
 
 
 class SwitchPrayers(PrayerRoutine):
-    def routine(
-        self, player: Player, last_auto: Style, boost: Prayer | PrayerCollection
-    ):
+    def routine(self, player: Player, last_auto: Style, boost: Prayer | PrayerCollection):
         """Switches prayers to counter the last observed style.
 
         Args:
@@ -260,12 +263,8 @@ def prayer_routine_comparison(scale: int, trials: int):
     melee_lad_mean_damage_switch = data[melee_lad_idx, routine_switch_idx, :].mean()
     melee_lad_mean_damage_camp = data[melee_lad_idx, routine_camp_idx, :].mean()
 
-    blood_fury_lad_mean_damage_switch = data[
-        blood_fury_lad_idx, routine_switch_idx, :
-    ].mean()
-    blood_fury_lad_mean_damage_camp = data[
-        blood_fury_lad_idx, routine_camp_idx, :
-    ].mean()
+    blood_fury_lad_mean_damage_switch = data[blood_fury_lad_idx, routine_switch_idx, :].mean()
+    blood_fury_lad_mean_damage_camp = data[blood_fury_lad_idx, routine_camp_idx, :].mean()
 
     magic_lad_mean_damage_switch = data[magic_lad_idx, routine_switch_idx, :].mean()
     magic_lad_mean_damage_camp = data[magic_lad_idx, routine_camp_idx, :].mean()
@@ -297,9 +296,7 @@ if __name__ == "__main__":
     scale_data = np.empty(shape=(m, n), dtype=float)
 
     for scale_idx, scale in enumerate(scales):
-        data, col_labels, row_labels, meta_header = prayer_routine_comparison(
-            scale, my_trials
-        )
+        data, col_labels, row_labels, meta_header = prayer_routine_comparison(scale, my_trials)
         scale_data[:, scale_idx] = data.reshape((m,))
 
     melee_lad_switch = scale_data[0, :]

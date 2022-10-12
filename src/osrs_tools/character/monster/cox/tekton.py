@@ -18,9 +18,7 @@ from .cox_monster import CoxMonster, get_base_levels_and_stats
 ###############################################################################
 
 _MONSTER_NAME_SMOL = "tekton"
-_LVLS_SMOL, _AGG_SMOL, _DEF_SMOL = get_base_levels_and_stats(
-    _MONSTER_NAME_SMOL
-)
+_LVLS_SMOL, _AGG_SMOL, _DEF_SMOL = get_base_levels_and_stats(_MONSTER_NAME_SMOL)
 
 _MONSTER_NAME_BIG = "tekton (enraged)"
 _LVLS_BIG, _AGG_BIG, _DEF_BIG = get_base_levels_and_stats(_MONSTER_NAME_BIG)
@@ -53,7 +51,7 @@ class TektonABC(CoxMonster):
 
 
 class Tekton(TektonABC):
-    """The small muttadile from the Chambers of Xeric."""
+    """The normal tekton from the Chambers of Xeric."""
 
     @classmethod
     def simple(cls, party_size: int, challenge_mode: bool = False) -> Tekton:
@@ -84,11 +82,10 @@ class Tekton(TektonABC):
 
 
 class TektonEnraged(TektonABC):
-    """The big muttadile from the Chambers of Xeric."""
+    """The enraged tekton from the Chambers of Xeric."""
 
     @classmethod
-    def simple(cls, party_size: int, challenge_mode: bool = False) -> \
-            TektonEnraged:
+    def simple(cls, party_size: int, challenge_mode: bool = False) -> TektonEnraged:
 
         _mel_style = MonsterStyle(
             Styles.NPC_MELEE,

@@ -359,7 +359,7 @@ def magic_shield_comparison(**kwargs):
 
     olms = [OlmMageHand.from_de0(ps) for ps in range(15, 32, 8)]
 
-    indices, axes, data_ary = utils.bedevere_the_wise(
+    data_ary = utils.bedevere_the_wise(
         players=lad,
         equipment=equipment,
         target=olms,

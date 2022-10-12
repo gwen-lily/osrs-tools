@@ -20,12 +20,114 @@ from osrs_tools.prayer import Prayer, Prayers
 from osrs_tools.spell import Spell
 from osrs_tools.stats import PlayerLevels
 from osrs_tools.style import PlayerStyle
+from osrs_tools.style.all_weapon_styles import UnarmedStyles
 
 from .damage_axes import DamageAxes
 
 ###############################################################################
 # main class                                                                  #
 ###############################################################################
+
+
+@dataclass(frozen=True)
+class PvmAxesEquipmentStyle(DamageAxes):
+    """Axes for a generic PvM damage calculation with paired equipment & style"""
+
+    # characters axes
+    player: list[Player]
+    target: list[Character]
+    # strategy parameters (interact with player)
+    equipment_style: list[tuple[Equipment, PlayerStyle]] = field(default_factory=list)
+    prayers: list[Prayers] = field(default_factory=list)
+    boosts: list[Boost] = field(default_factory=list)
+    levels: list[PlayerLevels] = field(default_factory=list)
+    # damage distribution parameters
+    special_attack: list[bool] = field(default_factory=list)
+    distance: list[int] = field(default_factory=list)
+    spell: list[Spell] = field(default_factory=list)
+    additional_targets: list[int | list[Character]] = field(default_factory=list)
+
+    @classmethod
+    def from_pvm_axes(cls, other: PvmAxes):
+        equipment_style_axis: list[tuple[Equipment, PlayerStyle]] = []
+
+        for eqp in other.equipment:
+            # get weapon from equipment (priority) or player
+            try:
+                wpn = eqp.weapon
+            except AssertionError as exc:
+                raise ValueError("weapon must be stored per equipment") from exc
+
+            for sty in other.style:
+                if sty in wpn.styles:
+                    equipment_style_axis.append((eqp, sty))
+
+        return cls(
+            player=other.player,
+            target=other.target,
+            equipment_style=equipment_style_axis,
+            prayers=other.prayers,
+            boosts=other.boosts,
+            levels=other.levels,
+            special_attack=other.special_attack,
+            distance=other.distance,
+            spell=other.spell,
+            additional_targets=other.additional_targets,
+        )
+
+
+@dataclass(frozen=True)
+class PvmAxesPlayerEquipmentStyle(DamageAxes):
+    """Axes for a generic PvM damage calculation with paired player, equipment, & style"""
+
+    # characters axes
+    player_equipment_style: list[tuple[Player, Equipment, PlayerStyle]]
+    target: list[Character]
+    # strategy parameters (interact with player)
+    prayers: list[Prayers] = field(default_factory=list)
+    boosts: list[Boost] = field(default_factory=list)
+    levels: list[PlayerLevels] = field(default_factory=list)
+    # damage distribution parameters
+    special_attack: list[bool] = field(default_factory=list)
+    distance: list[int] = field(default_factory=list)
+    spell: list[Spell] = field(default_factory=list)
+    additional_targets: list[int | list[Character]] = field(default_factory=list)
+
+    @classmethod
+    def from_pvm_axes(cls, other: PvmAxes):
+        player_equipment_style_axis: list[tuple[Player, Equipment, PlayerStyle]] = []
+        extra_styles: list[PlayerStyle] = []
+
+        # if any of the players are unarmed, an unarmed style must be present
+        for ply in other.player:
+            if ply.style in UnarmedStyles:
+                extra_styles.append(ply.style)
+
+        styles = other.style + extra_styles
+
+        for ply in other.player:
+            for eqp in other.equipment:
+                # get weapon from equipment (priority) or player
+                try:
+                    wpn = eqp.weapon
+                except AssertionError:
+                    wpn = ply.wpn
+
+                for sty in styles:
+                    if sty in wpn.styles:
+                        player_equipment_style_axis.append((ply, eqp, sty))
+
+        return cls(
+            player_equipment_style=player_equipment_style_axis,
+            target=other.target,
+            prayers=other.prayers,
+            boosts=other.boosts,
+            levels=other.levels,
+            special_attack=other.special_attack,
+            distance=other.distance,
+            spell=other.spell,
+            additional_targets=other.additional_targets,
+        )
 
 
 @dataclass(frozen=True)

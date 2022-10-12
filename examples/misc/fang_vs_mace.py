@@ -42,7 +42,8 @@ def main():
 
     full_axes = PvmAxes.create(player, targets, equipment=equipment, style=styles, prayers=prayers, boosts=boosts)
 
-    axes, data = bedevere_the_wise(full_axes, DataMode.DAMAGE_PER_TICK)
+    data = bedevere_the_wise(full_axes, DataMode.DAMAGE_PER_TICK)
+    axes = full_axes.squeezed_axes
 
     for idx, ax in enumerate(axes):
         print(ax.name)
@@ -70,7 +71,7 @@ def augury_comparison():
 
     full_axes = PvmAxes.create(player, target, prayers=prayers, boosts=boosts)
 
-    axes, data = bedevere_the_wise(full_axes, DataMode.DAMAGE_PER_TICK)
+    data = bedevere_the_wise(full_axes, DataMode.DAMAGE_PER_TICK)
 
     for axis_idx, (axis, axis_len) in enumerate(zip(full_axes.squeezed_axes, full_axes.squeezed_dims)):
         print(axis.name)
