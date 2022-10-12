@@ -2,4 +2,4 @@
 docstring-min-length=10
 disable=missing-function-docstring,missing-class-docstring,missing-module-docstring,no-method-argument,wrong-import-order,arguments-differ
 [FORMAT]
-good-names=d,i,j,x,y,id,g,k,v,tl,mh,s,hp,ab,dm,hs
+good-names=d,i,j,x,y,id,g,k,v,tl,mh,s,hp,ab,dm,hs,ps,cm

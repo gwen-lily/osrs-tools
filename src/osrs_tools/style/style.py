@@ -8,15 +8,7 @@
 
 from dataclasses import dataclass, field
 
-from osrs_tools.data import (
-    DT,
-    MagicDamageTypes,
-    MeleeDamageTypes,
-    RangedDamageTypes,
-    SpellStylesNames,
-    Stances,
-    Styles,
-)
+from osrs_tools.data import DT, MagicDamageTypes, MeleeDamageTypes, RangedDamageTypes, SpellStylesNames, Stances, Styles
 from osrs_tools.stats import StyleStats
 from osrs_tools.tracked_value import StyleBonus
 
@@ -64,6 +56,10 @@ class Style:
     @combat_bonus.setter
     def combat_bonus(self, __value: StyleStats, /):
         self._combat_bonus = __value
+
+    def __str__(self) -> str:
+        string = f"{__class__.__name__}({self.name.value})"
+        return string
 
 
 ###############################################################################

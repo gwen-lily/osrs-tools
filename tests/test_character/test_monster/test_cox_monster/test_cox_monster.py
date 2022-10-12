@@ -45,7 +45,8 @@ def test_olm_melee():
 
     assert len(ax.squeezed_dims) == 2
 
-    axes, dam_ary = bedevere_the_wise(ax, DataMode.MAX_HIT)
+    axes = ax.squeezed_axes
+    dam_ary = bedevere_the_wise(ax, DataMode.MAX_HIT)
 
     assert len(axes) == 2
     assert dam_ary.shape == (3, 3)

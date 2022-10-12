@@ -63,9 +63,7 @@ def test_osmumtens_fang():
 
     ax = PvmAxes.create(player, target, prayers=prayer, boosts=boost, special_attack=special_attack)
 
-    axes, dam_ary = bedevere_the_wise(ax, DataMode.MAX_HIT)
-
-    meta_header = "test header"
+    dam_ary = bedevere_the_wise(ax, DataMode.MAX_HIT)
 
     with open("out.txt", mode="w", encoding="UTF-8") as f:
         f.write(str(dam_ary))

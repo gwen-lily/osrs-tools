@@ -60,6 +60,7 @@ class RoomEstimate(CoxEstimate, ABC):
             return
 
         for mt in self.monster_types:
+            pass  # TODO: wtf is this?
 
     @abstractmethod
     def tick_estimate(self) -> int:
@@ -72,8 +73,7 @@ class RoomEstimate(CoxEstimate, ABC):
         classes.
         """
 
-        return sum([est.monster.points_per_room(**kwargs)
-                    for est in self.monster_estimates])
+        return sum([est.monster.points_per_room(**kwargs) for est in self.monster_estimates])
 
 
 @dataclass
@@ -147,7 +147,7 @@ class MonsterEstimate(CoxEstimate):
 
     def points_per_unit(self, **kwargs) -> int:
         """Find the points yielded by killing a unit."""
-        base_hp = self.monster.base_hp
+        base_hp = self.monster._levels.hp
 
         _points_per_unit = math.floor(int(base_hp) * COX_POINTS_PER_HITPOINT)
         return _points_per_unit

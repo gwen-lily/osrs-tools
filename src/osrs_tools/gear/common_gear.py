@@ -270,7 +270,7 @@ ZerkRing = BerserkerRingI
 # gear sets ###################################################################
 
 BandosSet = [NeitiznotFaceguard, BandosChestplate, BandosTassets]
-InquisitorSet = [InquisitorsGreatHelm, InquisitorsHauberk, InquisitorsPlateskirt]
+InquisitorsArmourSet = [InquisitorsGreatHelm, InquisitorsHauberk, InquisitorsPlateskirt]
 
 TorvaSet = [TorvaFullHelm, TorvaPlatebody, TorvaPlatelegs]
 

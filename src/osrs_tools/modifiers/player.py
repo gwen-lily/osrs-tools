@@ -38,7 +38,8 @@ from osrs_tools.gear.common_gear import (
     CrystalArmorSet,
     DragonHunterCrossbow,
     DragonHunterLance,
-    InquisitorSet,
+    InquisitorsArmourSet,
+    InquisitorsPlateskirt,
     Seercull,
     SlayerHelmetI,
     ThammaronsSceptre,
@@ -46,6 +47,7 @@ from osrs_tools.gear.common_gear import (
     TwistedBow,
     ViggorasChainmace,
 )
+from osrs_tools.gear.custom_gear import SaeBaeInqHauberk, SaeBaeInqHelm
 from osrs_tools.spell.spell import Spell
 from osrs_tools.spell.spells import BoltSpells, FireSpells, StandardSpell
 from osrs_tools.stats import AggressiveStats, additional_stats
@@ -512,11 +514,15 @@ class PlayerModifiers(CharacterModifiers):
         if lad.style.damage_type is DT.CRUSH:
             comment = "inquisitor"
 
+            sae_bae_set = [SaeBaeInqHelm, SaeBaeInqHauberk, InquisitorsPlateskirt]
+
             if lad.eqp.inquisitor_set:
                 modifier = 1 + INQUISITOR_SET_BONUS + 3 * INQUISITOR_PIECE_BONUS
+            elif lad.wearing(*sae_bae_set):
+                modifier = 1 + 0.05  # 5% full set bonus
             else:
                 modifier = 1
-                qualifying_armor = InquisitorSet
+                qualifying_armor = InquisitorsArmourSet
 
                 for armor in qualifying_armor:
                     if lad.wearing(armor):
