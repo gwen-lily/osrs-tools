@@ -56,7 +56,10 @@ class PvmAxesEquipmentStyle(DamageAxes):
             try:
                 wpn = eqp.weapon
             except AssertionError as exc:
-                raise ValueError("weapon must be stored per equipment") from exc
+                if len(other.player) == 1:
+                    wpn = other.player[0].wpn
+                else:
+                    raise ValueError("weapon must be stored per equipment w/ multiple players") from exc
 
             for sty in other.style:
                 if sty in wpn.styles:
