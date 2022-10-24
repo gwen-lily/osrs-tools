@@ -7,6 +7,7 @@
 """
 from __future__ import annotations
 
+import math
 from copy import copy
 from dataclasses import dataclass, field
 
@@ -177,9 +178,9 @@ class Monster(Character):
         _roll = super().defence_roll(other, _dt)
 
         if isinstance(other, Player) and _dt in MagicDamageTypes:
-            if other.eqp[Slots.RING] == gear.BrimstoneRing:
+            if other.eqp._ring == gear.BrimstoneRing:
                 reduction = _roll // 10 / 4
-                _roll -= reduction
+                _roll = Roll(math.floor(_roll.value - reduction))
 
         return _roll
 

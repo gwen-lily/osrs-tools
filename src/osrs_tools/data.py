@@ -65,6 +65,17 @@ PARTY_AVERAGE_MINING_LEVEL = 42
 PARTY_AVERAGE_THIEVING_LEVEL = 42
 COX_POINTS_PER_HITPOINT = 4.15
 
+# toa values
+TOA_RAID_LVL_MOD = 0.02  # per 5 raid levels
+TOA_PATH_MOD_1 = 0.05
+TOA_PATH_MOD_0 = 0.08
+TOA_TEAM_MOD_LOW = 0.9
+TOA_TEAM_MOD_HIGH = 0.6
+TOA_MAX_RAID_LEVEL = 600
+TOA_MAX_PARTY_SIZE = 8
+
+
+# armour bonuses
 
 CRYSTAL_PIECE_ARM = 0.06
 CRYSTAL_PIECE_DM = 0.03
@@ -433,13 +444,17 @@ class DataMode(Enum):
 class DataAxes(Enum):
     """DataAxes enums for the analysis_tools module"""
 
-    players = "players"
-    targets = "targets"
-    equipment = "equipment"
-    active_style = "active_style"
-    prayers = "prayers"
-    boosts = "boosts"
-    levels = "levels"
+    PLAYER = "player"
+    TARGET = "target"
+    EQUIPMENT = "equipment"
+    STYLE = "style"
+    PRAYERS = "prayers"
+    BOOSTS = "boosts"
+    LEVELS = "levels"
+    SPECIAL_ATTACK = "special_attack"
+    DISTANCE = "distance"
+    SPELL = "spell"
+    ADDITIONAL_TARGETS = "additional_targets"
 
 
 # slots ######################################################################

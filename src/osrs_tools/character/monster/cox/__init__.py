@@ -15,4 +15,5 @@ from .lizardman_shaman import LizardmanShaman
 from .muttadile import BigMuttadile, SmallMuttadile
 from .olm import OlmHead, OlmMageHand, OlmMeleeHand
 from .skeletal_mystic import SkeletalMystic
-from .tekton import Tekton
+from .tekton import Tekton, TektonEnraged
+from .vanguards import MageVanguard, MeleeVanguard, RangedVanguard

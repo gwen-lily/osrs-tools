@@ -62,7 +62,7 @@ TorvaFullHelm = Gear.from_bb("torva full helm")
 TorvaPlatebody = Gear.from_bb("torva platebody")
 TorvaPlatelegs = Gear.from_bb("torva platelegs")
 
-DharoksGreataxe = Gear.from_bb("dharok's greataxe")
+DharoksHelm = Gear.from_bb("dharok's helm")
 DharoksPlatebody = Gear.from_bb("dharok's platebody")
 DharoksPlatelegs = Gear.from_bb("dharok's platelegs")
 DharoksGreataxe = Weapon.from_bb("dharok's greataxe")
@@ -163,6 +163,7 @@ AbyssalWhip = SpecialWeapon.from_bb("abyssal whip")
 AbyssalTentacle = SpecialWeapon.from_bb("abyssal tentacle")
 AbyssalDagger = SpecialWeapon.from_bb("abyssal dagger")
 DragonDagger = SpecialWeapon.from_bb("dragon dagger")
+OsmumtensFang = SpecialWeapon.from_bb("osmumten's fang")
 
 Seercull = SpecialWeapon.from_bb("seercull")
 
@@ -209,6 +210,8 @@ TormentedBracelet = Gear.from_bb("tormented bracelet")
 EternalBoots = Gear.from_bb("eternal boots")
 SeersRingI = Gear.from_bb("seers (i)")
 
+ElidinisWardF = Gear.from_bb("elidinis' ward (f)")
+
 AvernicDefender = Gear.from_bb("avernic defender")
 TyrannicalRingI = Gear.from_bb("tyrannical (i)")
 
@@ -230,10 +233,15 @@ BandosTassets = Gear.from_bb("bandos tassets")
 InquisitorsGreatHelm = Gear.from_bb("inquisitor's great helm")
 InquisitorsHauberk = Gear.from_bb("inquisitor's hauberk")
 InquisitorsPlateskirt = Gear.from_bb("inquisitor's plateskirt")
+InquisitorsMace = Weapon.from_bb("inquisitor's mace")
 
 ArmadylHelmet = Gear.from_bb("armadyl helmet")
 ArmadylChestplate = Gear.from_bb("armadyl chestplate")
 ArmadylChainskirt = Gear.from_bb("armadyl chainskirt")
+
+MasoriMaskF = Gear.from_bb("masori mask (f)")
+MasoriBodyF = Gear.from_bb("masori body (f)")
+MasoriChapsF = Gear.from_bb("masori chaps (f)")
 
 AncestralHat = Gear.from_bb("ancestral hat")
 AncestralRobeTop = Gear.from_bb("ancestral robe top")
@@ -262,57 +270,57 @@ ZerkRing = BerserkerRingI
 # gear sets ###################################################################
 
 BandosSet = [NeitiznotFaceguard, BandosChestplate, BandosTassets]
-InquisitorSet = [InquisitorsGreatHelm, InquisitorsHauberk, InquisitorsPlateskirt]
+InquisitorsArmourSet = [InquisitorsGreatHelm, InquisitorsHauberk, InquisitorsPlateskirt]
 
 TorvaSet = [TorvaFullHelm, TorvaPlatebody, TorvaPlatelegs]
 
-DharoksSet = [
-    DharoksGreataxe,
+DharoksSet: list[Gear] = [
+    DharoksHelm,
     DharoksPlatebody,
     DharoksPlatelegs,
     DharoksGreataxe,
 ]
 
-NormalVoidSet = [
+NormalVoidSet: list[Gear] = [
     VoidKnightHelm,
     VoidKnightTop,
     VoidKnightRobe,
     VoidKnightGloves,
 ]
 
-EliteVoidSet = [
+EliteVoidSet: list[Gear] = [
     VoidKnightHelm,
     EliteVoidTop,
     EliteVoidRobe,
     VoidKnightGloves,
 ]
 
-JusticiarSet = [
+JusticiarSet: list[Gear] = [
     JusticiarFaceguard,
     JusticiarChestguard,
     JusticiarLegguard,
 ]
 
-ObsidianArmorSet = [
+ObsidianArmorSet: list[Gear] = [
     ObsidianHelm,
     ObsidianPlatebody,
     ObsidianPlatelegs,
 ]
 
-ObsidianWeapons = [
+ObsidianWeapons: list[Gear] = [
     ObsidianDagger,
     ObsidianMace,
     ObsidianMaul,
     ObsidianSword,
 ]
 
-LeafBladedWeapons = [
+LeafBladedWeapons: list[Weapon] = [
     LeafBladedSpear,
     LeafBladedSword,
     LeafBladedBattleaxe,
 ]
 
-CrystalArmorSet = [
+CrystalArmorSet: list[Gear] = [
     CrystalHelm,
     CrystalBody,
     CrystalLegs,
@@ -320,7 +328,7 @@ CrystalArmorSet = [
 
 SmokeStaves = [SmokeBattlestaff, MysticSmokeStaff]
 
-GracefulSet = [
+GracefulSet: list[Gear] = [
     GracefulHood,
     GracefulTop,
     GracefulLegs,
@@ -329,13 +337,13 @@ GracefulSet = [
     GracefulCape,
 ]
 
-Chinchompas = [
+Chinchompas: list[Weapon] = [
     Chinchompa,
     RedChinchompa,
     BlackChinchompa,
 ]
 
-StavesOfTheDead = [
+StavesOfTheDead: list[SpecialWeapon] = [
     StaffOfLight,
     StaffOfTheDead,
     ToxicStaffOfTheDead,

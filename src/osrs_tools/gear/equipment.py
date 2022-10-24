@@ -618,6 +618,17 @@ class Equipment:
             return False
 
     @property
+    def osmumtens_fang(self) -> bool:
+        """Return True if equipment contains osmumten's fang.
+
+        Returns
+        -------
+        bool
+        """
+        qualifying_weapons = [gear.OsmumtensFang]
+        return self._weapon in qualifying_weapons
+
+    @property
     def abyssal_dagger(self) -> bool:
         """Return True if equipment contains any form of abyssal dagger.
 

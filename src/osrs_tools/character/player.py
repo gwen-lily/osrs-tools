@@ -41,9 +41,11 @@ from osrs_tools.gear.common_gear import (
     SanguinestiStaff,
     TridentOfTheSeas,
     TridentOfTheSwamp,
+    TumekensShadow,
 )
 from osrs_tools.prayer import Prayer, Prayers, Preserve
 from osrs_tools.spell import AncientSpell, GodSpell, PoweredSpell, PoweredSpells, Spell, StandardSpell, StandardSpells
+from osrs_tools.spell.spell import TumekenPoweredSpell
 from osrs_tools.stats import AggressiveStats, DefensiveStats, PlayerLevels
 from osrs_tools.style import PlayerStyle, UnarmedStyles, WeaponStyles
 from osrs_tools.timers import GET_UPDATE_CALLABLE, Effect, RepeatedEffect, TimedEffect, Timer
@@ -317,7 +319,9 @@ class Player(Character):
         # magic is a little less simple
         if spell is None:
             # no spell or autocast specified, try to manually set it.
-            if self.wpn == SanguinestiStaff:
+            if self.wpn == TumekensShadow:
+                self.autocast = PoweredSpells.TUMEKENS_SHADOW.value
+            elif self.wpn == SanguinestiStaff:
                 self.autocast = PoweredSpells.SANGUINESTI_STAFF.value
             elif self.wpn == TridentOfTheSwamp:
                 self.autocast = PoweredSpells.TRIDENT_OF_THE_SWAMP.value
@@ -336,6 +340,8 @@ class Player(Character):
         elif isinstance(spell, GodSpell):
             base_damage = spell.max_hit(self.charged)
         elif isinstance(spell, PoweredSpell):
+            base_damage = spell.max_hit(self.visible_magic)
+        elif isinstance(spell, TumekenPoweredSpell):
             base_damage = spell.max_hit(self.visible_magic)
         else:
             raise ValueError(spell)
@@ -449,7 +455,7 @@ class Player(Character):
         if self.wpn in gear.Chinchompas:
             # don't account for ammo if using chinchompas or thrown weapons
             # TODO: Thrown weapons
-            ammo = self.eqp[Slots.AMMUNITION]
+            ammo = self.eqp._ammunition
 
             if ammo is not None:
                 ammo_bonus = ammo.aggressive_bonus.ranged_strength

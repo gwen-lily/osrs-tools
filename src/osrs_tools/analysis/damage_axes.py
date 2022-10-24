@@ -29,7 +29,14 @@ class DamageAxes:
 
     @property
     def dims(self) -> tuple[int, ...]:
-        return tuple(len(getattr(self, axis.name)) for axis in self.axes)
+        dims: list[int] = []
+
+        for axis in self.axes:
+            val = len(getattr(self, axis.name))
+            val = 1 if val == 0 else val  # no 0-dim axes
+            dims.append(val)
+
+        return tuple(dims)
 
     @property
     def indices(self):

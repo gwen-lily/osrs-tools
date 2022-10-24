@@ -14,10 +14,8 @@ from osrs_tools.character.monster.cox import SkeletalMystic
 from osrs_tools.combat.damage import Damage
 from osrs_tools.cox_scaled.estimate import RoomEstimate
 from osrs_tools.gear import Equipment
-from osrs_tools.prayer import (IncredibleReflexes, Prayers, ProtectFromMagic,
-                               Rigour)
-from osrs_tools.strategy import (CombatStrategy, DwhStrategy, RangedStrategy,
-                                 TbowStrategy)
+from osrs_tools.prayer import IncredibleReflexes, Prayers, ProtectFromMagic, Rigour
+from osrs_tools.strategy import CombatStrategy, DwhStrategy, RangedStrategy, TbowStrategy
 from osrs_tools.tracked_value import Level
 from typing_extensions import Self
 
@@ -27,12 +25,10 @@ from typing_extensions import Self
 
 # prayers
 
-_RIGOUR_PRAYMAGE = Prayers(
-    name="rigour & pray mage", prayers=[Rigour, ProtectFromMagic]
-)
+_RIGOUR_PRAYMAGE = Prayers(name="rigour & pray mage", prayers=[Rigour, ProtectFromMagic])
 
 # gear
-_DRGIMP_GEAR = gear.InquisitorSet + [
+_DRGIMP_GEAR = gear.InquisitorsArmourSet + [
     gear.SalveAmuletEI,
     gear.MythicalCape,
     gear.TyrannicalRingI,

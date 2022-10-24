@@ -91,15 +91,6 @@ class StylesCollection:
         else:
             raise TypeError(__name)
 
-    def get_by_style(self, style: Styles) -> Style:
-        raise DeprecationWarning
-
-    def get_by_dt(self, damage_type: DT) -> Style:
-        raise DeprecationWarning
-
-    def get_by_stance(self, stance: Stances) -> Style:
-        raise DeprecationWarning
-
 
 ###############################################################################
 # main classes                                                                #
@@ -108,6 +99,7 @@ class StylesCollection:
 
 @dataclass
 class WeaponStyles(StylesCollection):
+    styles: list[PlayerStyle]
     default: PlayerStyle
 
     def __getitem__(self, __key: Styles | DT | Stances, /) -> PlayerStyle:
@@ -119,6 +111,7 @@ class WeaponStyles(StylesCollection):
 
 @dataclass
 class MonsterStyles(StylesCollection):
+    styles: list[MonsterStyle]
     default: MonsterStyle
 
     def __getitem__(self, __value: Styles | DT | Stances, /) -> MonsterStyle:

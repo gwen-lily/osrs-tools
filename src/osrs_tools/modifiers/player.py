@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from copy import copy
 from dataclasses import dataclass
 
 from osrs_tools.character import Character
@@ -37,7 +38,8 @@ from osrs_tools.gear.common_gear import (
     CrystalArmorSet,
     DragonHunterCrossbow,
     DragonHunterLance,
-    InquisitorSet,
+    InquisitorsArmourSet,
+    InquisitorsPlateskirt,
     Seercull,
     SlayerHelmetI,
     ThammaronsSceptre,
@@ -45,6 +47,7 @@ from osrs_tools.gear.common_gear import (
     TwistedBow,
     ViggorasChainmace,
 )
+from osrs_tools.gear.custom_gear import SaeBaeInqHauberk, SaeBaeInqHelm
 from osrs_tools.spell.spell import Spell
 from osrs_tools.spell.spells import BoltSpells, FireSpells, StandardSpell
 from osrs_tools.stats import AggressiveStats, additional_stats
@@ -93,23 +96,29 @@ class PlayerModifiers(CharacterModifiers):
         AggressiveStats
         """
         lad = self.player
+        target = self.target
         ab = lad.eqp.aggressive_bonus
+        ab2 = copy(ab)
 
         if (dinhs := self._dinhs_strength_modifier()) is not None:
-            ab.melee_strength += dinhs
+            ab2.melee_strength += dinhs
         elif (smoke := self._smoke_modifier()) is not None:
             _, gear_damage_bonus = smoke
-            ab.magic_strength += gear_damage_bonus
+            ab2.magic_strength += gear_damage_bonus
         elif lad.eqp.tumekens_shadow:
-            if isinstance(self.target, ToaMonster):
-                tumeken_mod = 4
+            if isinstance(target, Monster):
+                if MonsterTypes.TOA in target.special_attributes:
+                    tumeken_mod = 4
+                else:
+                    tumeken_mod = 3
             else:
                 tumeken_mod = 3
 
-            ab.magic_attack *= tumeken_mod
-            ab.magic_strength *= tumeken_mod
+            ab2.magic_attack *= tumeken_mod
+            raw_magic_strength = tumeken_mod * float(ab.magic_strength)
+            ab2.magic_strength = TrackedFloat(min([max([0, raw_magic_strength]), 1.0]))
 
-        return ab
+        return ab2
 
     def get_modifiers(self) -> tuple[list[RollModifier], list[DamageModifier]]:
         """Get all attack roll and damage modifiers relevant to the calculation.
@@ -323,7 +332,7 @@ class PlayerModifiers(CharacterModifiers):
         if _dt not in MagicDamageTypes:
             return
 
-        value = 1.0 + float(lad.aggressive_bonus.magic_strength)
+        value = 1.0 + float(self.aggressive_bonus.magic_strength)
         comment = "magic damage"
         return DamageModifier(value, comment)
 
@@ -505,11 +514,15 @@ class PlayerModifiers(CharacterModifiers):
         if lad.style.damage_type is DT.CRUSH:
             comment = "inquisitor"
 
+            sae_bae_set = [SaeBaeInqHelm, SaeBaeInqHauberk, InquisitorsPlateskirt]
+
             if lad.eqp.inquisitor_set:
                 modifier = 1 + INQUISITOR_SET_BONUS + 3 * INQUISITOR_PIECE_BONUS
+            elif lad.wearing(*sae_bae_set):
+                modifier = 1 + 0.05  # 5% full set bonus
             else:
                 modifier = 1
-                qualifying_armor = InquisitorSet
+                qualifying_armor = InquisitorsArmourSet
 
                 for armor in qualifying_armor:
                     if lad.wearing(armor):

@@ -73,7 +73,7 @@ Iron pickaxe	5	-2	3				1				7									5	16	1	weapon	pickaxes
 Bronze pickaxe	4	-2	2				1				5									5	16	1	weapon	pickaxes	
 Rune pickaxe	26	-2	24				1				29									5	16	41	weapon	pickaxes	
 Obsidian sword	47	38	-2			2	3				49									4	5		weapon	stab swords	
-Osmumten's Fang	150	105									115				0.5			stab		5	5		weapon	stab swords	
+Osmumten's fang	105	75									103				0.5			stab		5	5		weapon	stab swords	
 Rune 2h sword		69	50	-4						-1	70									7	10		weapon	two-handed swords	TRUE
 Rune battleaxe	-2	48	43							-1	64									6	8		weapon	axes	
 Rune claws	26	38	-4			10	19	5			39				0.15	0.15		Slash		4	6		weapon	claws	TRUE
@@ -209,7 +209,8 @@ Neitiznot						31	29	34	3	30	3			3									head
 Justiciar faceguard				-6	-2	60	63	59	-6	67				2									head		
 Dragon full helm				-6	-2	45	48	41	-1	46													head		
 Dragon med helm				-3	-1	33	35	32	-1	34													head		
-Masori helmet				-1	12	3	4	3	6	4		1		1									head		
+Masori mask				-1	12	3	4	3	6	4		2											head		
+Masori mask (f)				-1	12	8	10	12	12	9		2		1									head		
 Rune full helm				-6	-2	30	32	27	-1	30													head		
 Serpentine				-5	-5	52	55	58	0	50	5												head		
 Slayer helmet (i)				3	3	30	32	27	10	30													head		
@@ -314,7 +315,8 @@ Dragon chainbody				-15		81	93	98	-3	82													body
 3rd age platebody				-20	0	96	108	113	-4	97													body		
 Rune platebody				-30	-10	82	80	72	-6	80													body		
 Dragon platebody				-30	-10	109	107	97	-6	106													body		
-Masori chestplate	0	0	0	-4	43	37	35	38	25	33	0	4		1									body		
+Masori body				-4	43	37	35	38	25	33		4											body		
+Masori body (f)				-4	43	59	52	64	74	60		4		1									body		
 Armadyl chestplate	-7	-7	-7	-15	33	56	48	61	70	57				1									body		
 Crystal body	0	0	0	-18	31	46	38	48	44	68				3									body		
 Karil's leathertop				-15	30	47	52	50	65	57													body		
@@ -359,7 +361,8 @@ Justiciar legguard				-31	-17	95	92	93	-14	102				4									legs
 3rd age platelegs				-25	-2	78	76	83	-5	75													legs		
 Dragon platelegs				-21	-7	68	66	63	-4	65													legs		
 Rune platelegs				-21	-7	51	49	47	-4	49													legs		
-Masori chainskirt				-2	27	26	24	29	19	22		2		1									legs		
+Masori chaps				-2	27	26	24	29	19	22		2											legs		
+Masori chaps (f)				-2	27	35	30	39	46	37		2		1									legs		
 Armadyl chainskirt	-6	-6	-6	-10	20	32	26	34	40	33				1									legs		
 Crystal legs				-12	18	26	21	30	34	38				2									legs		
 Karil's leatherskirt				-10	17	26	20	28	35	33													legs		
@@ -406,7 +409,8 @@ Falador shield 3				-8	-2	18	22	20	-1	20				4									shield
 Falador shield 4				-8	-2	27	31	29	-1	29				5									shield		
 Elysian spirit shield						63	65	75	2	57				3									shield		
 Arcane spirit shield				20		53	55	73	2	52				3									shield		
-Ward of Elidinis				25		53	55	73	2	52			0.05	4									shield		
+Elidinis' ward				5		5	3	9	0	6			0.03	1									shield		
+Elidinis' ward (f)				25		53	55	73	2	52			0.05	4									shield		
 Spectral spirit shield						53	55	73	30	52				3									shield		
 Mind shield									9														shield		
 Ancient Wyvern shield	-10	-10	-10	15	-10	72	80	75	15	-5	-2												shield		

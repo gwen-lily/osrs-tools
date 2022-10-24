@@ -109,6 +109,10 @@ class Hitsplat:
     @classmethod
     def clamp_to_hitpoints_cap(cls, damage: np.ndarray, probability: np.ndarray, hitpoints_cap: int | Level):
         hp_cap = int(hitpoints_cap)
+
+        if hp_cap >= int(damage.max()):
+            return cls(damage, probability)
+
         dmg_adj = damage[: hp_cap + 1]
         prb_adj = np.zeros(dmg_adj.shape)
         prb_adj[:hp_cap] = probability[:hp_cap]

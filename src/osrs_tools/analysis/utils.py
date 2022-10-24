@@ -8,6 +8,7 @@ All time values are in ticks unless otherwise noted.
 ###############################################################################
 """
 
+from copy import copy
 from dataclasses import Field
 from functools import wraps
 from itertools import combinations
@@ -15,12 +16,17 @@ from typing import Any, Callable, ParamSpec, TypeVar
 
 import numpy as np
 import pandas as pd
-from osrs_tools.analysis.pvm_axes import PvmAxes
+from osrs_tools.analysis.damage_axes import DamageAxes
+from osrs_tools.analysis.pvm_axes import PvmAxes, PvmAxesEquipmentStyle, PvmAxesPlayerEquipmentStyle
 from osrs_tools.boost import Boost, Overload
 from osrs_tools.character import Character
+from osrs_tools.character.monster import Monster
 from osrs_tools.character.player import Player
 from osrs_tools.combat import PvMCalc
-from osrs_tools.data import DEFAULT_FLOAT_FMT, DEFAULT_TABLE_FMT, DataAxes, DataMode
+from osrs_tools.data import DEFAULT_FLOAT_FMT, DEFAULT_TABLE_FMT
+from osrs_tools.data import DataAxes
+from osrs_tools.data import DataAxes as DA
+from osrs_tools.data import DataMode, Slots
 from osrs_tools.exceptions import OsrsException
 from osrs_tools.gear import Equipment, Gear
 from osrs_tools.prayer import Piety, Prayer, Prayers
@@ -236,14 +242,14 @@ def table_2d(func: Callable) -> Callable:
 
 
 def bedevere_the_wise(
-    pvm_axes: PvmAxes,
+    axes_container: DamageAxes,
     data_mode: DataMode = DataMode.DPT,
-) -> tuple[tuple[Field[Any]], np.ndarray]:
+) -> np.ndarray:
     """Smart comparison interface for a generic PvM damage calculation
 
     Parameters
     ----------
-    pvm_axes : PvmAxes
+    axes_container : PvmAxes
         A datatype that contains information on the space of a PvMCalc
 
     data_mode : DataMode, optional
@@ -260,29 +266,108 @@ def bedevere_the_wise(
     ------
     NotImplementedError
     """
-    data_ary = np.empty(shape=pvm_axes.dims, dtype=data_mode.value.dtype)
 
-    for indices in pvm_axes.indices:
-        # iterate through all possible indices
-        params = pvm_axes[indices]
+    # if isinstance(pvm_axes, PvmAxes):
+    #     axes = pvm_axes.squeezed_axes
+    #     dims = pvm_axes.squeezed_dims
+    # elif isinstance(pvm_axes, PvmAxesEquipmentStyle):
+    #     axes = pvm_axes.squeezed_axes
+    #     dims = pvm_axes.squeezed_dims
+    # elif isinstance(pvm_axes, PvmAxesPlayerEquipmentStyle):
+    #     axes = pvm_axes.squeezed_axes
+    #     dims = pvm_axes.squeezed_dims
+    # else:
+    #     raise ValueError(pvm_axes)
 
-        player, target = params[0], params[1]
-        strategy_params = params[2:7]
-        pvm_calc_params = params[7:11]
+    wide_dims = axes_container.dims
+    squeezed_dims = axes_container.squeezed_dims
 
-        if any(_sp is not None for _sp in strategy_params):
+    if len(squeezed_dims) > 2:
+        raise ValueError(axes_container)
+
+    data_ary = np.empty(shape=wide_dims, dtype=data_mode.value.dtype)
+
+    for _indices in axes_container.indices:
+        # iterate through all possible indices combinations
+        params = axes_container[_indices]
+
+        # TODO: Rework this shitty code
+        if isinstance(axes_container, PvmAxesEquipmentStyle):
+            ply, tgt, (eqp, sty), pry, bst, lvl, spc, dst, spl, adt = params
+            assert isinstance(ply, Player)
+            assert isinstance(tgt, Monster)
+
+            strategy_params = (eqp, sty, pry, bst, lvl)
+            pvm_calc_params = (spc, dst, spl, adt)
+
+        elif isinstance(axes_container, PvmAxesPlayerEquipmentStyle):
+            (ply, eqp, sty), tgt, pry, bst, lvl, spc, dst, spl, adt = params
+            assert isinstance(ply, Player)
+            assert isinstance(tgt, Monster)
+
+            strategy_params = (eqp, sty, pry, bst, lvl)
+            pvm_calc_params = (spc, dst, spl, adt)
+
+        elif isinstance(axes_container, PvmAxes):
+            ply, tgt = params[0:2]
+            strategy_params = params[2:7]
+            pvm_calc_params = params[7:11]
+
+            assert isinstance(ply, Player)
+            assert isinstance(tgt, Monster)
+
+            eqp, sty, pry, bst, lvl = strategy_params
+            spc, dst, spl, adt = pvm_calc_params
+
+            if isinstance(sty, PlayerStyle):
+                if isinstance(eqp, Equipment):
+                    try:
+                        weapon = eqp.weapon
+                    except AssertionError:
+                        weapon = ply.wpn
+                else:
+                    weapon = ply.wpn
+
+                if sty not in weapon.styles:
+                    data_ary[_indices] = 0
+                    continue
+
+        else:
+            raise ValueError(axes_container)
+
+        strat_kwargs = {
+            DA.EQUIPMENT.value: eqp,
+            DA.STYLE.value: sty,
+            DA.PRAYERS.value: pry,
+            DA.BOOSTS.value: bst,
+            DA.LEVELS.value: lvl,
+        }
+        pvm_calc_kwargs = {
+            DA.SPECIAL_ATTACK.value: spc,
+            DA.DISTANCE.value: dst,
+            DA.SPELL.value: spl,
+            DA.ADDITIONAL_TARGETS.value: adt,
+        }
+
+        if any(_sp is not None for _sp in strat_kwargs.values()):
             # if the player must be modified directly
-            strat = CombatStrategy(player, *strategy_params)
-            dam = strat.activate().damage_distribution(target, *pvm_calc_params)
+            old_eqp = copy(ply.eqp)
+            old_sty = copy(ply.style)
+
+            strat = CombatStrategy(ply, **strat_kwargs)
+            dam = strat.activate().damage_distribution(tgt, **pvm_calc_kwargs)
+
+            ply.eqp = old_eqp
+            ply.style = old_sty
         else:
             # if the player does not need to be modified directly
-            dam = PvMCalc(player, target).get_damage(*pvm_calc_params)
+            dam = PvMCalc(ply, tgt).get_damage(**pvm_calc_kwargs)
 
         if data_mode.value.attribute is not None:
-            value = dam.__getattribute__(data_mode.value.attribute)
+            value = getattr(dam, data_mode.value.attribute)
 
         else:
-            hp = target.levels.hitpoints
+            hp = tgt.levels.hitpoints
 
             if data_mode is DataMode.TICKS_TO_KILL:
                 value = hp / dam.per_tick
@@ -295,16 +380,15 @@ def bedevere_the_wise(
             else:
                 raise NotImplementedError
 
-        data_ary[indices] = value
+        data_ary[_indices] = value
 
     # final squeezing
     ary_squeezed = data_ary.squeeze()
-    axes = pvm_axes.squeezed_axes
 
-    return axes, ary_squeezed
+    return ary_squeezed
 
 
-bedevere_2d = table_2d(bedevere_the_wise)
+# bedevere_2d = table_2d(bedevere_the_wise)
 
 
 def robin_the_brave(
@@ -342,6 +426,8 @@ def robin_the_brave(
             indices (tuple[int]): An iterable list of all indices of the data array.
             data_ary (np.ndarray): The data array.
     """
+    return NotImplemented
+
     # error checking
     if isinstance(switches, Equipment):
         switches_tup = switches.equipped_gear
@@ -362,16 +448,16 @@ def robin_the_brave(
 
     equipments = [Equipment(**switch_dict) for switch_dict in switch_combos]
 
-    return bedevere_the_wise(
-        player,
-        target,
-        equipment=equipments,
-        prayers=prayers,
-        boosts=boosts,
-        active_style=active_style,
-        data_mode=data_mode,
-        **kwargs,
-    )
+    # return bedevere_the_wise(
+    #     player,
+    #     target,
+    #     equipment=equipments,
+    #     prayers=prayers,
+    #     boosts=boosts,
+    #     active_style=active_style,
+    #     data_mode=data_mode,
+    #     **kwargs,
+    # )
 
 
 class AnalysisError(OsrsException):

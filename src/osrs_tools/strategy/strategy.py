@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 
 from bedevere.markov import MarkovChain
 from osrs_tools.boost import Boost, Overload
+from osrs_tools.character.monster import Monster
 from osrs_tools.character.monster.cox import CoxMonster
 from osrs_tools.character.player import Player
 from osrs_tools.combat import Damage, PvMCalc
@@ -56,7 +57,7 @@ class CombatStrategy(Strategy):
     boost : Boost | list[Boost]
         The Boost the player will use.
 
-    prayers : Prayer | PrayerCollection
+    prayers : Prayers | None
         The prayers the player will use.
 
     gear : list[Gear]
@@ -77,7 +78,7 @@ class CombatStrategy(Strategy):
     equipment: Equipment = field(default_factory=Equipment)
     style: PlayerStyle | None = None
     prayers: Prayers | None = None
-    boosts: Boost | list[Boost] = Overload
+    boosts: Boost | list[Boost] | None = Overload
     levels: PlayerLevels | None = None
 
     # methods
@@ -87,7 +88,7 @@ class CombatStrategy(Strategy):
         eqp = self.player.eqp
 
         if self.equipment:
-            eqp.equip(*self.equipment)
+            eqp += self.equipment
 
         if self.style is not None:
             self.player.style = self._style
@@ -96,10 +97,13 @@ class CombatStrategy(Strategy):
             _exc_str = f"{self.player.style} not in {self.player.wpn.styles}"
             raise ValueError(_exc_str)
 
-        assert self.player.eqp.full_set
+        # assert self.player.eqp.full_set
         return self
 
     def boost_player(self) -> Self:
+        if self.boosts is None:
+            return self
+
         if self.levels is not None:
             self.player._levels = self._levels
 
@@ -113,9 +117,8 @@ class CombatStrategy(Strategy):
         return self
 
     def pray_player(self) -> Self:
-        self.player.reset_prayers()
-
         if self.prayers is not None:
+            self.player.reset_prayers()
             self.player.pray(self.prayers)
 
         return self
@@ -138,13 +141,10 @@ class CombatStrategy(Strategy):
         """
         return self.equip_player(**kwargs).boost_player().pray_player().misc_player(**kwargs)
 
-    def damage_distribution(self, target: CoxMonster, **kwargs) -> Damage:
+    def damage_distribution(self, target: Monster, **kwargs) -> Damage:
         """Simple wrapper for Player.damage_distribution"""
         calc = PvMCalc(self.player, target)
         return calc.get_damage(**kwargs)
-
-    def get_markov(self, target: CoxMonster, **kwargs) -> MarkovChain:
-        raise NotImplementedError
 
     # properties
 
