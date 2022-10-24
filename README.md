@@ -1,4 +1,4 @@
-osrs-tools by bedevere (noahgill409@gmail.com)
+osrs-tools by bedevere (sarahgschwengel@gmail.com)
 
 to build the package manually run this in the root directory
 ```
