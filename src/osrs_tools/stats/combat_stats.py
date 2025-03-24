@@ -1,7 +1,7 @@
 """Definition of CombatStats, PlayerLevels, & MonsterLevels
 
 ###############################################################################
-# email:    noahgill409@gmail.com                                             #
+# email:    orchid.lilith@proton.me                                           #
 # created:  2022                                                              #
 ###############################################################################
 """

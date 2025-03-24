@@ -1,7 +1,7 @@
 """Imagine not stacking and chinning shamans in every raid :3
 
 ###############################################################################
-# email:    noahgill409@gmail.com                                             #
+# email:    orchid.lilith@proton.me                                           #
 # created: 2022-05-01                                                         #
 ###############################################################################
 """

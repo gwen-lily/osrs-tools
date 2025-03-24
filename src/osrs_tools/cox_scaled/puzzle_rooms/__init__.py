@@ -1,7 +1,7 @@
 """Strategies and estimates for puzzle rooms.
 
 ###############################################################################
-# email:    noahgill409@gmail.com                                             #
+# email:    orchid.lilith@proton.me                                           #
 # created:  2022-04-17                                                        #
 ###############################################################################
 """

@@ -1,7 +1,7 @@
 """The strategy sub-module, where all good abstractions of dps come from!
 
 ###############################################################################
-# email:    noahgill409@gmail.com                                             #
+# email:    orchid.lilith@proton.me                                           #
 # created:  2022-05-06                                                        #
 ###############################################################################
 """

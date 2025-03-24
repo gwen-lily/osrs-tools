@@ -1,7 +1,7 @@
 """Spells and definition of all OSRS spells.
 
 ###############################################################################
-# email:    noahgill409@gmail.com                                             #
+# email:    orchid.lilith@proton.me                                           #
 # created:                                                                    #
 ###############################################################################
 """

@@ -1,7 +1,7 @@
 """Defines Rotation and all relevant combat and puzzle rotations
 
 ###############################################################################
-# email:    noahgill409@gmail.com                                             #
+# email:    orchid.lilith@proton.me                                           #
 ###############################################################################
 """
 

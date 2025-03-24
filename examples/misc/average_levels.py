@@ -4,7 +4,7 @@ from osrs_tools.stats import PlayerLevels
 from osrs_tools.tracked_value import Level
 
 ###############################################################################
-# email:    noahgill409@gmail.com                                             #
+# email:    orchid.lilith@proton.me                                           #
 # created:  2022-04-18                                                        #
 ###############################################################################
 

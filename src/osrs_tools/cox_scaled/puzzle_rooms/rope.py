@@ -1,7 +1,7 @@
 """An estimate for the tightrope room. The best puzzle room in scaled cox.
 
 ###############################################################################
-# email:    noahgill409@gmail.com                                             #
+# email:    orchid.lilith@proton.me                                           #
 # created:  2022-04-17                                                        #
 ###############################################################################
 """

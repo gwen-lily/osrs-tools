@@ -1,7 +1,7 @@
 """Styles & their containers, as well as definitions of all weapon styles.
 
 ###############################################################################
-# email:    noahgill409@gmail.com                                             #
+# email:    orchid.lilith@proton.me                                           #
 # created:                                                                    #
 ###############################################################################
 """

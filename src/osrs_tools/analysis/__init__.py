@@ -4,7 +4,7 @@ This is my favorite sub-module, because I named some of the functions after
 Knights of the Round table, and it's the most maths heavy section.
 
 ###############################################################################
-# email:    noahgill409@gmail.com                                             #
+# email:    orchid.lilith@proton.me                                           #
 # created:  2022-05-06                                                        #
 ###############################################################################
 """

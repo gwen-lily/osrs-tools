@@ -5,7 +5,7 @@ for 10 stams. Assume proper brewing practice and you probably wanna pray mage
 at all times on melee. (#TODO: Test that claim)
 
 ###############################################################################
-# email:    noahgill409@gmail.com                                             #
+# email:    orchid.lilith@proton.me                                           #
 # created:  2022-04-17                                                        #
 ###############################################################################
 """

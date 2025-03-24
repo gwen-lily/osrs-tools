@@ -3,7 +3,7 @@
 This code is a little old and jank, but it gets the job done.
 
 ###############################################################################
-# email:    noahgill409@gmail.com                                             #
+# email:    orchid.lilith@proton.me                                           #
 # created: 2022-05-02                                                         #
 ###############################################################################
 """

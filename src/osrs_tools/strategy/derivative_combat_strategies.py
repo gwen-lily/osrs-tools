@@ -3,7 +3,7 @@
 These strategies implement weapons & styles basically.
 
 ###############################################################################
-# email:    noahgill409@gmail.com                                             #
+# email:    orchid.lilith@proton.me                                           #
 # created:  2022-03-27                                                        #
 ###############################################################################
 """

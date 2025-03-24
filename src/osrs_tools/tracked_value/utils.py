@@ -1,7 +1,7 @@
 """Helper utilities for creating and defining modifiers
 
 ###############################################################################
-# email:    noahgill409@gmail.com                                             #
+# email:    orchid.lilith@proton.me                                           #
 # created: 2022-05-03                                                         #
 ###############################################################################
 """

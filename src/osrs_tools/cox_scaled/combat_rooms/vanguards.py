@@ -1,7 +1,7 @@
 """An estimate for the vanguards room. Avoid at all costs if you can
 
 ###############################################################################
-# email:    noahgill409@gmail.com                                             #
+# email:    orchid.lilith@proton.me                                           #
 # created:  2022-05-08                                                        #
 ###############################################################################
 """

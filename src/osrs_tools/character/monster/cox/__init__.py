@@ -1,7 +1,7 @@
 """The cox sub-module of the monster sub-module. Very sub, very cool.
 
 ###############################################################################
-# email:    noahgill409@gmail.com                                             #
+# email:    orchid.lilith@proton.me                                           #
 # created:  2022-04-30                                                        #
 ###############################################################################
 """

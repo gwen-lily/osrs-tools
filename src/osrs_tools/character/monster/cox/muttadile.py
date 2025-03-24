@@ -1,7 +1,7 @@
 """Adorable little critter and its fearsome momma.
 
 ###############################################################################
-# email:    noahgill409@gmail.com                                             #
+# email:    orchid.lilith@proton.me                                           #
 # created: 2022-05-01                                                         #
 ###############################################################################
 """

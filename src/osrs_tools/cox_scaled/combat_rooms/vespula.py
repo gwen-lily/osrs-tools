@@ -1,7 +1,7 @@
 """An estimate for the vespula room. Surprisingly pog for scaled solos! :3
 
 ###############################################################################
-# email:    noahgill409@gmail.com                                             #
+# email:    orchid.lilith@proton.me                                           #
 # created:  2022-04-16                                                        #
 ###############################################################################
 """

@@ -3,7 +3,7 @@
 All time values are in ticks unless otherwise noted.
 
 ###############################################################################
-# email:    noahgill409@gmail.com                                             #
+# email:    orchid.lilith@proton.me                                           #
 # created:                                                                    #
 ###############################################################################
 """

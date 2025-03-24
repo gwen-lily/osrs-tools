@@ -1,7 +1,7 @@
 """I think I might have accidentally just used the bridge pattern?
 
 ###############################################################################
-# email:    noahgill409@gmail.com                                             #
+# email:    orchid.lilith@proton.me                                           #
 # created:  2022-04-24                                                        #
 ###############################################################################
 """

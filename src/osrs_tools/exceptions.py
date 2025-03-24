@@ -1,7 +1,7 @@
 """The basic exception for the osrs-tools module.
 
 ###############################################################################
-# email:    noahgill409@gmail.com                                             #
+# email:    orchid.lilith@proton.me                                           #
 # created:                                                                    #
 ###############################################################################
 """

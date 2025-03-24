@@ -1,7 +1,7 @@
 """Handles the bulk of combat calculations for players.
 
 ###############################################################################
-# email:    noahgill409@gmail.com                                             #
+# email:    orchid.lilith@proton.me                                           #
 # created: 2022-04-25                                                         #
 ###############################################################################
 """

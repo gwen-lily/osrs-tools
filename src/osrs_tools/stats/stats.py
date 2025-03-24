@@ -1,7 +1,7 @@
 """Definition of Stats and StatsOptional
 
 ###############################################################################
-# email:    noahgill409@gmail.com                                             #
+# email:    orchid.lilith@proton.me                                           #
 # created:                                                                    #
 ###############################################################################
 """

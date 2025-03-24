@@ -1,7 +1,7 @@
 """Gossip, gossip, * just stop it / Everybody knows I'm a mother fuckin monster
 
 ###############################################################################
-# email:    noahgill409@gmail.com                                             #
+# email:    orchid.lilith@proton.me                                           #
 # created:  2022-04-27                                                        #
 ###############################################################################
 """

@@ -1,7 +1,7 @@
 """Equipment, a Gear container with some validation and ease of access.
 
 ###############################################################################
-# email:    noahgill409@gmail.com                                             #
+# email:    orchid.lilith@proton.me                                           #
 # created:                                                                    #
 ###############################################################################
 """

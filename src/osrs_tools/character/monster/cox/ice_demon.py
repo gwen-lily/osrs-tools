@@ -1,7 +1,7 @@
 """Big blue lad, prone to getting arclight spec'd into oblivion and surged.
 
 ###############################################################################
-# email:    noahgill409@gmail.com                                             #
+# email:    orchid.lilith@proton.me                                           #
 # created: 2022-04-30                                                         #
 ###############################################################################
 """

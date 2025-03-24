@@ -1,7 +1,7 @@
 """The utils sub-module for the cox-scaled sub-module of osrs-tools
 
 ###############################################################################
-# email:    noahgill409@gmail.com                                             #
+# email:    orchid.lilith@proton.me                                           #
 # created:  2022-05-03                                                        #
 ###############################################################################
 """

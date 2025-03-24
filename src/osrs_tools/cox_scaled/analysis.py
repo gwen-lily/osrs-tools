@@ -1,7 +1,7 @@
 """This is where the fun happens, a nice bow to wrap up the whole thing
 
 ###############################################################################
-# email:    noahgill409@gmail.com                                             #
+# email:    orchid.lilith@proton.me                                           #
 # created:  2022-05-31                                                        #
 ###############################################################################
 """

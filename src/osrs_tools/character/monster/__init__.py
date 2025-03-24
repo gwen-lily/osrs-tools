@@ -1,7 +1,7 @@
 """The monster sub-module, handling all things monster :3
 
 ###############################################################################
-# email:    noahgill409@gmail.com                                             #
+# email:    orchid.lilith@proton.me                                           #
 # created:  2022-04-30                                                        #
 ###############################################################################
 """

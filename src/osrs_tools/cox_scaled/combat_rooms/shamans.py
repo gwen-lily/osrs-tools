@@ -1,7 +1,7 @@
 """An estimate for the shamans room. The best combat room in scaled cox.
 
 ###############################################################################
-# email:    noahgill409@gmail.com                                             #
+# email:    orchid.lilith@proton.me                                           #
 # created:  2022-04-17                                                        #
 ###############################################################################
 """

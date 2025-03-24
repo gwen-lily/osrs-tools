@@ -1,7 +1,7 @@
 """Some right proper chinnable, yet dangerous lads if you ask me.
 
 ###############################################################################
-# email:    noahgill409@gmail.com                                             #
+# email:    orchid.lilith@proton.me                                           #
 # created: 2022-05-01                                                         #
 ###############################################################################
 """

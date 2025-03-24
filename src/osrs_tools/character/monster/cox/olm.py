@@ -1,7 +1,7 @@
 """The Great Olm, possibly the Greatest Olm, quite frankly.
 
 ###############################################################################
-# email:    noahgill409@gmail.com                                             #
+# email:    orchid.lilith@proton.me                                           #
 # created: 2022-05-01                                                         #
 ###############################################################################
 """

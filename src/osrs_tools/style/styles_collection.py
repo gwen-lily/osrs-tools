@@ -1,7 +1,7 @@
 """Define StylesCollection, WeaponStyles, and MonsterStyles
 
 ###############################################################################
-# email:    noahgill409@gmail.com                                             #
+# email:    orchid.lilith@proton.me                                           #
 # created:                                                                    #
 ###############################################################################
 """

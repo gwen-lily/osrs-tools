@@ -4,7 +4,7 @@ Pre-chop kindling & surge it down on one or two accounts. Arclight reduce if
 you are able.
 
 ###############################################################################
-# email:    noahgill409@gmail.com                                             #
+# email:    orchid.lilith@proton.me                                           #
 # created:  2022-04-17                                                        #
 ###############################################################################
 """

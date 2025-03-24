@@ -1,7 +1,7 @@
 """Weapon, a subclass of Gear with some extra functionality.
 
 ###############################################################################
-# email:    noahgill409@gmail.com                                             #
+# email:    orchid.lilith@proton.me                                           #
 # created:                                                                    #
 ###############################################################################
 """

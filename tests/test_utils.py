@@ -1,7 +1,7 @@
 """Test the utils / resource reader by running it
 
 ###############################################################################
-# email:    noahgill409@gmail.com                                             #
+# email:    orchid.lilith@proton.me                                           #
 # created: 2022-05-02                                                         #
 ###############################################################################
 """

@@ -1,7 +1,7 @@
 """This is the cox-scaled sub-module for osrs-tools.
 
 ###############################################################################
-# email:    noahgill409@gmail.com                                             #
+# email:    orchid.lilith@proton.me                                           #
 # created:  2022-04-17                                                        #
 ###############################################################################
 """

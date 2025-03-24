@@ -1,7 +1,7 @@
 """Estimate classes which allow for re-usable room efficiency analysis.
 
 ###############################################################################
-# email:    noahgill409@gmail.com                                             #
+# email:    orchid.lilith@proton.me                                           #
 # created:  2022-03-27                                                        #
 ###############################################################################
 """

@@ -1,7 +1,7 @@
 """Strategy classes which allow for re-usable combat simulation.
 
 ###############################################################################
-# email:    noahgill409@gmail.com                                             #
+# email:    orchid.lilith@proton.me                                           #
 # created:  2022-03-27                                                        #
 ###############################################################################
 """

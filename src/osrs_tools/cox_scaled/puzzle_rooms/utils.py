@@ -1,7 +1,7 @@
 """utils for the puzzle-rooms sub-module of the cox-scaled sub-module of...
 
 ###############################################################################
-# email:    noahgill409@gmail.com                                             #
+# email:    orchid.lilith@proton.me                                           #
 # created:  2022-05-05                                                        #
 ###############################################################################
 """

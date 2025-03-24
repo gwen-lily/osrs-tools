@@ -1,7 +1,7 @@
 """Basic combat strategies with bis gear and no weapons
 
 ###############################################################################
-# email:    noahgill409@gmail.com                                             #
+# email:    orchid.lilith@proton.me                                           #
 # created:  2022-03-27                                                        #
 ###############################################################################
 """

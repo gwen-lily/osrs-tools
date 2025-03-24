@@ -1,7 +1,7 @@
 """SpecialWeapon, a subclass of Weapon with some extra functionality.
 
 ###############################################################################
-# email:    noahgill409@gmail.com                                             #
+# email:    orchid.lilith@proton.me                                           #
 # created:                                                                    #
 ###############################################################################
 """
